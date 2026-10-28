@@ -621,12 +621,20 @@ fun CameraLiveScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Pill("Sự kiện", panel == 1, onClick = { panel = if (panel == 1) 0 else 1 })
-                Pill("Xem lại", false, onClick = { onOpenTimeline(camera) })
-                Spacer(Modifier.weight(1f))
+                Row(
+                    Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Pill("Sự kiện", panel == 1, onClick = { panel = if (panel == 1) 0 else 1 })
+                    Pill("Xem lại", false, onClick = { onOpenTimeline(camera) })
+                }
                 Text(
                     "Thông báo",
                     style = MaterialTheme.typography.labelMedium,
+                    fontSize = 11.sp,
                     color = IOSSecondaryLabel,
                 )
                 Switch(

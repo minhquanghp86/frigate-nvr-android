@@ -202,6 +202,18 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - `VideoPlayer` nhận thêm `onFullscreen` (vẽ nút khi có) và `startPositionMs` (giữ đúng vị trí đang xem).
 - Live vẫn dùng cơ chế riêng (giữ thanh công cụ khi ngang).
 
+## 3p. Cập nhật 28/10/2026 (lần 15) — điều khiển tự viết, timeline kiểu Frigate
+
+- **Bỏ nút fullscreen nổi**: `VideoPlayer` dùng thanh điều khiển tự viết (play/pause, seekbar, thời gian,
+  fullscreen) hiện/ẩn cùng nhau, tự ẩn sau 4s khi đang phát; chạm video để hiện lại. Thay cho controller
+  mặc định của Media3 (nguyên nhân bị cắt hai đầu trên máy hẹp).
+- **Responsive**: hàng nút sự kiện dùng `BoxWithConstraints` + `FlowRow` (máy < 340dp → 2 nút/hàng,
+  rộng hơn → 1 hàng 4 nút); hàng bộ lọc và hàng điều khiển live cuộn ngang nên không bị chèn.
+- **Timeline kiểu Frigate**: thay slider bằng dải thời gian **cuộn ngang 24h** vẽ bằng Canvas:
+  vạch giờ, vùng có ghi hình (xanh), **vạch sự kiện tô màu theo nhãn** (người xanh dương, xe cam, khác đỏ),
+  playhead nét đứt + bong bóng giờ:phút. Chạm vào dải để chọn thời điểm và phát; nút Phát/Tải giữ nguyên.
+  Dữ liệu sự kiện trong ngày lấy từ `/api/events?after=…&before=…` (TimelineViewModel.loadDayEvents).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
