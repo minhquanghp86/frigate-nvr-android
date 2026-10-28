@@ -153,6 +153,17 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - Tìm kiếm sự kiện bằng AI: `GET /api/events/search?query=…` (ô tìm kiếm trong tab Sự kiện).
 - Lọc thông báo theo camera (Cài đặt → Thông báo → Camera nhận thông báo).
 
+## 3l. Cập nhật 28/10/2026 (lần 11) — toàn màn hình, PiP, khung nhận diện
+
+- **Toàn màn hình thật**: nút vuông giờ ẩn system bars (`WindowInsetsControllerCompat`) + thanh công cụ;
+  bấm lại / chạm video để thoát.
+- **Picture-in-Picture**: nút cạnh thay cho nút fit (fit vẫn còn trong sheet cài đặt).
+  Manifest `supportsPictureInPicture`, `configChanges` thêm screenLayout/smallestScreenSize;
+  `PipState` (StateFlow) để UI ẩn thanh công cụ khi ở cửa sổ nhỏ.
+- **Khung nhận diện**: Frigate vẽ box phía server trong **MJPEG** (`/api/{camera}?bbox=1`) và snapshot —
+  WebRTC/MP4/HLS là luồng gốc nên KHÔNG có box. Công tắc "Khung nhận diện" trong sheet (mặc định bật);
+  ở chế độ Tự động, bật box sẽ giữ MJPEG thay vì nâng lên WebRTC.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

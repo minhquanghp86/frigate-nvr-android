@@ -424,8 +424,8 @@ class FrigateRepository(
     fun eventSnapshot(id: String) = url("/api/events/$id/snapshot.jpg?bbox=1")
     fun eventClip(id: String) = url("/api/events/$id/clip.mp4")
     fun cameraLatest(camera: String) = url("/api/$camera/latest.jpg")
-    fun cameraMjpeg(camera: String, fps: Int, height: Int) =
-        url("/api/$camera?fps=$fps&height=$height")
+    fun cameraMjpeg(camera: String, fps: Int, height: Int, boxes: Boolean = false) =
+        url("/api/$camera?fps=$fps&height=$height" + if (boxes) "&bbox=1" else "")
     fun reviewClip(id: String) = url("/api/review/$id/clip.mp4")
 
     /** mp4 của một khoảng thời gian (dùng để tải 1 khung giờ ghi hình). */
