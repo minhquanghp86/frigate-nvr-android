@@ -276,20 +276,31 @@ class FrigateRepository(
         return built
     }
 
+    /** Nội dung lỗi FastAPI (field nào sai...) để hiển thị thay vì chỉ mã HTTP. */
+    private fun errorDetail(e: HttpException): String {
+        val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull() ?: return ""
+        val compact = body.replace(Regex("\\s+"), " ").trim()
+        return if (compact.isBlank()) "" else " — ${compact.take(240)}"
+    }
+
     /** Chạy một lệnh API với phiên hiện tại; lỗi 401 -> yêu cầu đăng nhập lại. */
     suspend fun <T> call(block: suspend FrigateApi.() -> T): T {
         val session = current ?: throw FrigateApiException("Chưa đăng nhập server Frigate.")
         return try {
             apiFor(session).block()
         } catch (e: HttpException) {
+            val detail = errorDetail(e)
             when (e.code()) {
                 401 -> {
                     handleUnauthorized()
                     throw FrigateApiException("Phiên đăng nhập hết hạn — đăng nhập lại.")
                 }
-                403 -> throw FrigateApiException("Tài khoản không có quyền trên camera này (403).")
-                404 -> throw FrigateApiException("Không tìm thấy dữ liệu (404).")
-                else -> throw FrigateApiException("Server trả lỗi HTTP ${e.code()}.")
+                403 -> throw FrigateApiException(
+                    "Tài khoản không có quyền trên camera này (403).$detail",
+                )
+                404 -> throw FrigateApiException("Không tìm thấy dữ liệu (404).$detail")
+                422 -> throw FrigateApiException("Server từ chối tham số (422).$detail")
+                else -> throw FrigateApiException("Server trả lỗi HTTP ${e.code()}.$detail")
             }
         } catch (e: FrigateApiException) {
             throw e
