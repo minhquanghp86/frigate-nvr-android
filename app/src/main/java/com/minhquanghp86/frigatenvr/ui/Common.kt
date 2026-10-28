@@ -2,6 +2,17 @@ package com.minhquanghp86.frigatenvr.ui
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import kotlinx.coroutines.delay
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
@@ -180,7 +191,7 @@ fun ScreenHeader(
     LargeTitleHeader(title = title, subtitle = subtitle, trailing = actions)
 }
 
-/** Trình phát video (mp4/HLS) — tự giải phóng khi rời màn hình. */
+/** Trình phát video (mp4/HLS) với thanh điều khiển tự viết — tự co giãn theo bề ngang. */
 @Composable
 fun VideoPlayer(
     url: String,
@@ -193,6 +204,12 @@ fun VideoPlayer(
     val context = LocalContext.current
     val repo = rememberRepo()
     var error by remember(url) { mutableStateOf<String?>(null) }
+    var showControls by remember(url) { mutableStateOf(true) }
+    var isPlaying by remember(url) { mutableStateOf(playWhenReady) }
+    var positionMs by remember(url) { mutableLongStateOf(0L) }
+    var durationMs by remember(url) { mutableLongStateOf(0L) }
+    var dragging by remember(url) { mutableStateOf(false) }
+    var dragValue by remember(url) { mutableFloatStateOf(0f) }
 
     val player = remember(url) {
         val ok = repo.okhttp()
@@ -216,12 +233,31 @@ fun VideoPlayer(
         }
     }
 
-    // Nhảy tới đúng thời điểm (dùng cho timeline: chọn 10:35 -> phát từ phút 35).
+    // Nhảy tới đúng thời điểm (timeline: chọn 10:35 -> phát từ phút 35).
     LaunchedEffect(player, startPositionMs) {
         if (startPositionMs <= 0) return@LaunchedEffect
         androidx.compose.runtime.snapshotFlow { player.playbackState }
             .first { it == Player.STATE_READY }
         player.seekTo(startPositionMs)
+    }
+
+    LaunchedEffect(player) {
+        while (true) {
+            if (!dragging) {
+                positionMs = player.currentPosition.coerceAtLeast(0L)
+                durationMs = player.duration.coerceAtLeast(0L)
+            }
+            isPlaying = player.isPlaying
+            delay(350)
+        }
+    }
+
+    // Đang phát thì tự ẩn thanh điều khiển (nút toàn màn hình cũng ẩn theo).
+    LaunchedEffect(showControls, isPlaying, dragging) {
+        if (showControls && isPlaying && !dragging) {
+            delay(4_000)
+            showControls = false
+        }
     }
 
     DisposableEffect(player) {
@@ -231,14 +267,9 @@ fun VideoPlayer(
     Box(modifier) {
         AndroidView(
             factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = true
-                    controllerShowTimeoutMs = 4000
-                }
+                PlayerView(ctx).apply { useController = false }
             },
             modifier = Modifier.fillMaxSize(),
-            // player được gán ở update: khi url đổi, view phải chuyển sang player mới
-            // (nếu chỉ gán trong factory, đổi khung giờ sẽ phát trên player đã release -> dừng hình).
             update = { view ->
                 if (view.player !== player) view.player = player
                 view.resizeMode = if (fit) {
@@ -248,23 +279,89 @@ fun VideoPlayer(
                 }
             },
         )
-        if (onFullscreen != null) {
-            IconButton(
-                onClick = onFullscreen,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .size(36.dp)
-                    .background(Color(0x99202429), RoundedCornerShape(8.dp)),
+
+        // Chạm vào video để hiện/ẩn thanh điều khiển.
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { showControls = !showControls },
+        )
+
+        if (showControls) {
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Color(0xB3000000))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
             ) {
-                Icon(
-                    Icons.Outlined.Fullscreen,
-                    contentDescription = "Toàn màn hình",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        formatClock(
+                            if (dragging) (dragValue * durationMs).toLong() else positionMs,
+                        ),
+                        color = Color.White,
+                        fontSize = 11.sp,
+                    )
+                    Slider(
+                        value = when {
+                            durationMs <= 0 -> 0f
+                            dragging -> dragValue
+                            else -> (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+                        },
+                        onValueChange = { v ->
+                            dragging = true
+                            dragValue = v
+                        },
+                        onValueChangeFinished = {
+                            if (durationMs > 0) player.seekTo((dragValue * durationMs).toLong())
+                            dragging = false
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 6.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = IOSBlue,
+                            activeTrackColor = IOSBlue,
+                            inactiveTrackColor = Color(0x66FFFFFF),
+                        ),
+                    )
+                    Text(
+                        formatClock(durationMs),
+                        color = Color.White,
+                        fontSize = 11.sp,
+                    )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            if (player.isPlaying) player.pause() else player.play()
+                            showControls = true
+                        },
+                    ) {
+                        Icon(
+                            if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = if (isPlaying) "Tạm dừng" else "Phát",
+                            tint = Color.White,
+                        )
+                    }
+                    Spacer(Modifier.weight(1f))
+                    if (onFullscreen != null) {
+                        IconButton(onClick = onFullscreen) {
+                            Icon(
+                                Icons.Outlined.Fullscreen,
+                                contentDescription = "Toàn màn hình",
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                }
             }
         }
+
         if (error != null) {
             Text(
                 text = "Không phát được video ($error)",
@@ -277,6 +374,14 @@ fun VideoPlayer(
             )
         }
     }
+}
+
+private fun formatClock(ms: Long): String {
+    val total = (ms / 1000).coerceAtLeast(0)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val s = total % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
 }
 
 

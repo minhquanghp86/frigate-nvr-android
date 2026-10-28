@@ -1,6 +1,8 @@
 package com.minhquanghp86.frigatenvr.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.OutlinedTextField
 import com.minhquanghp86.frigatenvr.ui.IOSBlue
@@ -149,6 +151,7 @@ fun EventsScreen(
         Row(
             Modifier
                 .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -478,10 +481,14 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        androidx.compose.foundation.layout.BoxWithConstraints {
+            val perRow = if (maxWidth < 340.dp) 2 else 4
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                maxItemsInEachRow = perRow,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
             OutlinedButton(
                 onClick = {
                     scope.launch {
@@ -562,6 +569,7 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                 Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("Xoá", fontSize = 12.sp)
+            }
             }
         }
 

@@ -271,6 +271,9 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     private val _playing = MutableStateFlow<String?>(null)
     val playing: StateFlow<String?> = _playing.asStateFlow()
 
+    private val _dayEvents = MutableStateFlow<List<FrigateEvent>>(emptyList())
+    val dayEvents: StateFlow<List<FrigateEvent>> = _dayEvents.asStateFlow()
+
     private val timezone: String = java.util.TimeZone.getDefault().id
 
     init { refresh() }
@@ -297,6 +300,7 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
     fun setCamera(value: String) {
         _camera.value = value
         _playing.value = null
+        _dayEvents.value = emptyList()
         loadHours()
     }
 
@@ -307,6 +311,33 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
                 _hours.value = repo.call { cameraRecordingsSummary(camera, timezone) }
             } catch (e: Exception) {
                 _error.value = e.message ?: "Không tải được khung giờ ghi hình."
+            }
+        }
+    }
+
+    fun loadDayEvents(day: String) {
+        val camera = _camera.value ?: return
+        viewModelScope.launch {
+            _dayEvents.value = try {
+                val zone = java.time.ZoneId.systemDefault()
+                val start = java.time.ZonedDateTime.of(
+                    java.time.LocalDate.parse(day),
+                    java.time.LocalTime.MIDNIGHT,
+                    zone,
+                ).toEpochSecond()
+                repo.call {
+                    events(
+                        mapOf(
+                            "cameras" to camera,
+                            "after" to start.toString(),
+                            "before" to (start + 86_400).toString(),
+                            "limit" to "200",
+                            "include_thumbnails" to "0",
+                        ),
+                    )
+                }
+            } catch (_: Exception) {
+                emptyList()
             }
         }
     }
