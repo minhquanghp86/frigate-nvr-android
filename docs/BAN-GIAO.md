@@ -67,6 +67,17 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - Vẫn giữ MP4/HLS (go2rtc 1984) và MJPEG (Frigate) để so sánh/fallback.
 - Lưu ý bảo mật: go2rtc 1984 đang mở, `/api/streams` lộ URL RTSP kèm user/mật khẩu camera.
 
+## 3e. Cập nhật 28/10/2026 (lần 4) — ký cố định + sửa khung hình live
+
+- **Không cập nhật được APK (xung đột gói)**: release trước ký bằng *debug key*, mà runner CI
+  tạo debug keystore mới mỗi lần → chữ ký khác nhau. Thêm `keystore/frigate-release.jks`
+  (alias `frigate`) và `signingConfigs.release`; bản v0.1.5 phải gỡ cài lại 1 lần, sau đó cập nhật đè được.
+- **Live bị phóng/cắt viền**: `SurfaceViewRenderer` để mặc định FILL; đổi sang
+  `SCALE_ASPECT_FIT` + tắt hardware scaler. ExoPlayer (MP4/HLS/clip) đặt `RESIZE_MODE_FIT`.
+- Chặn port go2rtc 1984: thêm vào `go2rtc:` của Frigate config
+  `api: {listen: "127.0.0.1:1984"}` (nginx vẫn nối 127.0.0.1, LAN bị chặn) —
+  khi đó MP4/HLS trong app ngừng dùng được, WebRTC/MJPEG vẫn chạy.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

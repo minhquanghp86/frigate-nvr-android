@@ -236,6 +236,7 @@ fun VideoPlayer(
                     this.player = player
                     useController = true
                     controllerShowTimeoutMs = 4000
+                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                 }
             },
             modifier = Modifier.fillMaxSize(),

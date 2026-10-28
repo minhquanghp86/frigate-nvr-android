@@ -21,6 +21,8 @@ App Android kết nối thẳng tới **API của Frigate NVR** (chạy như add
 
 1. Tải APK mới nhất: **Actions → run gần nhất → Artifact** (hoặc **Releases** nếu build từ tag `v*`).
 2. Cài lên điện thoại (cho phép cài từ nguồn không xác định).
+   - APK release ký bằng keystore cố định (`keystore/frigate-release.jks`) nên các bản sau **cập nhật đè được**.
+   - Riêng bản `v0.1.5` cần **gỡ app cũ một lần** (bản cũ ký debug key của runner), từ đó về sau không phải gỡ nữa.
 3. Mở app → nhập địa chỉ server và tài khoản Frigate.
 
 ### Cấu hình Frigate để app kết nối được
