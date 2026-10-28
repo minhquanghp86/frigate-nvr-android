@@ -198,6 +198,7 @@ fun VideoPlayer(
     url: String,
     modifier: Modifier = Modifier,
     playWhenReady: Boolean = true,
+    fit: Boolean = true,
 ) {
     val context = LocalContext.current
     val repo = rememberRepo()
@@ -236,10 +237,21 @@ fun VideoPlayer(
                     this.player = player
                     useController = true
                     controllerShowTimeoutMs = 4000
-                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    resizeMode = if (fit) {
+                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    } else {
+                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize(),
+            update = { view ->
+                view.resizeMode = if (fit) {
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
+                } else {
+                    androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                }
+            },
         )
         if (error != null) {
             Text(
