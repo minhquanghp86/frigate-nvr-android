@@ -415,6 +415,10 @@ class FrigateRepository(
         url("/api/$camera?fps=$fps&height=$height")
     fun reviewClip(id: String) = url("/api/review/$id/clip.mp4")
 
+    /** mp4 của một khoảng thời gian (dùng để tải 1 khung giờ ghi hình). */
+    fun clipRange(camera: String, startSec: Long, endSec: Long): String =
+        url("/api/$camera/start/$startSec/end/$endSec/clip.mp4")
+
     /**
      * HLS của một khung giờ ghi hình. Frigate phục vụ HLS qua nginx-vod ở /vod/...
      * (KHÔNG phải /api/vod/... — đường đó chỉ trả JSON mapping nên player báo

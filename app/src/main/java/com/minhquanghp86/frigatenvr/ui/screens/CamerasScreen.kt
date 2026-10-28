@@ -78,6 +78,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.minhquanghp86.frigatenvr.data.FrigateConfig
+import com.minhquanghp86.frigatenvr.data.FrigateEvent
+import com.minhquanghp86.frigatenvr.ui.relTime
+import com.minhquanghp86.frigatenvr.ui.IOSSecondaryLabel
 import com.minhquanghp86.frigatenvr.data.MjpegSource
 import com.minhquanghp86.frigatenvr.ui.IOSCard
 import com.minhquanghp86.frigatenvr.ui.CamerasViewModel
@@ -106,6 +109,7 @@ fun CamerasScreen(
 ) {
     val vm: CamerasViewModel = viewModel()
     val state by vm.state.collectAsState()
+    val latest by vm.latest.collectAsState()
     var tick by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -133,13 +137,18 @@ fun CamerasScreen(
         when (val s = state) {
             UiState.Loading -> LoadingBox()
             is UiState.Error -> ErrorBox(s.message, onRetry = { vm.refresh() })
-            is UiState.Ok -> CameraGrid(s.data, tick, onOpenCamera)
+            is UiState.Ok -> CameraGrid(s.data, tick, latest, onOpenCamera)
         }
     }
 }
 
 @Composable
-private fun CameraGrid(config: FrigateConfig, tick: Int, onOpenCamera: (String) -> Unit) {
+private fun CameraGrid(
+    config: FrigateConfig,
+    tick: Int,
+    latest: Map<String, FrigateEvent>,
+    onOpenCamera: (String) -> Unit,
+) {
     val repo = rememberRepo()
     val cameras = config.enabledCameras
 
@@ -212,6 +221,15 @@ private fun CameraGrid(config: FrigateConfig, tick: Int, onOpenCamera: (String) 
                             modifier = Modifier.weight(1f),
                             maxLines = 1,
                         )
+                        if (latest[name] != null) {
+                            Text(
+                                "${latest[name]!!.label} · ${relTime(latest[name]!!.startTime)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = IOSSecondaryLabel,
+                                maxLines = 1,
+                                modifier = Modifier.padding(start = 8.dp),
+                            )
+                        }
                         if (cam?.hasAudio == true) {
                             Icon(
                                 Icons.Outlined.MusicNote,

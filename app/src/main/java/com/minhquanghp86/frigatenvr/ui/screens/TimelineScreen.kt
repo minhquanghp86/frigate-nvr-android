@@ -33,6 +33,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -70,6 +72,12 @@ fun TimelineScreen(modifier: Modifier = Modifier) {
     val playing by vm.playing.collectAsState()
 
     var selectedDay by remember { mutableStateOf<String?>(null) }
+    var playingSpec by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    var saveMsg by remember { mutableStateOf<String?>(null) }
+    val repo = com.minhquanghp86.frigatenvr.ui.rememberRepo()
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(days) {
         if (selectedDay == null || selectedDay !in days) selectedDay = days.firstOrNull()
     }
@@ -133,6 +141,37 @@ fun TimelineScreen(modifier: Modifier = Modifier) {
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.weight(1f),
                         )
+                        playingSpec?.let { spec ->
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        saving = true
+                                        val start = java.time.ZonedDateTime.of(
+                                            java.time.LocalDate.parse(spec.first),
+                                            java.time.LocalTime.of(spec.second.toIntOrNull() ?: 0, 0),
+                                            java.time.ZoneId.systemDefault(),
+                                        ).toEpochSecond()
+                                        val saved = com.minhquanghp86.frigatenvr.data.MediaSaver.save(
+                                            context = context,
+                                            client = repo.okhttp(),
+                                            url = repo.clipRange(
+                                                camera ?: "",
+                                                start,
+                                                start + 3600,
+                                            ),
+                                            fileName = "frigate-${camera}-${spec.first}-${spec.second}.mp4",
+                                            mime = "video/mp4",
+                                        )
+                                        saveMsg = saved?.let { "Đã lưu: $it" } ?: "Không tải được"
+                                        saving = false
+                                    }
+                                },
+                                enabled = !saving,
+                            ) {
+                                Text(if (saving) "Đang tải…" else "Tải", fontSize = 12.sp)
+                            }
+                            Spacer(Modifier.width(6.dp))
+                        }
                         OutlinedButton(onClick = { vm.stop() }) {
                             Icon(
                                 Icons.Outlined.Close,
@@ -204,7 +243,10 @@ fun TimelineScreen(modifier: Modifier = Modifier) {
                                 verticalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 items(dayHours, key = { "${day}-${it.hour}" }) { hour ->
-                                    HourCard(day = day, hour = hour) { vm.play(day, hour.hour) }
+                                    HourCard(day = day, hour = hour) {
+                                        vm.play(day, hour.hour)
+                                        playingSpec = day to hour.hour
+                                    }
                                 }
                             }
                         }
