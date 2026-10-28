@@ -17,6 +17,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.first
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -181,6 +184,7 @@ fun VideoPlayer(
     modifier: Modifier = Modifier,
     playWhenReady: Boolean = true,
     fit: Boolean = true,
+    startPositionMs: Long = 0L,
 ) {
     val context = LocalContext.current
     val repo = rememberRepo()
@@ -208,6 +212,14 @@ fun VideoPlayer(
         }
     }
 
+    // Nhảy tới đúng thời điểm (dùng cho timeline: chọn 10:35 -> phát từ phút 35).
+    LaunchedEffect(player, startPositionMs) {
+        if (startPositionMs <= 0) return@LaunchedEffect
+        androidx.compose.runtime.snapshotFlow { player.playbackState }
+            .first { it == Player.STATE_READY }
+        player.seekTo(startPositionMs)
+    }
+
     DisposableEffect(player) {
         onDispose { player.release() }
     }
@@ -216,18 +228,15 @@ fun VideoPlayer(
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
-                    this.player = player
                     useController = true
                     controllerShowTimeoutMs = 4000
-                    resizeMode = if (fit) {
-                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    } else {
-                        androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                    }
                 }
             },
             modifier = Modifier.fillMaxSize(),
+            // player được gán ở update: khi url đổi, view phải chuyển sang player mới
+            // (nếu chỉ gán trong factory, đổi khung giờ sẽ phát trên player đã release -> dừng hình).
             update = { view ->
+                if (view.player !== player) view.player = player
                 view.resizeMode = if (fit) {
                     androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT
                 } else {

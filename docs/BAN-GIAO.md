@@ -179,6 +179,21 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - **Danh sách tự làm mới sau khi xoá**: `FrigateRepository.dataVersion` tăng khi xoá sự kiện;
   `EventsViewModel` và panel sự kiện trong live theo dõi để refresh (hết cảnh 404 khi bấm ảnh cũ).
 
+## 3n. Cập nhật 28/10/2026 (lần 13) — xem lại kiểu mới, fullscreen, tải có tiến trình
+
+- **Xem lại**: bấm "Xem lại" trong live mở **route riêng `timeline/{camera}`** (có nút back, ẩn tab bar)
+  thay vì nhảy sang tab.
+- **Thiết kế lại trình xem lại**: chọn **ngày bằng dropdown**; **slider 0–1439 phút** chọn thời điểm
+  (thả tay -> phát đúng giờ, tua tới đúng phút); nút Phát / Tải khung giờ; hiện số khung giờ có ghi.
+- **Sửa lỗi đổi khung giờ bị dừng**: `VideoPlayer` gán player trong `AndroidView.update`
+  (trước chỉ gán 1 lần ở factory nên đổi URL vẫn trỏ player đã release). Thêm `startPositionMs` để seek.
+- **Tải media có tiến trình**: `MediaSaver` hiện notification "Đang tải…" (%), rồi "Đã lưu" (kèm đường dẫn)
+  hoặc "Không tải được"; kênh `frigate_downloads`.
+- **Fullscreen**: giữ đủ thanh công cụ ở chế độ ngang; chạm màn hình chỉ ẩn/hiện nút, **không thoát** fullscreen;
+  thoát bằng nút Toàn màn hình (quay về dọc).
+- **Trả lại 4 switch tính năng camera** trong sheet bánh răng của live (Camera/Phát hiện/Ghi hình/Ảnh chụp).
+- **Nút hành động sự kiện**: 1 hàng 4 nút gọn (Giữ · Clip · Ảnh · Xoá) thay vì xuống dòng.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

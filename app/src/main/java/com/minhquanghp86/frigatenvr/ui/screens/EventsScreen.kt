@@ -476,9 +476,9 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        androidx.compose.foundation.layout.FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             OutlinedButton(
                 onClick = {
@@ -496,6 +496,8 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                     }
                 },
                 enabled = !busy,
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(horizontal = 4.dp),
             ) {
                 Icon(
                     if (retained) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
@@ -503,7 +505,7 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(Modifier.width(6.dp))
-                Text(if (retained) "Bỏ giữ" else "Giữ", fontSize = 13.sp)
+                Text(if (retained) "Bỏ giữ" else "Giữ", fontSize = 12.sp)
             }
 
             if (event.hasClip) {
@@ -526,7 +528,7 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                 ) {
                     Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Tải clip", fontSize = 13.sp)
+                    Text("Clip", fontSize = 12.sp)
                 }
             }
 
@@ -550,14 +552,14 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                 ) {
                     Icon(Icons.Outlined.Image, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Lưu ảnh", fontSize = 13.sp)
+                    Text("Ảnh", fontSize = 12.sp)
                 }
             }
 
             OutlinedButton(onClick = { confirmDelete = true }, enabled = !busy) {
                 Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Xoá", fontSize = 13.sp)
+                Text("Xoá", fontSize = 12.sp)
             }
         }
 
