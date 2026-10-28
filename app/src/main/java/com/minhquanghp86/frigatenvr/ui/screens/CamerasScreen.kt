@@ -3,6 +3,9 @@ package com.minhquanghp86.frigatenvr.ui.screens
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.outlined.CropFree
 import androidx.compose.material.icons.outlined.FitScreen
@@ -245,13 +248,24 @@ fun CameraLiveScreen(
     var bitmapSize by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var measuredFps by remember { mutableDoubleStateOf(0.0) }
+    var onEnabled by remember(camera) { mutableStateOf(true) }
+    var onDetect by remember(camera) { mutableStateOf(true) }
+    var onRecord by remember(camera) { mutableStateOf(false) }
+    var onSnapshot by remember(camera) { mutableStateOf(false) }
+    var featureError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val mode = runCatching { LiveMode.valueOf(modeName) }.getOrDefault(LiveMode.WEBRTC)
 
     LaunchedEffect(camera) {
         val cfg = runCatching { repo.call { config() } }.getOrNull()
-        streamName = cfg?.cameras?.get(camera)?.liveStreamNames?.firstOrNull() ?: camera
+        val cam = cfg?.cameras?.get(camera)
+        streamName = cam?.liveStreamNames?.firstOrNull() ?: camera
+        onEnabled = cam?.enabled ?: true
+        onDetect = cam?.detectOn ?: true
+        onRecord = cam?.recording ?: false
+        onSnapshot = cam?.snapshotsOn ?: false
     }
 
     DisposableEffect(camera) {
@@ -284,6 +298,18 @@ fun CameraLiveScreen(
             throw e
         } catch (e: Exception) {
             error = e.message ?: "Không mở được luồng MJPEG."
+        }
+    }
+
+    fun toggleFeature(feature: String, value: Boolean, revert: () -> Unit) {
+        scope.launch {
+            try {
+                repo.setCameraFeature(camera, feature, value)
+                featureError = null
+            } catch (e: Exception) {
+                revert()
+                featureError = e.message ?: "Không đổi được $feature"
+            }
         }
     }
 
@@ -416,6 +442,32 @@ fun CameraLiveScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("Camera $camera", style = MaterialTheme.typography.titleMedium)
+
+                Text(
+                    "Bật/tắt tính năng (API yêu cầu tài khoản admin)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ToggleRow("Camera", onEnabled) { v ->
+                    onEnabled = v
+                    toggleFeature("enabled", v) { onEnabled = !v }
+                }
+                ToggleRow("Phát hiện đối tượng", onDetect) { v ->
+                    onDetect = v
+                    toggleFeature("detect", v) { onDetect = !v }
+                }
+                ToggleRow("Ghi hình", onRecord) { v ->
+                    onRecord = v
+                    toggleFeature("recordings", v) { onRecord = !v }
+                }
+                ToggleRow("Ảnh chụp", onSnapshot) { v ->
+                    onSnapshot = v
+                    toggleFeature("snapshots", v) { onSnapshot = !v }
+                }
+                featureError?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
+                HorizontalDivider()
 
                 DropdownField(
                     label = "Luồng",

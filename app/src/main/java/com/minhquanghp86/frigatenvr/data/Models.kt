@@ -15,6 +15,9 @@ data class LoginRequest(val user: String, val password: String)
 data class LoginBody(val message: String? = null, val access_token: String? = null)
 
 @Serializable
+data class CameraSetBody(val value: String)
+
+@Serializable
 data class IdsBody(
     val ids: List<String>,
     // Frigate 0.18 yêu cầu field này khi đánh dấu đã xem/bỏ đánh dấu.
@@ -85,7 +88,10 @@ data class FrigateCameraConfig(
     val detect: JsonObject? = null,
     val live: JsonObject? = null,
     val ffmpeg: JsonObject? = null,
+    val snapshots: JsonObject? = null,
 ) {
+    val detectOn: Boolean get() = detect.flag("enabled", default = true)
+    val snapshotsOn: Boolean get() = snapshots.flag("enabled")
     val recording: Boolean get() = record.flag("enabled")
     val hasAudio: Boolean get() = audio.flag("enabled")
 
@@ -107,8 +113,8 @@ private fun JsonElement.textOrNull(): String? = try {
     null
 }
 
-private fun JsonObject?.flag(key: String): Boolean =
-    this?.get(key)?.jsonPrimitive?.booleanOrNull ?: false
+private fun JsonObject?.flag(key: String, default: Boolean = false): Boolean =
+    this?.get(key)?.jsonPrimitive?.booleanOrNull ?: default
 
 @Serializable
 data class VersionInfo(

@@ -10,6 +10,7 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.QueryMap
@@ -71,6 +72,13 @@ interface FrigateApi {
     // Frigate 0.18 trả PlainTextResponse (vd "0.18.2-cfa08c5"), không phải JSON object.
     @GET("api/version")
     suspend fun version(): ResponseBody
+
+    @PUT("api/camera/{camera}/set/{feature}")
+    suspend fun setCameraFeature(
+        @Path("camera") camera: String,
+        @Path("feature") feature: String,
+        @Body body: CameraSetBody,
+    ): retrofit2.Response<ResponseBody>
 
     @GET("api/stats")
     suspend fun stats(): ResponseBody

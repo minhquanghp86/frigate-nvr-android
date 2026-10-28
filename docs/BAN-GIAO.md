@@ -93,6 +93,15 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
   fps · độ phân giải · kbps; chip thống kê góc dưới-trái, không đè nút.
 - VideoPlayer (MP4/HLS): thêm tham số `fit` (RESIZE_MODE_FIT/ZOOM), cập nhật qua `AndroidView.update`.
 
+## 3h. Cập nhật 28/10/2026 (lần 7) — công tắc camera (admin)
+
+- Thêm `PUT /api/camera/{cam}/set/{feature}` body `{"value":"ON"|"OFF"}` cho 4 tính năng:
+  `enabled` (Camera), `detect`, `recordings`, `snapshots`. UI: sheet cài đặt của màn live.
+- API này yêu cầu role **admin**. Tài khoản `Minhquang` trong Frigate đã là admin;
+  nếu app hiển thị viewer thì đăng xuất/đăng nhập lại (role nằm trong JWT lúc login).
+- Mật khẩu admin của Frigate có thể reset bằng `auth: reset_admin_password: true` + restart
+  (in ra trong log add-on), sau đó nhớ đặt lại `false`.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

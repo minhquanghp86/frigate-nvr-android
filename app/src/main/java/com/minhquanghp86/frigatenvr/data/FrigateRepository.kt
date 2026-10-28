@@ -391,6 +391,11 @@ class FrigateRepository(
     /** WHEP qua proxy có xác thực của Frigate (không cần mở port 1984). */
     fun webRtcEndpoint(stream: String) = url("/api/go2rtc/webrtc?src=$stream")
 
+    /** Bật/tắt tính năng camera (API yêu cầu role admin). */
+    suspend fun setCameraFeature(camera: String, feature: String, on: Boolean) {
+        call { setCameraFeature(camera, feature, CameraSetBody(if (on) "ON" else "OFF")) }
+    }
+
     fun go2rtcHls(stream: String) = "${go2rtcBase()}/api/stream.m3u8?src=$stream"
 
     fun go2rtcMp4(stream: String) = "${go2rtcBase()}/api/stream.mp4?src=$stream"
