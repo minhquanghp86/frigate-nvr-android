@@ -26,7 +26,13 @@ Chi tiết API: [API-FRIGATE.md](API-FRIGATE.md).
 
 - **Build local** (JDK 17, Android SDK 34): `./gradlew assembleDebug assembleRelease` → xanh; `app-debug.apk` ≈ 21 MB, `app-release.apk` ≈ 15 MB (ký debug key).
 - **Frigate thật của người dùng**: `https://<ip-lan>:8971` — TLS self-signed, auth bật. `POST /api/login` trả 401 JSON khi sai mật khẩu (đúng hành vi), `/api/version` 401 khi không có token (nginx `auth_request`), `/api/login` được miễn auth. Port 5000 không mở ra LAN → app phải dùng 8971 + bật "tin chứng chỉ tự ký" (mặc định bật).
-- **CI**: build bằng GitHub-hosted runner `ubuntu-latest`, artifact `frigate-nvr-android-<version>`.
+- **CI**: chạy trên `ubuntu-latest` của GitHub, artifact `frigate-nvr-android-<version>` (≈ 14 MB) — run đầu tiên xanh ngày 28/10/2026.
+
+### Ghi chú sự cố CI đã gặp (đừng lặp lại)
+
+1. Repo **private** trên gói free → job không được cấp runner (fail sau ~3 s, 0 step) vì hết phút Actions. Đã chuyển repo sang **public** → dùng runner GitHub miễn phí.
+2. `android-actions/setup-android@v3` **đang hỏng**: nó gọi `sdkmanager tools`, package `tools` không còn trong SDK repo → `Failed to find package 'tools'`. Đã bỏ step này, chỉ ghi `sdk.dir` từ `ANDROID_SDK_ROOT` (runner ubuntu-latest có sẵn SDK + licenses, AGP tự tải package thiếu).
+
 
 ## 4. Việc còn lại
 
