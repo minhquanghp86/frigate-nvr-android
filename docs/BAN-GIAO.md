@@ -122,6 +122,16 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - Lưu trữ: `/api/recordings/storage` (admin) — thanh % theo camera.
 - Bộ lọc label lấy động từ `/api/labels`.
 
+## 3j. Cập nhật 28/10/2026 (lần 9) — deep link thông báo + tiện ích
+
+- **Thông báo mở đúng sự kiện**: notification mang `EXTRA_EVENT_ID`, MainActivity (`singleTop`)
+  đẩy vào `notify/DeepLinks`, `MainScaffold` điều hướng `event/{id}` (kể cả khi app cold-start
+  hoặc đang ở màn đăng nhập -> điều hướng sau khi login).
+- **Camera**: thẻ camera hiện sự kiện mới nhất (label + thời gian tương đối) lấy từ `/api/events?cameras=X&limit=1`.
+- **Sự kiện**: thêm nút **Lưu ảnh** (snapshot) cạnh Lưu clip/Xoá/Giữ.
+- **Xem lại**: nút **Tải** tải trọn 1 khung giờ ghi hình (`/api/{cam}/start/{s}/end/{e}/clip.mp4`,
+  mốc giờ tính theo timezone máy) về `Downloads/Frigate`.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

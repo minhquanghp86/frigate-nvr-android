@@ -248,3 +248,15 @@ fun VideoPlayer(
         }
     }
 }
+
+
+fun relTime(epoch: Double): String {
+    if (epoch <= 0) return "—"
+    val diff = (System.currentTimeMillis() / 1000.0 - epoch).toLong().coerceAtLeast(0)
+    return when {
+        diff < 60 -> "vừa xong"
+        diff < 3600 -> "${diff / 60} phút trước"
+        diff < 86400 -> "${diff / 3600} giờ trước"
+        else -> "${diff / 86400} ngày trước"
+    }
+}

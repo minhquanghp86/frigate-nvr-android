@@ -5,6 +5,7 @@ import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.rememberCoroutineScope
@@ -498,6 +499,30 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                     Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Tải clip", fontSize = 13.sp)
+                }
+            }
+
+            if (event.hasSnapshot) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            val saved = MediaSaver.save(
+                                context = context,
+                                client = repo.okhttp(),
+                                url = repo.eventSnapshot(event.id),
+                                fileName = "frigate-${event.id}.jpg",
+                                mime = "image/jpeg",
+                            )
+                            message = saved?.let { "Đã lưu: $it" } ?: "Không tải được ảnh"
+                            busy = false
+                        }
+                    },
+                    enabled = !busy,
+                ) {
+                    Icon(Icons.Outlined.Image, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Lưu ảnh", fontSize = 13.sp)
                 }
             }
 

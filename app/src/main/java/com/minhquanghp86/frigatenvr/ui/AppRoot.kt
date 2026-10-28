@@ -115,6 +115,15 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
     val route = backStack?.destination?.route
     val onDetail = route != null && route !in tabs.map { it.route }
 
+    // Điều hướng từ thông báo / deep link (mở đúng sự kiện).
+    val pendingRoute by com.minhquanghp86.frigatenvr.notify.DeepLinks.route.collectAsState()
+    LaunchedEffect(pendingRoute) {
+        pendingRoute?.let { target ->
+            navController.navigate(target) { launchSingleTop = true }
+            com.minhquanghp86.frigatenvr.notify.DeepLinks.clear()
+        }
+    }
+
     Scaffold(
         containerColor = IOSBackground,
         bottomBar = {

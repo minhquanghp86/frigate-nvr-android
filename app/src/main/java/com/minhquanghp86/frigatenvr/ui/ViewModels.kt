@@ -31,16 +31,35 @@ class CamerasViewModel(app: Application) : AndroidViewModel(app) {
     private val _state = MutableStateFlow<UiState<FrigateConfig>>(UiState.Loading)
     val state: StateFlow<UiState<FrigateConfig>> = _state.asStateFlow()
 
+    private val _latest = MutableStateFlow<Map<String, FrigateEvent>>(emptyMap())
+    val latest: StateFlow<Map<String, FrigateEvent>> = _latest.asStateFlow()
+
     init { refresh() }
 
     fun refresh() {
         _state.value = UiState.Loading
         viewModelScope.launch {
-            _state.value = try {
-                UiState.Ok(repo.call { config() })
+            val cfg = try {
+                repo.configCached()
             } catch (e: Exception) {
-                UiState.Error(e.message ?: "Không tải được cấu hình Frigate.")
+                _state.value = UiState.Error(e.message ?: "Không tải được cấu hình Frigate.")
+                return@launch
             }
+            _state.value = UiState.Ok(cfg)
+            _latest.value = cfg.enabledCameras.mapNotNull { cam ->
+                val ev = runCatching {
+                    repo.call {
+                        events(
+                            mapOf(
+                                "cameras" to cam,
+                                "limit" to "1",
+                                "include_thumbnails" to "0",
+                            ),
+                        )
+                    }.firstOrNull()
+                }.getOrNull()
+                ev?.let { cam to it }
+            }.toMap()
         }
     }
 
