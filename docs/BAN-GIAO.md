@@ -48,6 +48,14 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 
 
 
+## 3c. Cập nhật 28/10/2026 (lần 2) — live nhiều luồng + sửa HLS
+
+- **Xem lại lỗi `ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED`**: app gọi `/api/vod/...` (endpoint này trả JSON mapping cho nginx-vod, không phải playlist). Chuyển sang `/vod/{yyyy-mm}/{dd}/{hh}/{cam}/{tz}/master.m3u8`.
+- **Live có 3 luồng** (dropdown): MJPEG (Frigate, fps + độ phân giải chọn được) · HLS(go2rtc) · MP4(go2rtc).
+  MJPEG lấy từ luồng *detect* nên thường chỉ ~5 fps; HLS/MP4 đi thẳng go2rtc (port 1984) nên giữ fps gốc của camera.
+- Thêm ô **go2rtc URL** trong Cài đặt (mặc định tự suy ra `http://<ip-frigate>:1984`).
+- fps chọn được: 1/2/3/5/8/10/15; độ phân giải: 240/360/480/720/1080.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

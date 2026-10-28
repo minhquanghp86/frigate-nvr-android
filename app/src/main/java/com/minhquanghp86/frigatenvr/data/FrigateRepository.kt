@@ -83,6 +83,7 @@ class FrigateRepository(
             trustSelfSigned = prefs[KEY_TRUST] ?: true,
             token = prefs[KEY_TOKEN]?.takeIf { it.isNotBlank() },
             authDisabled = prefs[KEY_AUTH_OFF] ?: false,
+            go2rtcUrl = prefs[KEY_GO2RTC]?.takeIf { it.isNotBlank() },
         )
         _state.value = if (session.loggedIn) SessionState.Ready(session) else SessionState.Anonymous
     }
@@ -96,6 +97,7 @@ class FrigateRepository(
             p[KEY_TRUST] = s.trustSelfSigned
             p[KEY_TOKEN] = s.token.orEmpty()
             p[KEY_AUTH_OFF] = s.authDisabled
+            if (s.go2rtcUrl.isNullOrBlank()) p.remove(KEY_GO2RTC) else p[KEY_GO2RTC] = s.go2rtcUrl
         }
     }
 
@@ -146,6 +148,7 @@ class FrigateRepository(
                         trustSelfSigned = trustSelfSigned,
                         token = null,
                         authDisabled = true,
+                        go2rtcUrl = current?.go2rtcUrl,
                     )
                     persist(session)
                     _state.value = SessionState.Ready(session)
@@ -170,6 +173,7 @@ class FrigateRepository(
                         token = token,
                         authDisabled = false,
                         profile = profile,
+                        go2rtcUrl = current?.go2rtcUrl,
                     )
                     persist(session)
                     _state.value = SessionState.Ready(session)
@@ -227,6 +231,7 @@ class FrigateRepository(
         password: String? = null,
         remember: Boolean? = null,
         trustSelfSigned: Boolean? = null,
+        go2rtcUrl: String? = null,
     ): String? {
         val session = current ?: return "Chưa đăng nhập."
         val base = baseUrlRaw?.let { FrigateNet.normalizeBaseUrl(it) } ?: session.baseUrl
@@ -238,6 +243,7 @@ class FrigateRepository(
             password = password ?: session.password,
             rememberPassword = remember ?: session.rememberPassword,
             trustSelfSigned = trustSelfSigned ?: session.trustSelfSigned,
+            go2rtcUrl = go2rtcUrl?.trim()?.ifBlank { null } ?: session.go2rtcUrl,
         )
         persist(updated)
         client = null
@@ -357,11 +363,34 @@ class FrigateRepository(
     fun cameraMjpeg(camera: String, fps: Int, height: Int) =
         url("/api/$camera?fps=$fps&height=$height")
     fun reviewClip(id: String) = url("/api/review/$id/clip.mp4")
+
+    /**
+     * HLS của một khung giờ ghi hình. Frigate phục vụ HLS qua nginx-vod ở /vod/...
+     * (KHÔNG phải /api/vod/... — đường đó chỉ trả JSON mapping nên player báo
+     * ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED). Kèm timezone để khớp giờ app hiển thị.
+     */
     fun vodHour(day: String, hour: String, camera: String): String {
-        // day = "2026-10-28", hour = "14"
         val (y, m, d) = day.split("-")
-        return url("/api/vod/$y-$m/$d/$hour/$camera")
+        val tz = java.util.TimeZone.getDefault().id.replace("/", ",")
+        return url("/vod/$y-$m/$d/$hour/$camera/$tz/master.m3u8")
     }
+
+    // ------------------------------------------------------------------ go2rtc
+
+    /** go2rtc (mặc định http://<host-frigate>:1984) — luồng gốc, fps đầy đủ. */
+    fun go2rtcBase(): String {
+        val session = current ?: throw FrigateApiException("Chưa đăng nhập server Frigate.")
+        session.go2rtcUrl?.takeIf { it.isNotBlank() }?.let {
+            return FrigateNet.normalizeBaseUrl(it)
+        }
+        val host = runCatching { java.net.URI(session.baseUrl).host }.getOrNull()
+            ?: return FrigateNet.normalizeBaseUrl(session.baseUrl)
+        return "http://$host:1984"
+    }
+
+    fun go2rtcHls(stream: String) = "${go2rtcBase()}/api/stream.m3u8?src=$stream"
+
+    fun go2rtcMp4(stream: String) = "${go2rtcBase()}/api/stream.mp4?src=$stream"
 
     companion object {
         private val KEY_BASE = stringPreferencesKey("base_url")
@@ -371,5 +400,6 @@ class FrigateRepository(
         private val KEY_REMEMBER = booleanPreferencesKey("remember_password")
         private val KEY_TRUST = booleanPreferencesKey("trust_self_signed")
         private val KEY_AUTH_OFF = booleanPreferencesKey("auth_disabled")
+        private val KEY_GO2RTC = stringPreferencesKey("go2rtc_url")
     }
 }

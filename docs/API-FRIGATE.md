@@ -62,7 +62,7 @@ Response: `id, camera, start_time, end_time (epoch **hoặc** chuỗi ISO tùy v
 |---|---|---|---|
 | `/api/recordings/summary` | GET | `timezone`, `cameras` | `{"2026-10-28": true, ...}` — ngày nào có ghi |
 | `/api/{camera}/recordings/summary` | GET | `timezone` | `[{day, events, hours: [{hour:"14", events, motion, objects, duration}]}]` (mới nhất trước) |
-| `/api/vod/{yyyy-mm}/{dd}/{hh}/{camera}` | GET | — | **HLS m3u8** cho khung giờ đó |
+| `/vod/{yyyy-mm}/{dd}/{hh}/{camera}[/{tz}]/master.m3u8` | GET | — | **HLS thật** cho khung giờ (nginx-vod). `/api/vod/...` chỉ trả JSON mapping → player báo `PARSING_CONTAINER_UNSUPPORTED`. `tz` dạng `Asia,Ho_Chi_Minh` để khớp giờ app |
 | `/api/vod/{camera}/start/{ts}/end/{ts}` | GET | — | HLS theo khoảng tùy ý |
 | `/api/{camera}/start/{ts}/end/{ts}/clip.mp4` | GET | — | mp4 theo khoảng |
 | `/api/recordings/storage` | GET | — | Dung lượng (GĐ3) |
@@ -100,3 +100,17 @@ Response: `id, camera, start_time, end_time (epoch **hoặc** chuỗi ISO tùy v
 | `include_thumbnails` | deprecated nhưng vẫn nhận | vẫn gửi `0` |
 
 Unit test khoá các shape này: `app/src/test/java/.../data/ModelsTest.kt` (`./gradlew testReleaseUnitTest`).
+
+## 9. go2rtc (luồng fps gốc)
+
+Frigate chạy kèm go2rtc ở **port 1984** (trong addon host_network là IP máy HA, không có xác thực):
+
+| Endpoint | Dùng |
+|---|---|
+| `GET /api/streams` | Danh sách stream (vd `dahua1`, `ezviz_sub`...) |
+| `GET /api/stream.m3u8?src=<stream>` | Master HLS → variant `hls/playlist.m3u8?id=...`; ExoPlayer phát trực tiếp |
+| `GET /api/stream.mp4?src=<stream>` | fMP4 liên tục (H264/AAC passthrough), độ trễ thấp nhất |
+| `POST /api/webrtc?src=<stream>` | WHEP (SDP offer/answer) nếu sau này cần WebRTC |
+
+App dùng HLS/MP4 với `src` = tên stream trong `cameras.<cam>.live.streams` (fallback: tên camera).
+Bảo mật: go2rtc 1984 không có auth — nếu không muốn mở, phải chặn ở firewall và dùng MJPEG (qua Frigate).

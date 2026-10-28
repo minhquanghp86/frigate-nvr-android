@@ -315,6 +315,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         password: String,
         remember: Boolean,
         trust: Boolean,
+        go2rtcUrl: String? = null,
     ) {
         viewModelScope.launch {
             _busy.value = true
@@ -324,6 +325,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
                 password = password.ifBlank { null },
                 remember = remember,
                 trustSelfSigned = trust,
+                go2rtcUrl = go2rtcUrl,
             ) ?: "Đã lưu cài đặt."
             _busy.value = false
             refresh()

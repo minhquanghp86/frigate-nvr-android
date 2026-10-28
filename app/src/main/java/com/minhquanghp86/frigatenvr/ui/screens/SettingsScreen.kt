@@ -65,6 +65,7 @@ fun SettingsScreen(
     var baseUrl by remember(session.baseUrl) { mutableStateOf(session.baseUrl) }
     var username by remember(session.username) { mutableStateOf(session.username) }
     var passInput by remember { mutableStateOf("") }
+    var go2rtcUrl by remember(session.go2rtcUrl) { mutableStateOf(session.go2rtcUrl.orEmpty()) }
     var keepPass by remember { mutableStateOf(session.rememberPassword) }
     var trustCert by remember { mutableStateOf(session.trustSelfSigned) }
     var confirmLogout by remember { mutableStateOf(false) }
@@ -118,6 +119,21 @@ fun SettingsScreen(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                             modifier = Modifier.fillMaxWidth(),
                         )
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedTextField(
+                            value = go2rtcUrl,
+                            onValueChange = { go2rtcUrl = it },
+                            label = { Text("go2rtc URL (tuỳ chọn)") },
+                            placeholder = { Text("http://192.168.1.100:1984") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            "Để trống = tự suy ra http://<ip-frigate>:1984. Dùng cho luồng HLS/MP4 " +
+                                "fps gốc. Lưu ý: go2rtc không có xác thực.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = keepPass, onCheckedChange = { keepPass = it })
                             Text("Ghi nhớ mật khẩu", style = MaterialTheme.typography.bodyMedium)
@@ -137,6 +153,7 @@ fun SettingsScreen(
                                     password = passInput,
                                     remember = keepPass,
                                     trust = trustCert,
+                                    go2rtcUrl = go2rtcUrl,
                                 )
                                 passInput = ""
                             },

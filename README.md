@@ -11,10 +11,10 @@ App Android kết nối thẳng tới **API của Frigate NVR** (chạy như add
 | Mục | Nội dung |
 |---|---|
 | **Đăng nhập** | `POST /api/login` → JWT (cookie `frigate_token`) → mọi request gắn `Authorization: Bearer`. Tự đăng nhập lại khi token hết hạn, hỗ trợ Frigate tắt xác thực (chế độ ẩn danh), tùy chọn "tin chứng chỉ tự ký" cho TLS nội bộ. |
-| **Camera** | Lưới camera lấy ảnh `latest.jpg` làm mới mỗi 5s; bấm vào xem **live MJPEG** (`/api/{camera}`) có chọn fps/độ phân giải, đo fps thực tế; tự fallback sang chế độ ảnh tĩnh 2s nếu MJPEG lỗi. |
+| **Camera** | Lưới camera (`latest.jpg`, 5s). Xem live với 3 luồng chọn từ dropdown: **MJPEG** (Frigate, `/api/{camera}`, chọn fps + độ phân giải, đo fps thực) và **HLS / MP4 qua go2rtc** (luồng gốc, fps đầy đủ, độ trễ thấp). |
 | **Sự kiện** | Lưới thumbnail từ `/api/events`, bộ lọc camera/nhãn/chỉ có clip, phân trang vô hạn; chi tiết: snapshot có khung nhận diện, **clip mp4**, điểm nhận diện, vùng, thời gian. |
 | **Cần xem** | `/api/review` (chưa xem/đã xem), cảnh báo vs phát hiện, mô tả; bấm để **phát clip** và **đánh dấu đã xem** (`POST /api/reviews/viewed`). |
-| **Xem lại** | Chọn camera → ngày có ghi hình (`/api/recordings/summary`) → khung giờ (`/api/{camera}/recordings/summary`) → **phát HLS** (`/api/vod/{yyyy-mm}/{dd}/{hh}/{camera}`). |
+| **Xem lại** | Chọn camera → ngày có ghi hình (`/api/recordings/summary`) → khung giờ (`/api/{camera}/recordings/summary`) → **phát HLS** qua nginx-vod: `/vod/{yyyy-mm}/{dd}/{hh}/{camera}/{tz}/master.m3u8`. |
 | **Cài đặt** | Sửa URL server/tài khoản/mật khẩu/tín certificate, xem phiên bản Frigate (`/api/version`) và sức khỏe (`/api/stats`: CPU, bộ nhớ, fps từng camera), đăng xuất (có xác nhận). |
 
 ## Cài đặt

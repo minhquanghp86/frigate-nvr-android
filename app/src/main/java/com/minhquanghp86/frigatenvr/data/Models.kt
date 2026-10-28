@@ -88,6 +88,23 @@ data class FrigateCameraConfig(
 ) {
     val recording: Boolean get() = record.flag("enabled")
     val hasAudio: Boolean get() = audio.flag("enabled")
+
+    /** Tên stream go2rtc khai báo trong live.streams (0.18: object, bản cũ: mảng). */
+    val liveStreamNames: List<String>
+        get() {
+            val streams = live?.get("streams") ?: return emptyList()
+            return when (streams) {
+                is JsonObject -> streams.values.mapNotNull { it.textOrNull() }
+                is kotlinx.serialization.json.JsonArray -> streams.mapNotNull { it.textOrNull() }
+                else -> emptyList()
+            }
+        }
+}
+
+private fun JsonElement.textOrNull(): String? = try {
+    jsonPrimitive.content.takeIf { it.isNotBlank() }
+} catch (_: Exception) {
+    null
 }
 
 private fun JsonObject?.flag(key: String): Boolean =

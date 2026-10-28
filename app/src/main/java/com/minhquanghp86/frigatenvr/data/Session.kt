@@ -15,6 +15,8 @@ data class ServerSession(
     val token: String? = null,
     val authDisabled: Boolean = false,
     val profile: Profile? = null,
+    /** Ghi đè địa chỉ go2rtc (mặc định suy ra http://<host-frigate>:1984). */
+    val go2rtcUrl: String? = null,
 ) {
     val loggedIn: Boolean get() = authDisabled || !token.isNullOrBlank()
 

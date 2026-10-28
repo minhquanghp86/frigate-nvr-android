@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -28,6 +30,8 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,6 +47,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,8 +79,8 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 
-private val FPS_OPTIONS = listOf(1, 2, 3, 5, 10)
-private val HEIGHT_OPTIONS = listOf(240, 360, 480, 720)
+private val FPS_OPTIONS = listOf(1, 2, 3, 5, 8, 10, 15)
+private val HEIGHT_OPTIONS = listOf(240, 360, 480, 720, 1080)
 
 @Composable
 fun CamerasScreen(
@@ -212,82 +217,104 @@ fun CameraLiveScreen(
     onBack: () -> Unit,
 ) {
     val repo = rememberRepo()
-    var mjpegMode by remember { mutableStateOf(true) }
-    var fpsIndex by remember { mutableIntStateOf(FPS_OPTIONS.indexOf(5).coerceAtLeast(0)) }
-    var heightIndex by remember { mutableIntStateOf(HEIGHT_OPTIONS.indexOf(480).coerceAtLeast(0)) }
+    var modeName by rememberSaveable { mutableStateOf(LiveMode.MJPEG.name) }
+    var fps by rememberSaveable { mutableIntStateOf(8) }
+    var height by rememberSaveable { mutableIntStateOf(480) }
+    var streamName by remember(camera) { mutableStateOf(camera) }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var measuredFps by remember { mutableDoubleStateOf(0.0) }
-    var poll by remember { mutableIntStateOf(0) }
 
-    val fps = FPS_OPTIONS[fpsIndex]
-    val height = HEIGHT_OPTIONS[heightIndex]
+    val mode = runCatching { LiveMode.valueOf(modeName) }.getOrDefault(LiveMode.MJPEG)
+
+    // go2rtc stream name theo config (live.streams) — thường trùng tên camera.
+    LaunchedEffect(camera) {
+        val cfg = runCatching { repo.call { config() } }.getOrNull()
+        streamName = cfg?.cameras?.get(camera)?.liveStreamNames?.firstOrNull() ?: camera
+    }
 
     DisposableEffect(camera) {
         onDispose { bitmap = null }
     }
 
-    // Luồng MJPEG (live thật) hoặc ảnh tĩnh mỗi 2 giây.
-    LaunchedEffect(camera, mjpegMode, fps, height) {
+    LaunchedEffect(camera, mode, fps, height) {
         bitmap = null
         error = null
         measuredFps = 0.0
-        if (mjpegMode) {
-            val source = MjpegSource(repo.okhttp(), repo.cameraMjpeg(camera, fps, height))
-            var windowStart = System.currentTimeMillis()
-            var frames = 0
-            try {
-                source.frames().collect { frame ->
-                    bitmap = frame
-                    frames++
-                    val now = System.currentTimeMillis()
-                    if (now - windowStart >= 1000) {
-                        measuredFps = frames * 1000.0 / (now - windowStart)
-                        frames = 0
-                        windowStart = now
-                    }
+        if (mode != LiveMode.MJPEG) return@LaunchedEffect
+
+        val source = MjpegSource(repo.okhttp(), repo.cameraMjpeg(camera, fps, height))
+        var windowStart = System.currentTimeMillis()
+        var frames = 0
+        try {
+            source.frames().collect { frame ->
+                bitmap = frame
+                frames++
+                val now = System.currentTimeMillis()
+                if (now - windowStart >= 1000) {
+                    measuredFps = frames * 1000.0 / (now - windowStart)
+                    frames = 0
+                    windowStart = now
                 }
-                if (error == null) error = "Luồng MJPEG đã đóng."
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                error = e.message ?: "Không mở được luồng MJPEG."
             }
-        } else {
-            while (true) {
-                val loaded = withContext(Dispatchers.IO) {
-                    try {
-                        repo.okhttp()
-                            .newCall(Request.Builder().url(repo.cameraLatest(camera)).build())
-                            .execute()
-                            .use { resp ->
-                                if (resp.isSuccessful) {
-                                    resp.body?.byteStream()?.use(BitmapFactory::decodeStream)
-                                } else null
-                            }
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
-                if (loaded != null) bitmap = loaded
-                measuredFps = 0.5
-                delay(2_000)
-            }
+            if (error == null) error = "Luồng MJPEG đã đóng."
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            error = e.message ?: "Không mở được luồng MJPEG."
         }
+    }
+
+    val streamUrl = when (mode) {
+        LiveMode.MJPEG -> null
+        LiveMode.HLS -> repo.go2rtcHls(streamName)
+        LiveMode.MP4 -> repo.go2rtcMp4(streamName)
     }
 
     Column(modifier.fillMaxSize()) {
         ScreenHeader(
             title = camera,
-            subtitle = if (mjpegMode) "Live MJPEG" else "Ảnh tĩnh (2s)",
+            subtitle = when (mode) {
+                LiveMode.MJPEG -> "MJPEG · ${height}p · ${fps} fps"
+                LiveMode.HLS -> "HLS go2rtc · $streamName"
+                LiveMode.MP4 -> "MP4 go2rtc · $streamName"
+            },
             actions = {
-                IconButton(onClick = {
-                    mjpegMode = !mjpegMode
-                }) {
-                    Icon(Icons.Outlined.Videocam, contentDescription = "Đổi chế độ")
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Outlined.ArrowBack, contentDescription = "Quay lại")
                 }
             },
         )
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            DropdownField(
+                label = "Luồng",
+                value = mode.label,
+                options = LiveMode.values().map { it.name to it.label },
+                onSelect = { modeName = it },
+            )
+            if (mode == LiveMode.MJPEG) {
+                DropdownField(
+                    label = "FPS",
+                    value = "$fps",
+                    options = FPS_OPTIONS.map { it.toString() to "$it fps" },
+                    onSelect = { fps = it.toIntOrNull() ?: fps },
+                )
+                DropdownField(
+                    label = "Chất lượng",
+                    value = "${height}p",
+                    options = HEIGHT_OPTIONS.map { it.toString() to "${it}p" },
+                    onSelect = { height = it.toIntOrNull() ?: height },
+                )
+            }
+        }
 
         Box(
             Modifier
@@ -296,86 +323,116 @@ fun CameraLiveScreen(
                 .background(Color(0xFF000000)),
             contentAlignment = Alignment.Center,
         ) {
-            val current = bitmap
-            if (current != null) {
-                Image(
-                    bitmap = current.asImageBitmap(),
-                    contentDescription = "Camera $camera",
-                    contentScale = ContentScale.Fit,
+            if (streamUrl != null) {
+                com.minhquanghp86.frigatenvr.ui.VideoPlayer(
+                    url = streamUrl,
                     modifier = Modifier.fillMaxSize(),
                 )
-            } else if (error == null) {
-                CircularProgressIndicator()
             } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        error ?: "Không có dữ liệu",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(16.dp),
+                val current = bitmap
+                if (current != null) {
+                    Image(
+                        bitmap = current.asImageBitmap(),
+                        contentDescription = "Camera $camera",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
                     )
-                    Button(onClick = {
-                        mjpegMode = false
-                        error = null
-                    }) { Text("Chuyển sang ảnh tĩnh") }
-                }
-            }
-
-            Row(
-                Modifier
-                    .align(Alignment.TopStart)
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier
-                        .background(Color(0xAA111111), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 3.dp),
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier
-                                .size(7.dp)
-                                .background(Color(0xFFF87171), RoundedCornerShape(4.dp)),
+                } else if (error == null) {
+                    CircularProgressIndicator()
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(16.dp),
+                    ) {
+                        Text(
+                            error ?: "Không có dữ liệu",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                        Spacer(Modifier.width(5.dp))
-                        Text("LIVE", color = Color.White, fontSize = 11.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { modeName = LiveMode.HLS.name }) {
+                            Text("Thử HLS (go2rtc)")
+                        }
                     }
                 }
-                if (measuredFps > 0) {
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        String.format(Locale.getDefault(), "%.1f fps", measuredFps),
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        modifier = Modifier
-                            .background(Color(0xAA111111), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 3.dp),
-                    )
+
+                if (current != null) {
+                    Row(
+                        Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            Modifier
+                                .background(Color(0xAA111111), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 3.dp),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    Modifier
+                                        .size(7.dp)
+                                        .background(Color(0xFFF87171), RoundedCornerShape(4.dp)),
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Text("LIVE", color = Color.White, fontSize = 11.sp)
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            String.format(Locale.getDefault(), "%.1f fps", measuredFps),
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            modifier = Modifier
+                                .background(Color(0xAA111111), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 3.dp),
+                        )
+                    }
                 }
             }
         }
 
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            OutlinedButton(onClick = { mjpegMode = !mjpegMode }) {
-                Text(if (mjpegMode) "MJPEG" else "Ảnh tĩnh", fontSize = 12.sp)
-            }
-            AssistChip(
-                onClick = { fpsIndex = (fpsIndex + 1) % FPS_OPTIONS.size },
-                label = { Text("${fps} fps", fontSize = 12.sp) },
+        if (mode == LiveMode.MJPEG) {
+            Text(
+                "MJPEG lấy từ luồng detect của Frigate nên fps bị giới hạn theo luồng đó. " +
+                    "Chọn HLS/MP4 (go2rtc) để xem fps gốc của camera.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             )
-            AssistChip(
-                onClick = { heightIndex = (heightIndex + 1) % HEIGHT_OPTIONS.size },
-                label = { Text("${height}p", fontSize = 12.sp) },
-            )
-            Spacer(Modifier.weight(1f))
-            OutlinedButton(onClick = onBack) {
-                Text("Quay lại", fontSize = 12.sp)
+        }
+    }
+}
+
+private enum class LiveMode(val label: String) {
+    MJPEG("MJPEG (Frigate)"),
+    HLS("HLS (go2rtc)"),
+    MP4("MP4 (go2rtc)"),
+}
+
+@Composable
+private fun DropdownField(
+    label: String,
+    value: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        AssistChip(
+            onClick = { open = true },
+            label = { Text("$label: $value", fontSize = 12.sp) },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (key, text) ->
+                DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = {
+                        open = false
+                        onSelect(key)
+                    },
+                )
             }
         }
     }
