@@ -207,10 +207,20 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     modifier = Modifier,
                     eventId = entry.arguments?.getString("id").orEmpty(),
                     onBack = { navController.popBackStack() },
+                    onFullscreen = { url, pos ->
+                        com.minhquanghp86.frigatenvr.ui.PlayerStore.open(url, pos)
+                        navController.navigate("player")
+                    },
                 )
             }
             composable("timeline") {
-                TimelineScreen(modifier = Modifier)
+                TimelineScreen(
+                    modifier = Modifier,
+                    onFullscreen = { url, pos ->
+                        com.minhquanghp86.frigatenvr.ui.PlayerStore.open(url, pos)
+                        navController.navigate("player")
+                    },
+                )
             }
             composable(
                 "timeline/{camera}",
@@ -221,6 +231,10 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     initialCamera = entry.arguments?.getString("camera"),
                     showBack = true,
                     onBack = { navController.popBackStack() },
+                    onFullscreen = { url, pos ->
+                        com.minhquanghp86.frigatenvr.ui.PlayerStore.open(url, pos)
+                        navController.navigate("player")
+                    },
                 )
             }
             composable("settings") {
@@ -229,6 +243,11 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     session = state.session,
                     onOpenLogs = { navController.navigate("logs") },
                     onOpenStorage = { navController.navigate("storage") },
+                )
+            }
+            composable("player") {
+                com.minhquanghp86.frigatenvr.ui.screens.FullscreenPlayerScreen(
+                    onExit = { navController.popBackStack() },
                 )
             }
             composable("logs") {

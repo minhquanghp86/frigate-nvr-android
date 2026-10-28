@@ -194,6 +194,14 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - **Trả lại 4 switch tính năng camera** trong sheet bánh răng của live (Camera/Phát hiện/Ghi hình/Ảnh chụp).
 - **Nút hành động sự kiện**: 1 hàng 4 nút gọn (Giữ · Clip · Ảnh · Xoá) thay vì xuống dòng.
 
+## 3o. Cập nhật 28/10/2026 (lần 14) — toàn màn hình cho mọi trình phát
+
+- Thêm `PlayerStore` + route `player`: mọi `VideoPlayer` (clip sự kiện, khung giờ xem lại) có nút
+  toàn màn hình ở góc phải; bấm sẽ mở màn hình player riêng, **xoay ngang**, ẩn system bars,
+  thoát bằng nút hoặc Back (khôi phục dọc).
+- `VideoPlayer` nhận thêm `onFullscreen` (vẽ nút khi có) và `startPositionMs` (giữ đúng vị trí đang xem).
+- Live vẫn dùng cơ chế riêng (giữ thanh công cụ khi ngang).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
