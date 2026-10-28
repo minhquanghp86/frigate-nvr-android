@@ -67,6 +67,9 @@ class FrigateRepository(
     private val _notifyEnabled = MutableStateFlow(false)
     val notifyEnabled: StateFlow<Boolean> = _notifyEnabled.asStateFlow()
 
+    private val _notifyCameras = MutableStateFlow<Set<String>>(emptySet())
+    val notifyCameras: StateFlow<Set<String>> = _notifyCameras.asStateFlow()
+
     private val current: ServerSession?
         get() = (state.value as? SessionState.Ready)?.session
 
@@ -105,6 +108,11 @@ class FrigateRepository(
         _notifyEnabled.value = enabled
     }
 
+    suspend fun setNotifyCameras(cameras: Set<String>) {
+        store.edit { it[KEY_NOTIFY_CAMS] = cameras.joinToString(",") }
+        _notifyCameras.value = cameras
+    }
+
     /** Làm mới profile — role có thể đã đổi sau lần đăng nhập trước. */
     fun refreshProfile() {
         val session = current ?: return
@@ -120,6 +128,11 @@ class FrigateRepository(
     private suspend fun loadStoredSession() {
         val prefs = store.data.first()
         _notifyEnabled.value = prefs[KEY_NOTIFY] ?: false
+        _notifyCameras.value = prefs[KEY_NOTIFY_CAMS]
+            ?.split(",")
+            ?.filter { it.isNotBlank() }
+            ?.toSet()
+            ?: emptySet()
         val base = prefs[KEY_BASE].orEmpty()
         if (base.isBlank()) {
             _state.value = SessionState.Anonymous
@@ -455,6 +468,29 @@ class FrigateRepository(
 
     fun go2rtcMp4(stream: String) = "${go2rtcBase()}/api/stream.mp4?src=$stream"
 
+    /**
+     * Làm nóng producer của go2rtc trước khi mở live: go2rtc chỉ khởi động luồng khi có consumer,
+     * nên mở sớm (rồi hủy sau ~400ms) giúp camera bắt đầu kết nối RTSP trong lúc điều hướng.
+     */
+    fun warmStream(stream: String) {
+        scope.launch {
+            runCatching {
+                val client = clientFor(current ?: return@launch)
+                val call = client.newCall(
+                    okhttp3.Request.Builder().url(go2rtcMp4(stream)).build(),
+                )
+                val job = launch {
+                    runCatching { call.execute().use { it.body?.byteStream()?.read() } }
+                }
+                // Giữ consumer ~6s: đủ để WebRTC nối vào và dùng chung producer,
+                // sau đó nhả để không tốn băng thông.
+                kotlinx.coroutines.delay(6_000)
+                call.cancel()
+                job.cancel()
+            }
+        }
+    }
+
     companion object {
         private val KEY_BASE = stringPreferencesKey("base_url")
         private val KEY_USER = stringPreferencesKey("username")
@@ -465,5 +501,6 @@ class FrigateRepository(
         private val KEY_AUTH_OFF = booleanPreferencesKey("auth_disabled")
         private val KEY_GO2RTC = stringPreferencesKey("go2rtc_url")
         private val KEY_NOTIFY = booleanPreferencesKey("notify_enabled")
+        private val KEY_NOTIFY_CAMS = stringPreferencesKey("notify_cameras")
     }
 }

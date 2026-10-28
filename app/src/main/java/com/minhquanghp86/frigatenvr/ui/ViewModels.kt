@@ -92,6 +92,14 @@ class EventsViewModel(app: Application) : AndroidViewModel(app) {
     private val _onlyWithClip = MutableStateFlow(false)
     val onlyWithClip: StateFlow<Boolean> = _onlyWithClip.asStateFlow()
 
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+
+    fun setQuery(value: String) {
+        _query.value = value.trim()
+        refresh()
+    }
+
     private val _cameras = MutableStateFlow<List<String>>(emptyList())
     val cameras: StateFlow<List<String>> = _cameras.asStateFlow()
 
@@ -150,7 +158,12 @@ class EventsViewModel(app: Application) : AndroidViewModel(app) {
                     if (_onlyWithClip.value) put("has_clip", "1")
                     if (before != null) put("before", before.toString())
                 }
-                val list = repo.call { events(params) }
+                val q = _query.value
+                val list = if (q.isNotBlank()) {
+                    repo.call { eventsSearch(mapOf("query" to q, "limit" to "50")) }
+                } else {
+                    repo.call { events(params) }
+                }
                 val known = _items.value.map { it.id }.toSet()
                 val merged = _items.value + list.filterNot { it.id in known }
                 _items.value = merged

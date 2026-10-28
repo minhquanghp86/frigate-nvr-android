@@ -1,6 +1,9 @@
 package com.minhquanghp86.frigatenvr.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.OutlinedTextField
+import com.minhquanghp86.frigatenvr.ui.IOSBlue
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Delete
@@ -89,6 +92,7 @@ private fun labelLabel(value: String?): String = value ?: "Tất cả"
 fun EventsScreen(
     modifier: Modifier = Modifier,
     onOpenEvent: (String) -> Unit,
+    showHeader: Boolean = true,
 ) {
     val vm: EventsViewModel = viewModel()
     val items by vm.items.collectAsState()
@@ -112,7 +116,7 @@ fun EventsScreen(
     }
 
     Column(modifier.fillMaxSize()) {
-        ScreenHeader(
+        if (showHeader) ScreenHeader(
             title = "Sự kiện",
             subtitle = "${items.size} sự kiện" + if (onlyClip) " (chỉ có clip)" else "",
             actions = {
@@ -121,6 +125,26 @@ fun EventsScreen(
                 }
             },
         )
+
+        var searchInput by remember { mutableStateOf("") }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            OutlinedTextField(
+                value = searchInput,
+                onValueChange = { searchInput = it },
+                placeholder = { Text("Tìm sự kiện (AI)…", fontSize = 14.sp) },
+                singleLine = true,
+                shape = RoundedCornerShape(99.dp),
+                modifier = Modifier.weight(1f),
+            )
+            IconButton(onClick = { vm.setQuery(searchInput) }) {
+                Icon(Icons.Outlined.Search, contentDescription = "Tìm", tint = IOSBlue)
+            }
+        }
 
         Row(
             Modifier

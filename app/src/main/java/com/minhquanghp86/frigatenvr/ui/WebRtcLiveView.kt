@@ -93,15 +93,17 @@ fun WebRtcLiveView(
     fit: Boolean = true,
     muted: Boolean = false,
     showStats: Boolean = false,
+    onFirstFrame: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val repo = rememberRepo()
     val client = remember { repo.okhttp() }
 
-    var status by remember(endpoint) { mutableStateOf("Đang kết nối WebRTC…") }
+    var status by remember(endpoint) { mutableStateOf("Đang kết nối…") }
     var showOverlay by remember(endpoint) { mutableStateOf(true) }
     var videoAspect by remember(endpoint) { mutableStateOf<Float?>(null) }
     var statsText by remember(endpoint) { mutableStateOf("") }
+    var firstFrameSeen by remember(endpoint) { mutableStateOf(false) }
 
     val eglBase = remember { EglBase.create() }
     val renderer = remember {
@@ -130,6 +132,10 @@ fun WebRtcLiveView(
                     if (w > 0 && h > 0) videoAspect = w / h
                 }
                 renderer.onFrame(frame)
+                if (!firstFrameSeen) {
+                    firstFrameSeen = true
+                    onFirstFrame()
+                }
             }
         }
     }
@@ -264,10 +270,8 @@ fun WebRtcLiveView(
             // go2rtc dùng non-trickle: chờ gom ICE rồi mới gửi offer (tối đa 3s).
             withTimeoutOrNull(700) { iceGathered.await() }
 
-            status = "Đang trao đổi SDP…"
             val answer = withContext(Dispatchers.IO) { postOffer(client, endpoint, offer.description) }
             pc.setRemoteDescriptionAwait(SessionDescription(SessionDescription.Type.ANSWER, answer))
-            status = "Đang chờ hình ảnh…"
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -304,27 +308,34 @@ fun WebRtcLiveView(
         }
 
         if (showOverlay) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Transparent),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(20.dp),
+            val isError = status.contains("Lỗi") || status.contains("mất kết nối")
+            if (isError) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .background(Color(0x99000000)),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    if (!status.contains("Lỗi") && !status.contains("mất kết nối")) {
-                        CircularProgressIndicator()
-                    }
                     Text(
                         status,
                         color = Color.White,
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(top = 12.dp),
+                        modifier = Modifier.padding(24.dp),
                     )
                 }
+            } else {
+                // Chip nhỏ ở đáy: không che ảnh poster, không tạo cảm giác "đang quay".
+                Text(
+                    status,
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 14.dp)
+                        .background(Color(0x99000000), RoundedCornerShape(99.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                )
             }
         }
     }

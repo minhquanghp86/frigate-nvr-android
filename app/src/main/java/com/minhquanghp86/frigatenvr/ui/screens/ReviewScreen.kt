@@ -56,7 +56,7 @@ import com.minhquanghp86.frigatenvr.ui.fmtDuration
 import com.minhquanghp86.frigatenvr.ui.rememberRepo
 
 @Composable
-fun ReviewScreen(modifier: Modifier = Modifier) {
+fun ReviewScreen(modifier: Modifier = Modifier, showHeader: Boolean = true) {
     val vm: ReviewViewModel = viewModel()
     val items by vm.items.collectAsState()
     val loading by vm.loading.collectAsState()
@@ -64,7 +64,7 @@ fun ReviewScreen(modifier: Modifier = Modifier) {
     val unreadOnly by vm.unreadOnly.collectAsState()
 
     Column(modifier.fillMaxSize()) {
-        ScreenHeader(
+        if (showHeader) ScreenHeader(
             title = "Cần xem",
             subtitle = "${items.size} mục " + if (unreadOnly) "chưa xem" else "đã xem",
             actions = {

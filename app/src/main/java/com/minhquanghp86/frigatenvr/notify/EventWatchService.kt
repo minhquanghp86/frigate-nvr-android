@@ -140,8 +140,10 @@ class EventWatchService : Service() {
                         ),
                     )
                 }
+                val cameraFilter = repo.notifyCameras.value
                 for (e in events.sortedBy { it.startTime }) {
                     if (!seen.add(e.id)) continue
+                    if (cameraFilter.isNotEmpty() && e.camera !in cameraFilter) continue
                     if (e.startTime > lastAfter) lastAfter = e.startTime
                     if (e.hasSnapshot || e.hasClip) postEvent(e)
                 }

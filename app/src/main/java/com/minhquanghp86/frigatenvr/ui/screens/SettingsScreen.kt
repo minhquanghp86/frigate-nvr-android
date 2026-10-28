@@ -83,6 +83,9 @@ fun SettingsScreen(
     val busy by vm.busy.collectAsState()
     val message by vm.message.collectAsState()
     val notifyEnabled by repo.notifyEnabled.collectAsState()
+    val notifyCameras by repo.notifyCameras.collectAsState()
+    var showCameraPicker by remember { mutableStateOf(false) }
+    var allCameras by remember { mutableStateOf<List<String>>(emptyList()) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -93,6 +96,10 @@ fun SettingsScreen(
     var keepPass by remember { mutableStateOf(session.rememberPassword) }
     var trustCert by remember { mutableStateOf(session.trustSelfSigned) }
     var confirmLogout by remember { mutableStateOf(false) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        allCameras = runCatching { repo.configCached().enabledCameras }.getOrDefault(emptyList())
+    }
 
     val permLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
@@ -178,6 +185,13 @@ fun SettingsScreen(
                         subtitle = "Chạy nền, báo khi Frigate phát hiện đối tượng",
                         checked = notifyEnabled,
                         onChange = { setNotifications(it) },
+                    )
+                    IosDivider(16)
+                    IosRow(
+                        "Camera nhận thông báo",
+                        value = if (notifyCameras.isEmpty()) "Tất cả" else "${notifyCameras.size} camera",
+                        chevron = true,
+                        onClick = { showCameraPicker = true },
                     )
                 }
             }
@@ -281,6 +295,42 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (showCameraPicker) {
+        AlertDialog(
+            onDismissRequest = { showCameraPicker = false },
+            title = { Text("Camera nhận thông báo") },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    Text(
+                        "Bỏ chọn hết = nhận thông báo cho tất cả camera.",
+                        fontSize = 12.sp,
+                        color = IOSSecondaryLabel,
+                    )
+                    allCameras.forEach { cam ->
+                        androidx.compose.foundation.layout.Row(
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = cam in notifyCameras,
+                                onCheckedChange = { on ->
+                                    scope.launch {
+                                        repo.setNotifyCameras(
+                                            if (on) notifyCameras + cam else notifyCameras - cam,
+                                        )
+                                    }
+                                },
+                            )
+                            Text(cam)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showCameraPicker = false }) { Text("Xong") }
+            },
+        )
     }
 
     if (confirmLogout) {

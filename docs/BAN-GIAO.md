@@ -132,6 +132,27 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - **Xem lại**: nút **Tải** tải trọn 1 khung giờ ghi hình (`/api/{cam}/start/{s}/end/{e}/clip.mp4`,
   mốc giờ tính theo timezone máy) về `Downloads/Frigate`.
 
+## 3k. Cập nhật 28/10/2026 (lần 10) — tìm hiểu app tham khảo + live "tức thì"
+
+**App tham khảo (sp-engineering/frigate-viewer) phát live thế nào?**
+- KHÔNG phát video cho live. `views/camera-preview/LivePreview.tsx` chỉ là `<Image>` trỏ tới
+  `/api/{camera}/latest.jpg?bbox=1&ts=…` và refresh theo `refreshFrequency` (mặc định **10 giây**).
+- Thư viện `@lunarr/vlc-player` (libVLC) chỉ dùng ở `views/camera-event-clip` để phát **clip**.
+- Vì vậy nó "hiện ngay" vì đó là một ảnh JPEG (~12ms), không phải luồng video.
+
+**Cách của app ta (tốt hơn cả hai)**
+- Thêm chế độ **AUTO (mặc định)**: MJPEG của Frigate hiện ngay (~0.2s, ảnh động ~5fps theo luồng detect),
+  đồng thời WebRTC nối song song; **khi WebRTC có frame đầu** thì phủ lên toàn màn (không có khoảng đen,
+  nhờ mount WebRTC ở 1dp trong lúc chờ). Poster `latest.jpg` vẫn hiện trước frame MJPEG đầu tiên.
+- Warm producer go2rtc khi chạm camera (giữ consumer ~6s) → WebRTC vào nhanh hơn.
+- Bỏ chữ "Đang trao đổi SDP…", chỉ còn chip nhỏ ở đáy.
+- Lý do MP4 chậm: `api/stream.mp4` TTFB ~4.2s (chờ keyframe), sau warm còn ~2.5s.
+
+**Khác**
+- Gộp tab: "Sự kiện" + "Cần xem" → một tab **Sự kiện** với segmented control (còn 4 tab).
+- Tìm kiếm sự kiện bằng AI: `GET /api/events/search?query=…` (ô tìm kiếm trong tab Sự kiện).
+- Lọc thông báo theo camera (Cài đặt → Thông báo → Camera nhận thông báo).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
