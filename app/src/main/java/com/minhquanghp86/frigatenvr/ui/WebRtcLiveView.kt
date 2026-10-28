@@ -3,6 +3,7 @@ package com.minhquanghp86.frigatenvr.ui
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +51,8 @@ import org.webrtc.RtpTransceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
 import org.webrtc.SurfaceViewRenderer
+import org.webrtc.VideoFrame
+import org.webrtc.VideoSink
 import org.webrtc.VideoTrack
 
 @Volatile
@@ -84,6 +87,9 @@ fun WebRtcLiveView(
 
     var status by remember(endpoint) { mutableStateOf("Đang kết nối WebRTC…") }
     var showOverlay by remember(endpoint) { mutableStateOf(true) }
+    // Tỉ lệ khung hình thật của video (đọc từ frame đầu tiên) để ép View đúng tỉ lệ,
+    // tránh việc renderer phóng/cắt khi view hình chữ nhật khác tỉ lệ.
+    var videoAspect by remember(endpoint) { mutableStateOf<Float?>(null) }
 
     val eglBase = remember { EglBase.create() }
     val renderer = remember {
@@ -103,6 +109,19 @@ fun WebRtcLiveView(
             .createPeerConnectionFactory()
     }
     val pcHolder = remember { arrayOfNulls<PeerConnection>(1) }
+    val sink = remember {
+        object : VideoSink {
+            override fun onFrame(frame: VideoFrame) {
+                if (videoAspect == null) {
+                    // rotatedWidth/Height đã tính cả rotation của frame.
+                    val w = frame.rotatedWidth.toFloat()
+                    val h = frame.rotatedHeight.toFloat()
+                    if (w > 0 && h > 0) videoAspect = w / h
+                }
+                renderer.onFrame(frame)
+            }
+        }
+    }
 
     DisposableEffect(endpoint) {
         onDispose {
@@ -130,18 +149,18 @@ fun WebRtcLiveView(
                 override fun onIceCandidate(candidate: IceCandidate?) = Unit
                 override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) = Unit
                 override fun onAddStream(stream: MediaStream?) {
-                    stream?.videoTracks?.firstOrNull()?.addSink(renderer)
+                    stream?.videoTracks?.firstOrNull()?.addSink(sink)
                 }
 
                 override fun onRemoveStream(stream: MediaStream?) = Unit
                 override fun onDataChannel(channel: DataChannel?) = Unit
                 override fun onRenegotiationNeeded() = Unit
                 override fun onAddTrack(receiver: RtpReceiver?, streams: Array<out MediaStream>?) {
-                    (receiver?.track() as? VideoTrack)?.addSink(renderer)
+                    (receiver?.track() as? VideoTrack)?.addSink(sink)
                 }
 
                 override fun onTrack(transceiver: RtpTransceiver?) {
-                    (transceiver?.receiver?.track() as? VideoTrack)?.addSink(renderer)
+                    (transceiver?.receiver?.track() as? VideoTrack)?.addSink(sink)
                 }
 
                 override fun onConnectionChange(state: PeerConnection.PeerConnectionState?) {
@@ -195,7 +214,17 @@ fun WebRtcLiveView(
             .background(Color.Black),
         contentAlignment = Alignment.Center,
     ) {
-        AndroidView(factory = { renderer }, modifier = Modifier.fillMaxSize())
+        val aspect = videoAspect
+        AndroidView(
+            factory = { renderer },
+            modifier = if (aspect != null) {
+                Modifier
+                    .align(Alignment.Center)
+                    .aspectRatio(aspect)
+            } else {
+                Modifier.fillMaxSize()
+            },
+        )
         if (showOverlay) {
             Box(
                 Modifier

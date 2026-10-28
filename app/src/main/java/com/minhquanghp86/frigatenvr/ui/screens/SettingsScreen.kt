@@ -73,7 +73,7 @@ fun SettingsScreen(
     Column(modifier.fillMaxSize()) {
         ScreenHeader(
             title = "Cài đặt",
-            subtitle = "${session.baseUrl} · vai trò ${session.role}",
+            subtitle = "${session.baseUrl} · vai trò ${session.role} · app v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}",
         )
 
         LazyColumn(

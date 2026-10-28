@@ -78,6 +78,12 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
   `api: {listen: "127.0.0.1:1984"}` (nginx vẫn nối 127.0.0.1, LAN bị chặn) —
   khi đó MP4/HLS trong app ngừng dùng được, WebRTC/MJPEG vẫn chạy.
 
+## 3f. Cập nhật 28/10/2026 (lần 5) — ép tỉ lệ khung live + hiện version app
+
+- WebRTC: đọc `VideoFrame.rotatedWidth/Height` từ frame đầu để biết tỉ lệ thật, ép `Modifier.aspectRatio`
+  cho SurfaceViewRenderer (không còn phụ thuộc chế độ scale của renderer) + vẫn để `SCALE_ASPECT_FIT`.
+- Cài đặt hiện thêm `app v<versionName>` (BuildConfig.VERSION_NAME) để xác nhận bản đang cài.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
