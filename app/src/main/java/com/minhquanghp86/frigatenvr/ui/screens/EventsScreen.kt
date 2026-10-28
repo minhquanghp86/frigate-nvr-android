@@ -327,6 +327,7 @@ fun EventDetailScreen(
     modifier: Modifier = Modifier,
     eventId: String,
     onBack: () -> Unit,
+    onFullscreen: (String, Long) -> Unit = { _, _ -> },
 ) {
     val repo = rememberRepo()
     var event by remember(eventId) { mutableStateOf<FrigateEvent?>(null) }
@@ -378,6 +379,7 @@ fun EventDetailScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .aspectRatio(16f / 9f),
+                                onFullscreen = { onFullscreen(repo.eventClip(current.id), 0L) },
                             )
                         } else if (current.hasSnapshot) {
                             FrigateImage(

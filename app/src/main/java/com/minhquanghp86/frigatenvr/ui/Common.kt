@@ -2,6 +2,9 @@ package com.minhquanghp86.frigatenvr.ui
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.outlined.Fullscreen
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -185,6 +188,7 @@ fun VideoPlayer(
     playWhenReady: Boolean = true,
     fit: Boolean = true,
     startPositionMs: Long = 0L,
+    onFullscreen: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val repo = rememberRepo()
@@ -244,6 +248,23 @@ fun VideoPlayer(
                 }
             },
         )
+        if (onFullscreen != null) {
+            IconButton(
+                onClick = onFullscreen,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(36.dp)
+                    .background(Color(0x99202429), RoundedCornerShape(8.dp)),
+            ) {
+                Icon(
+                    Icons.Outlined.Fullscreen,
+                    contentDescription = "Toàn màn hình",
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
         if (error != null) {
             Text(
                 text = "Không phát được video ($error)",

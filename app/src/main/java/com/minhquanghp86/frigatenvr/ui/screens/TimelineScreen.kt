@@ -76,6 +76,7 @@ fun TimelineScreen(
     initialCamera: String? = null,
     showBack: Boolean = false,
     onBack: () -> Unit = {},
+    onFullscreen: (String, Long) -> Unit = { _, _ -> },
 ) {
     val vm: TimelineViewModel = viewModel()
     val cameras by vm.cameras.collectAsState()
@@ -230,6 +231,7 @@ fun TimelineScreen(
                             url = stream,
                             startPositionMs = startPosMs,
                             modifier = Modifier.fillMaxSize(),
+                            onFullscreen = { onFullscreen(stream, startPosMs) },
                         )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
