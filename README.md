@@ -15,6 +15,9 @@ App Android kết nối thẳng tới **API của Frigate NVR** (chạy như add
 | **Sự kiện** | Lưới thumbnail từ `/api/events`, bộ lọc camera/nhãn/chỉ có clip, phân trang vô hạn; chi tiết: snapshot có khung nhận diện, **clip mp4**, điểm nhận diện, vùng, thời gian. |
 | **Cần xem** | `/api/review` (chưa xem/đã xem), cảnh báo vs phát hiện, mô tả; bấm để **phát clip** và **đánh dấu đã xem** (`POST /api/reviews/viewed`). |
 | **Xem lại** | Chọn camera → ngày có ghi hình (`/api/recordings/summary`) → khung giờ (`/api/{camera}/recordings/summary`) → **phát HLS** qua nginx-vod: `/vod/{yyyy-mm}/{dd}/{hh}/{camera}/{tz}/master.m3u8`. |
+| **Thông báo** | Foreground service theo dõi `/api/events`, bắn thông báo khi có đối tượng mới; bật/tắt trong Cài đặt (kênh "Thông báo sự kiện", có hành động Dừng). |
+| **Sự kiện (hành động)** | Giữ vĩnh viễn (`POST /api/events/{id}/retain`), bỏ giữ, xoá sự kiện (`DELETE /api/events/{id}`), tải clip về Downloads. |
+| **Hệ thống** | Nhật ký (`/api/logs/{service}`) và dung lượng ghi hình theo camera (`/api/recordings/storage`, yêu cầu admin). |
 | **Cài đặt** | Sửa URL server/tài khoản/mật khẩu/tín certificate, xem phiên bản Frigate (`/api/version`) và sức khỏe (`/api/stats`: CPU, bộ nhớ, fps từng camera), đăng xuất (có xác nhận). |
 
 ## Cài đặt
@@ -71,6 +74,10 @@ app/src/main/java/com/minhquanghp86/frigatenvr/
     ├── ViewModels.kt        # Camera / Sự kiện / Review / Timeline / Cài đặt
     └── screens/             # Login, Cameras, Events, Review, Timeline, Settings
 ```
+
+## Giao diện
+
+Phong cách iOS: nền đen, nhóm cài đặt inset-grouped, tiêu đề lớn, pill filter, segmented control, thanh tab trong mờ — kết hợp tính năng native (WebRTC, ExoPlayer, foreground service).
 
 ## Lộ trình
 

@@ -171,25 +171,7 @@ fun ScreenHeader(
     subtitle: String? = null,
     actions: @Composable () -> Unit = {},
 ) {
-    Row(
-        modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            if (subtitle != null) {
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        actions()
-    }
+    LargeTitleHeader(title = title, subtitle = subtitle, trailing = actions)
 }
 
 /** Trình phát video (mp4/HLS) — tự giải phóng khi rời màn hình. */

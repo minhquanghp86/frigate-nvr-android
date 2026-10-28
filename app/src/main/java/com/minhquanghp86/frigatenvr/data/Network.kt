@@ -8,6 +8,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
@@ -68,6 +69,27 @@ interface FrigateApi {
         @Path("camera") camera: String,
         @Query("timezone") timezone: String,
     ): List<DayRecordings>
+
+    @DELETE("api/events/{id}")
+    suspend fun deleteEvent(@Path("id") id: String): retrofit2.Response<ResponseBody>
+
+    @POST("api/events/{id}/retain")
+    suspend fun retainEvent(@Path("id") id: String): retrofit2.Response<ResponseBody>
+
+    @DELETE("api/events/{id}/retain")
+    suspend fun unretenEvent(@Path("id") id: String): retrofit2.Response<ResponseBody>
+
+    @GET("api/labels")
+    suspend fun labels(): List<String>
+
+    @GET("api/logs/{service}")
+    suspend fun logs(@Path("service") service: String): ResponseBody
+
+    @GET("api/recordings/storage")
+    suspend fun storage(): kotlinx.serialization.json.JsonElement
+
+    @GET("api/notices")
+    suspend fun notices(): kotlinx.serialization.json.JsonElement
 
     // Frigate 0.18 trả PlainTextResponse (vd "0.18.2-cfa08c5"), không phải JSON object.
     @GET("api/version")

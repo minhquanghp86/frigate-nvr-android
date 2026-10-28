@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.minhquanghp86.frigatenvr.data.ReviewItem
+import com.minhquanghp86.frigatenvr.ui.IOSCard
 import com.minhquanghp86.frigatenvr.ui.ErrorBox
 import com.minhquanghp86.frigatenvr.ui.FrigateImage
 import com.minhquanghp86.frigatenvr.ui.LoadingBox
@@ -124,7 +125,7 @@ private fun ReviewRow(item: ReviewItem, onMarkViewed: () -> Unit) {
 
     Card(
         onClick = { expanded = !expanded },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = IOSCard),
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
