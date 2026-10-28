@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -298,6 +299,7 @@ fun TimelineScreen(
                         Modifier
                             .width((24 * HOUR_DP).dp)
                             .height(104.dp)
+                            .heightIn(min = 40.dp)
                             .pointerInput(day) {
                                 awaitEachGesture {
                                     val down = awaitFirstDown(requireUnconsumed = false)
@@ -353,6 +355,9 @@ fun TimelineScreen(
                     ) {
                         val w = size.width
                         val h = size.height
+                        // Lúc xoay màn hình/measure lại, Canvas có thể bị đo 0 -> drawText sẽ
+                        // ném "maxHeight(-4) must be >= minHeight(0)". Bỏ qua khi chưa có kích thước.
+                        if (w <= 0f || h <= 4f) return@Canvas
                         val pxPerMin = w / 1440f
                         val top = 26f
                         val bottom = h - 12f
@@ -379,7 +384,7 @@ fun TimelineScreen(
                                 end = Offset(x, bottom),
                                 strokeWidth = 1f,
                             )
-                            if (hour % 2 == 0 && hour < 24) {
+                            if (hour % 2 == 0 && hour < 24 && h > 20f) {
                                 drawText(
                                     textMeasurer = textMeasurer,
                                     text = "%02d:00".format(hour),
@@ -425,19 +430,21 @@ fun TimelineScreen(
                         )
                         val bw = bubble.size.width + 16f
                         val bh = bubble.size.height + 8f
-                        val bx = (px - bw / 2).coerceIn(0f, w - bw)
-                        drawRoundRect(
-                            color = IOSRed,
-                            topLeft = Offset(bx, h - bh - 2f),
-                            size = Size(bw, bh),
-                            cornerRadius = CornerRadius(bh / 2, bh / 2),
-                        )
-                        drawText(
-                            textMeasurer = textMeasurer,
-                            text = label,
-                            topLeft = Offset(bx + 8f, h - bh + 2f),
-                            style = TextStyle(color = Color.White, fontSize = 11.sp),
-                        )
+                        val bx = (px - bw / 2).coerceIn(0f, (w - bw).coerceAtLeast(0f))
+                        if (h > bh + 12f) {
+                            drawRoundRect(
+                                color = IOSRed,
+                                topLeft = Offset(bx, h - bh - 2f),
+                                size = Size(bw, bh),
+                                cornerRadius = CornerRadius(bh / 2, bh / 2),
+                            )
+                            drawText(
+                                textMeasurer = textMeasurer,
+                                text = label,
+                                topLeft = Offset(bx + 8f, h - bh + 2f),
+                                style = TextStyle(color = Color.White, fontSize = 11.sp),
+                            )
+                        }
                         // tay nắm để kéo thanh thời gian
                         drawCircle(
                             color = IOSOrange,

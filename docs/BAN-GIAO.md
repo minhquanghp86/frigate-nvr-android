@@ -238,6 +238,16 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - Thêm nút **Copy** (clipboard), **Chia sẻ** (ACTION_SEND), và **Xoá log** (chỉ ở nguồn "Ứng dụng").
 - Xem log "Ứng dụng" tự tắt chế độ tự cập nhật để không phá vùng bôi đen.
 
+## 3t. Cập nhật 29/10/2026 — sửa crash Canvas Timeline (từ crash log)
+
+Log người dùng gửi: `IllegalArgumentException: maxHeight(-4) must be >= than minHeight(0)` tại
+`TimelineScreen.kt:383` (drawText). Nguyên nhân: khi xoay màn hình/measure lại, Canvas bị đo cao 0
+nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
+- `if (w <= 0f || h <= 4f) return@Canvas`
+- chỉ vẽ nhãn giờ khi `h > 20f`; bong bóng thời gian khi `h > bh + 12f`
+- thêm `heightIn(min = 40.dp)` cho Canvas
+(Đây chính là crash khi bấm Toàn màn hình ở trình xem lại — xoay ngang làm Canvas measure lại.)
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
