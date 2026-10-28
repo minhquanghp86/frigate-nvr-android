@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 object Notify {
     const val CHANNEL_EVENTS = "frigate_events"
     const val CHANNEL_SERVICE = "frigate_watch"
+    const val CHANNEL_DOWNLOADS = "frigate_downloads"
     const val FOREGROUND_ID = 1001
 
     fun ensureChannels(context: Context) {
@@ -36,6 +37,13 @@ object Notify {
                 "Sự kiện camera",
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply { description = "Thông báo khi Frigate phát hiện đối tượng" },
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_DOWNLOADS,
+                "Tải media",
+                NotificationManager.IMPORTANCE_LOW,
+            ).apply { description = "Tiến trình tải clip/ảnh về máy" },
         )
         nm.createNotificationChannel(
             NotificationChannel(

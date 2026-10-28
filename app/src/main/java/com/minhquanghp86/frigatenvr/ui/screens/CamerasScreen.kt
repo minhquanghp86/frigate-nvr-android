@@ -298,6 +298,11 @@ fun CameraLiveScreen(
     var measuredFps by remember { mutableDoubleStateOf(0.0) }
     var webrtcReady by remember(camera) { mutableStateOf(false) }
     var events by remember(camera) { mutableStateOf<List<FrigateEvent>>(emptyList()) }
+    var onEnabled by remember(camera) { mutableStateOf(true) }
+    var onDetect by remember(camera) { mutableStateOf(true) }
+    var onRecord by remember(camera) { mutableStateOf(false) }
+    var onSnapshot by remember(camera) { mutableStateOf(false) }
+    var featureError by remember { mutableStateOf<String?>(null) }
     var eventsLoading by remember { mutableStateOf(false) }
     var allCameras by remember { mutableStateOf<List<String>>(emptyList()) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -307,7 +312,7 @@ fun CameraLiveScreen(
 
     fun applyFullscreen(on: Boolean) {
         immersive = on
-        chromeVisible = !on
+        chromeVisible = true
         panel = if (on) 0 else panel
         val act = activity ?: return
         act.requestedOrientation = if (on) {
@@ -386,6 +391,10 @@ fun CameraLiveScreen(
         val cam = cfg?.cameras?.get(camera)
         streamName = cam?.liveStreamNames?.firstOrNull() ?: camera
         allCameras = cfg?.enabledCameras.orEmpty()
+        onEnabled = cam?.enabled ?: true
+        onDetect = cam?.detectOn ?: true
+        onRecord = cam?.recording ?: false
+        onSnapshot = cam?.snapshotsOn ?: false
     }
 
     LaunchedEffect(panel, camera, dataVersion) {
@@ -435,6 +444,18 @@ fun CameraLiveScreen(
         }
     }
 
+    fun toggleFeature(feature: String, value: Boolean, revert: () -> Unit) {
+        scope.launch {
+            try {
+                repo.setCameraFeature(camera, feature, value)
+                featureError = null
+            } catch (e: Exception) {
+                revert()
+                featureError = e.message ?: "Không đổi được $feature"
+            }
+        }
+    }
+
     val streamUrl = when (mode) {
         LiveMode.MJPEG, LiveMode.WEBRTC, LiveMode.AUTO -> null
         LiveMode.HLS -> repo.go2rtcHls(streamName)
@@ -454,11 +475,8 @@ fun CameraLiveScreen(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                     ) {
-                        if (immersive) {
-                            applyFullscreen(false)
-                        } else {
-                            chromeVisible = !chromeVisible
-                        }
+                        // Ở chế độ ngang, chạm chỉ ẩn/hiện nút; thoát bằng nút Toàn màn hình.
+                        chromeVisible = !chromeVisible
                     },
                 contentAlignment = Alignment.Center,
             ) {
@@ -708,6 +726,27 @@ fun CameraLiveScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("Camera $camera", style = MaterialTheme.typography.titleMedium)
+
+                ToggleRow("Camera", onEnabled) { v ->
+                    onEnabled = v
+                    toggleFeature("enabled", v) { onEnabled = !v }
+                }
+                ToggleRow("Phát hiện đối tượng", onDetect) { v ->
+                    onDetect = v
+                    toggleFeature("detect", v) { onDetect = !v }
+                }
+                ToggleRow("Ghi hình", onRecord) { v ->
+                    onRecord = v
+                    toggleFeature("recordings", v) { onRecord = !v }
+                }
+                ToggleRow("Ảnh chụp", onSnapshot) { v ->
+                    onSnapshot = v
+                    toggleFeature("snapshots", v) { onSnapshot = !v }
+                }
+                featureError?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
+                androidx.compose.material3.HorizontalDivider()
 
                 DropdownField(
                     label = "Luồng",

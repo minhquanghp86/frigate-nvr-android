@@ -22,6 +22,10 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -281,6 +285,41 @@ fun EmptyState(
                 color = IOSSecondaryLabel,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
+        }
+    }
+}
+
+
+/** Dropdown kiểu iOS: hàng có nhãn + giá trị, bấm mở danh sách. */
+@Composable
+fun IosDropdown(
+    label: String,
+    value: String,
+    options: List<Pair<String, String>>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier.fillMaxWidth()) {
+        IosRow(
+            title = label,
+            value = value,
+            chevron = true,
+            onClick = { open = true },
+        )
+        androidx.compose.material3.DropdownMenu(
+            expanded = open,
+            onDismissRequest = { open = false },
+        ) {
+            options.forEach { (key, text) ->
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(text) },
+                    onClick = {
+                        open = false
+                        onSelect(key)
+                    },
+                )
+            }
         }
     }
 }

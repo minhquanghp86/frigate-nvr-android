@@ -190,7 +190,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     camera = entry.arguments?.getString("name").orEmpty(),
                     onBack = { navController.popBackStack() },
                     onOpenEvent = { navController.navigate("event/$it") },
-                    onOpenTimeline = { cam -> navController.navigate("timeline?camera=$cam") },
+                    onOpenTimeline = { cam -> navController.navigate("timeline/$cam") },
                 )
             }
             composable("events") {
@@ -209,19 +209,18 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     onBack = { navController.popBackStack() },
                 )
             }
+            composable("timeline") {
+                TimelineScreen(modifier = Modifier)
+            }
             composable(
-                "timeline?camera={camera}",
-                arguments = listOf(
-                    navArgument("camera") {
-                        type = NavType.StringType
-                        nullable = true
-                        defaultValue = null
-                    },
-                ),
+                "timeline/{camera}",
+                arguments = listOf(navArgument("camera") { type = NavType.StringType }),
             ) { entry ->
                 TimelineScreen(
                     modifier = Modifier,
                     initialCamera = entry.arguments?.getString("camera"),
+                    showBack = true,
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable("settings") {
