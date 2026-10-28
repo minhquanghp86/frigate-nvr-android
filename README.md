@@ -1,6 +1,6 @@
-# Frigate NVR cho Android
+# FriCam — trình xem Frigate NVR (Android)
 
-App Android kết nối thẳng tới **API của Frigate NVR** (chạy như add-on trên Home Assistant): đăng nhập bằng tài khoản Frigate, xem camera trực tiếp, xem danh sách sự kiện, mục cần xem (review) và phát lại bản ghi theo ngày/giờ.
+**FriCam** là app Android kết nối thẳng tới **API của Frigate NVR** (chạy như add-on trên Home Assistant): đăng nhập bằng tài khoản Frigate, xem camera trực tiếp, xem danh sách sự kiện, mục cần xem (review) và phát lại bản ghi theo ngày/giờ.
 
 - Ngôn ngữ: **Kotlin + Jetpack Compose (Material 3)**
 - Giao diện nền tối, thanh điều hướng 5 mục

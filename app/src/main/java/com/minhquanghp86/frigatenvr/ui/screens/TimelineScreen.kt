@@ -258,7 +258,12 @@ fun TimelineScreen(
                             url = stream,
                             startPositionMs = startPosMs,
                             modifier = Modifier.fillMaxSize(),
-                            onFullscreen = { onFullscreen(stream, startPosMs) },
+                            onFullscreen = {
+                                // Nhả player nội tuyến trước khi mở player toàn màn hình
+                                // (tránh 2 ExoPlayer cùng giải mã làm app bị kill).
+                                vm.stop()
+                                onFullscreen(stream, startPosMs)
+                            },
                         )
                     } else {
                         Text(

@@ -16,6 +16,7 @@ class FrigateApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.minhquanghp86.frigatenvr.notify.CrashLog.install(this)
         container = AppContainer(this)
     }
 }

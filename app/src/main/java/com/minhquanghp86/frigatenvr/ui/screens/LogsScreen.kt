@@ -42,11 +42,18 @@ import com.minhquanghp86.frigatenvr.ui.SegmentedControl
 import com.minhquanghp86.frigatenvr.ui.rememberRepo
 import kotlinx.coroutines.delay
 
-private val SERVICES = listOf("frigate", "go2rtc")
+private val SERVICES = listOf("frigate", "go2rtc", "app")
+
+private fun serviceLabel(key: String): String = when (key) {
+    "frigate" -> "Frigate"
+    "go2rtc" -> "go2rtc"
+    else -> "Ứng dụng"
+}
 
 @Composable
 fun LogsScreen(onBack: () -> Unit) {
     val repo = rememberRepo()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var serviceIndex by remember { mutableStateOf(0) }
     var follow by remember { mutableStateOf(true) }
     var text by remember { mutableStateOf("") }
@@ -55,7 +62,13 @@ fun LogsScreen(onBack: () -> Unit) {
 
     suspend fun load() {
         try {
-            text = repo.logs(SERVICES[serviceIndex])
+            val service = SERVICES[serviceIndex]
+            text = if (service == "app") {
+                com.minhquanghp86.frigatenvr.notify.CrashLog.read(context)
+                    .ifBlank { "Chưa có lỗi nào được ghi." }
+            } else {
+                repo.logs(service)
+            }
             error = null
         } catch (e: Exception) {
             error = e.message ?: "Không đọc được log"
@@ -98,7 +111,7 @@ fun LogsScreen(onBack: () -> Unit) {
         }
 
         SegmentedControl(
-            options = SERVICES.map { if (it == "frigate") "Frigate" else "go2rtc" },
+            options = SERVICES.map { serviceLabel(it) },
             selectedIndex = serviceIndex,
             onSelect = { serviceIndex = it },
             modifier = Modifier

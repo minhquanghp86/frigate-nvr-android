@@ -315,18 +315,28 @@ fun CameraLiveScreen(
         chromeVisible = true
         panel = if (on) 0 else panel
         val act = activity ?: return
-        act.requestedOrientation = if (on) {
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } else {
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-        val controller = androidx.core.view.WindowCompat.getInsetsController(act.window, rootView)
-        if (on) {
-            controller.systemBarsBehavior =
-                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-        } else {
-            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        rootView.post {
+            runCatching {
+                act.requestedOrientation = if (on) {
+                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                } else {
+                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                }
+            }
+            if (rootView.isAttachedToWindow) {
+                runCatching {
+                    val controller =
+                        androidx.core.view.WindowCompat.getInsetsController(act.window, rootView)
+                    if (on) {
+                        controller.systemBarsBehavior =
+                            androidx.core.view.WindowInsetsControllerCompat
+                                .BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    } else {
+                        controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            }
         }
     }
 
