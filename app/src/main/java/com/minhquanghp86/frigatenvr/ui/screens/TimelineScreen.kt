@@ -2,6 +2,8 @@ package com.minhquanghp86.frigatenvr.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -138,13 +140,30 @@ fun TimelineScreen(
         vm.play(day, hour.toString())
     }
 
+    val notifyPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { }
+
+    fun ensureNotifyPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notifyPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     fun downloadAt(value: Float) {
         val day = selectedDay ?: return
         val cam = camera ?: return
         val hour = value.toInt().coerceIn(0, 1439) / 60
         scope.launch {
             saving = true
-            message = null
+            message = "Đang tải…"
+            ensureNotifyPermission()
             val start = ZonedDateTime.of(
                 LocalDate.parse(day),
                 LocalTime.of(hour, 0),
@@ -156,6 +175,9 @@ fun TimelineScreen(
                 url = repo.clipRange(cam, start, start + 3600),
                 fileName = "frigate-$cam-$day-$hour.mp4",
                 mime = "video/mp4",
+                onProgress = { percent ->
+                    message = if (percent == null) "Đang tải…" else "Đang tải… $percent%"
+                },
             )
             message = saved?.let { "Đã lưu: $it" } ?: "Không tải được khung giờ này"
             saving = false
@@ -272,11 +294,55 @@ fun TimelineScreen(
                             .width((24 * HOUR_DP).dp)
                             .height(104.dp)
                             .pointerInput(day) {
-                                detectTapGestures { pos ->
-                                    val totalPx = size.width.toFloat()
-                                    val value = (pos.x / totalPx) * 1440f
-                                    minutes = value.coerceIn(0f, 1439f)
-                                    playAt(minutes)
+                                awaitEachGesture {
+                                    val down = awaitFirstDown(requireUnconsumed = false)
+                                    val width = size.width.toFloat()
+                                    val handleX = (minutes / 1440f) * width
+                                    val onHandle =
+                                        kotlin.math.abs(down.position.x - handleX) <= 28.dp.toPx()
+                                    if (onHandle) {
+                                        // Kéo riêng thanh thời gian; dải đứng im (consume sự kiện).
+                                        var changed = false
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val change = event.changes
+                                                .firstOrNull { it.id == down.id } ?: break
+                                            if (!change.pressed) break
+                                            val dx = change.position.x - change.previousPosition.x
+                                            if (dx != 0f) {
+                                                minutes = (minutes + dx / width * 1440f)
+                                                    .coerceIn(0f, 1439f)
+                                                changed = true
+                                                change.consume()
+                                            }
+                                        }
+                                        if (changed) playAt(minutes)
+                                    } else {
+                                        // Không chạm thanh: nếu là tap thì chọn thời điểm,
+                                        // nếu là kéo thì nhường cho dải cuộn.
+                                        var moved = false
+                                        while (true) {
+                                            val event = awaitPointerEvent()
+                                            val change = event.changes
+                                                .firstOrNull { it.id == down.id } ?: break
+                                            if (!change.pressed) break
+                                            if (change.isConsumed) {
+                                                moved = true
+                                                break
+                                            }
+                                            if ((change.position - down.position).getDistance() >
+                                                viewConfiguration.touchSlop
+                                            ) {
+                                                moved = true
+                                                break
+                                            }
+                                        }
+                                        if (!moved) {
+                                            minutes = ((down.position.x / width) * 1440f)
+                                                .coerceIn(0f, 1439f)
+                                            playAt(minutes)
+                                        }
+                                    }
                                 }
                             },
                     ) {
@@ -366,6 +432,12 @@ fun TimelineScreen(
                             text = label,
                             topLeft = Offset(bx + 8f, h - bh + 2f),
                             style = TextStyle(color = Color.White, fontSize = 11.sp),
+                        )
+                        // tay nắm để kéo thanh thời gian
+                        drawCircle(
+                            color = IOSOrange,
+                            radius = 7f,
+                            center = Offset(px, top - 8f),
                         )
                     }
                 }

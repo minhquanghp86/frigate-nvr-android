@@ -479,6 +479,21 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
     var message by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    val notifyPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { }
+
+    fun ensureNotifyPermission() {
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            val granted = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notifyPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         androidx.compose.foundation.layout.BoxWithConstraints {
@@ -522,12 +537,17 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                     onClick = {
                         scope.launch {
                             busy = true
+                            ensureNotifyPermission()
+                            message = "Đang tải…"
                             val saved = MediaSaver.save(
                                 context = context,
                                 client = repo.okhttp(),
                                 url = repo.eventClip(event.id),
                                 fileName = "frigate-${event.id}.mp4",
                                 mime = "video/mp4",
+                                onProgress = { percent ->
+                                    message = if (percent == null) "Đang tải…" else "Đang tải… $percent%"
+                                },
                             )
                             message = saved?.let { "Đã lưu: $it" } ?: "Không tải được clip"
                             busy = false
@@ -546,12 +566,17 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                     onClick = {
                         scope.launch {
                             busy = true
+                            ensureNotifyPermission()
+                            message = "Đang tải…"
                             val saved = MediaSaver.save(
                                 context = context,
                                 client = repo.okhttp(),
                                 url = repo.eventSnapshot(event.id),
                                 fileName = "frigate-${event.id}.jpg",
                                 mime = "image/jpeg",
+                                onProgress = { percent ->
+                                    message = if (percent == null) "Đang tải…" else "Đang tải… $percent%"
+                                },
                             )
                             message = saved?.let { "Đã lưu: $it" } ?: "Không tải được ảnh"
                             busy = false

@@ -27,7 +27,10 @@ object MediaSaver {
         url: String,
         fileName: String,
         mime: String,
+        onProgress: (Int?) -> Unit = {},
     ): String? = withContext(Dispatchers.IO) {
+        // Đảm bảo kênh tồn tại kể cả khi service chưa từng chạy.
+        runCatching { Notify.ensureChannels(context) }
         val nm = NotificationManagerCompat.from(context)
         val notificationId = (fileName.hashCode() and 0x7fffffff)
         val canNotify = nm.areNotificationsEnabled()
@@ -40,6 +43,8 @@ object MediaSaver {
                 .setContentText(text)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setShowWhen(false)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
             if (percent != null) {
                 builder.setProgress(100, percent, false)
@@ -73,6 +78,7 @@ object MediaSaver {
             runCatching { nm.notify(notificationId, failed) }
         }
 
+        onProgress(null)
         showProgress(null, "Đang kết nối…")
 
         val response = runCatching {
@@ -139,9 +145,10 @@ object MediaSaver {
                             out.write(buffer, 0, read)
                             written += read
                             val now = System.currentTimeMillis()
-                            if (now - lastNotified > 400) {
+                            if (now - lastNotified > 250) {
                                 lastNotified = now
                                 val percent = if (total > 0) ((written * 100) / total).toInt() else null
+                                onProgress(percent)
                                 showProgress(percent, formatBytes(written) + if (total > 0) " / ${formatBytes(total)}" else "")
                             }
                         }
@@ -152,6 +159,7 @@ object MediaSaver {
                 return@withContext null
             }
 
+            onProgress(100)
             showDone(finalPath)
             return@withContext finalPath
         }
