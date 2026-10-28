@@ -27,9 +27,8 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
+      # Không dùng android-actions/setup-android: runner ubuntu-latest đã có Android SDK
+      # (và action này đang hỏng vì package "tools" không còn trong SDK repo).
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
@@ -38,6 +37,7 @@ jobs:
           SDKDIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "sdk.dir=${SDKDIR}" > local.properties
           echo "Dùng SDK: ${SDKDIR}"
+          ls "${SDKDIR}/platforms" 2>/dev/null || true
 
       - name: Xac dinh version
         id: ver
