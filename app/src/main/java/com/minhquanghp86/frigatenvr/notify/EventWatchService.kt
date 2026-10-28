@@ -42,7 +42,7 @@ object Notify {
             NotificationChannel(
                 CHANNEL_DOWNLOADS,
                 "Tải media",
-                NotificationManager.IMPORTANCE_LOW,
+                NotificationManager.IMPORTANCE_DEFAULT,
             ).apply { description = "Tiến trình tải clip/ảnh về máy" },
         )
         nm.createNotificationChannel(

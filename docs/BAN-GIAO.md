@@ -214,6 +214,16 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
   playhead nét đứt + bong bóng giờ:phút. Chạm vào dải để chọn thời điểm và phát; nút Phát/Tải giữ nguyên.
   Dữ liệu sự kiện trong ngày lấy từ `/api/events?after=…&before=…` (TimelineViewModel.loadDayEvents).
 
+## 3q. Cập nhật 28/10/2026 (lần 16) — kéo playhead, icon tab, tiến trình tải
+
+- **Timeline 2 thao tác**: chạm thanh thời gian (playhead, có tay nắm tròn) → kéo riêng, dải đứng im
+  (sự kiện bị consume); chạm/kéo **ngoài** tay nắm → dải cuộn như cũ, tap (không di chuyển) → chọn giờ.
+  Dùng `awaitEachGesture` + `awaitFirstDown` + kiểm tra `isConsumed`/`touchSlop`.
+- **Icon tab**: "Xem lại" dùng icon `History` (trước bị nhầm thành bánh răng của Cài đặt).
+- **Tiến trình tải**: thêm `onProgress` cho MediaSaver; app hiện "Đang tải… x%" ngay trong màn hình,
+  xin quyền POST_NOTIFICATIONS khi bấm Tải; kênh `frigate_downloads` nâng lên IMPORTANCE_DEFAULT,
+  thêm CATEGORY_PROGRESS, cập nhật mỗi 250ms; gọi `Notify.ensureChannels` trước khi đăng ký.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

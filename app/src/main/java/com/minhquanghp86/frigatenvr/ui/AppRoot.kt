@@ -154,7 +154,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                                     imageVector = when (tab.route) {
                                         "cameras" -> Icons.Outlined.Videocam
                                         "events" -> Icons.Outlined.Notifications
-                                        "review" -> Icons.Outlined.History
+                                        "timeline" -> Icons.Outlined.History
                                         else -> Icons.Outlined.Settings
                                     },
                                     contentDescription = tab.label,
