@@ -54,7 +54,6 @@ private data class Tab(val route: String, val label: String)
 private val tabs = listOf(
     Tab("cameras", "Camera"),
     Tab("events", "Sự kiện"),
-    Tab("review", "Cần xem"),
     Tab("timeline", "Xem lại"),
     Tab("settings", "Cài đặt"),
 )
@@ -194,7 +193,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                 )
             }
             composable("events") {
-                EventsScreen(
+                com.minhquanghp86.frigatenvr.ui.screens.MediaScreen(
                     modifier = Modifier,
                     onOpenEvent = { navController.navigate("event/$it") },
                 )
@@ -208,9 +207,6 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     eventId = entry.arguments?.getString("id").orEmpty(),
                     onBack = { navController.popBackStack() },
                 )
-            }
-            composable("review") {
-                ReviewScreen(modifier = Modifier)
             }
             composable("timeline") {
                 TimelineScreen(modifier = Modifier)

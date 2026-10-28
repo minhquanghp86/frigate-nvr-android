@@ -47,6 +47,11 @@ interface FrigateApi {
         @QueryMap params: Map<String, @JvmSuppressWildcards String>,
     ): List<FrigateEvent>
 
+    @GET("api/events/search")
+    suspend fun eventsSearch(
+        @QueryMap params: Map<String, @JvmSuppressWildcards String>,
+    ): List<FrigateEvent>
+
     @GET("api/events/{id}")
     suspend fun event(@Path("id") id: String): FrigateEvent
 

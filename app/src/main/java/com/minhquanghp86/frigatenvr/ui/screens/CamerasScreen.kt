@@ -167,7 +167,10 @@ private fun CameraGrid(
         items(cameras, key = { it }) { name ->
             val cam = config.cameras[name]
             Card(
-                onClick = { onOpenCamera(name) },
+                onClick = {
+                    runCatching { repo.warmStream(name) }
+                    onOpenCamera(name)
+                },
                 colors = CardDefaults.cardColors(
                     containerColor = IOSCard,
                 ),
@@ -253,7 +256,7 @@ fun CameraLiveScreen(
     onBack: () -> Unit,
 ) {
     val repo = rememberRepo()
-    var modeName by rememberSaveable { mutableStateOf(LiveMode.WEBRTC.name) }
+    var modeName by rememberSaveable { mutableStateOf(LiveMode.AUTO.name) }
     var fps by rememberSaveable { mutableIntStateOf(8) }
     var height by rememberSaveable { mutableIntStateOf(480) }
     var fit by rememberSaveable { mutableStateOf(true) }
@@ -267,6 +270,7 @@ fun CameraLiveScreen(
     var bitmapSize by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var measuredFps by remember { mutableDoubleStateOf(0.0) }
+    var webrtcReady by remember(camera) { mutableStateOf(false) }
     var onEnabled by remember(camera) { mutableStateOf(true) }
     var onDetect by remember(camera) { mutableStateOf(true) }
     var onRecord by remember(camera) { mutableStateOf(false) }
@@ -278,6 +282,8 @@ fun CameraLiveScreen(
     val mode = runCatching { LiveMode.valueOf(modeName) }.getOrDefault(LiveMode.WEBRTC)
 
     LaunchedEffect(camera) {
+        // Làm nóng luồng go2rtc ngay khi vào màn (nếu 1984 truy cập được).
+        runCatching { repo.warmStream(camera) }
         val cfg = runCatching { repo.configCached() }.getOrNull()
         val cam = cfg?.cameras?.get(camera)
         streamName = cam?.liveStreamNames?.firstOrNull() ?: camera
@@ -291,11 +297,12 @@ fun CameraLiveScreen(
         onDispose { bitmap = null }
     }
 
-    LaunchedEffect(camera, mode, fps, height, reloadKey) {
+    LaunchedEffect(camera, mode, fps, height, reloadKey, webrtcReady) {
         bitmap = null
         error = null
         measuredFps = 0.0
-        if (mode != LiveMode.MJPEG) return@LaunchedEffect
+        if (mode != LiveMode.MJPEG && mode != LiveMode.AUTO) return@LaunchedEffect
+        if (mode == LiveMode.AUTO && webrtcReady) return@LaunchedEffect
 
         val source = MjpegSource(repo.okhttp(), repo.cameraMjpeg(camera, fps, height))
         var windowStart = System.currentTimeMillis()
@@ -333,7 +340,7 @@ fun CameraLiveScreen(
     }
 
     val streamUrl = when (mode) {
-        LiveMode.MJPEG, LiveMode.WEBRTC -> null
+        LiveMode.MJPEG, LiveMode.WEBRTC, LiveMode.AUTO -> null
         LiveMode.HLS -> repo.go2rtcHls(streamName)
         LiveMode.MP4 -> repo.go2rtcMp4(streamName)
     }
@@ -350,6 +357,37 @@ fun CameraLiveScreen(
             contentAlignment = Alignment.Center,
         ) {
             when {
+                mode == LiveMode.AUTO -> key(reloadKey) {
+                    Box(Modifier.fillMaxSize()) {
+                        if (!webrtcReady) {
+                            val current = bitmap
+                            if (current != null) {
+                                Image(
+                                    bitmap = current.asImageBitmap(),
+                                    contentDescription = "Camera $camera",
+                                    contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                FrigateImage(
+                                    url = repo.cameraLatest(camera),
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                                )
+                            }
+                        }
+                        // WebRTC nối song song; khi có frame đầu thì phủ lên (không có khoảng đen).
+                        com.minhquanghp86.frigatenvr.ui.WebRtcLiveView(
+                            endpoint = repo.webRtcEndpoint(camera),
+                            modifier = if (webrtcReady) Modifier.fillMaxSize() else Modifier.size(1.dp),
+                            fit = fit,
+                            muted = muted,
+                            showStats = showStats,
+                            onFirstFrame = { webrtcReady = true },
+                        )
+                    }
+                }
+
                 mode == LiveMode.WEBRTC -> key(reloadKey) {
                     Box(Modifier.fillMaxSize()) {
                         // Ảnh poster hiện ngay trong lúc WebRTC bắt tay -> không còn màn hình chờ.
@@ -580,6 +618,7 @@ private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Un
 }
 
 private enum class LiveMode(val label: String) {
+    AUTO("Tự động (ảnh → WebRTC)"),
     WEBRTC("WebRTC (Frigate)"),
     MP4("MP4 (go2rtc)"),
     HLS("HLS (go2rtc)"),
