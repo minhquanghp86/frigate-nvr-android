@@ -59,9 +59,9 @@ fun LoginScreen(repo: FrigateRepository) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Frigate NVR", style = MaterialTheme.typography.headlineMedium)
+        Text("FriCam", style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Kết nối tới Frigate NVR của bạn",
+            "Trình xem Frigate NVR (không chính thức)",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -13,8 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,23 +32,41 @@ fun FullscreenPlayerScreen(onExit: () -> Unit) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
     val view = LocalView.current
-    val request by PlayerStore.request.collectAsState()
+
+    // Chụp request 1 lần khi vào màn: tránh việc store bị clear giữa recomposition.
+    val request = remember { PlayerStore.request.value }
 
     DisposableEffect(Unit) {
-        activity?.requestedOrientation =
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        activity?.window?.let { window ->
-            val controller = WindowCompat.getInsetsController(window, view)
-            controller.systemBarsBehavior =
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.systemBars())
+        // Đổi orientation/insets phải chạy sau khi view đã attach; bọc runCatching vì
+        // một số máy ném lỗi nếu view chưa attach (nguyên nhân crash trước đây).
+        val apply = Runnable {
+            runCatching {
+                activity?.requestedOrientation =
+                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            }
+            if (view.isAttachedToWindow) {
+                runCatching {
+                    activity?.window?.let { window ->
+                        val controller = WindowCompat.getInsetsController(window, view)
+                        controller.systemBarsBehavior =
+                            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                        controller.hide(WindowInsetsCompat.Type.systemBars())
+                    }
+                }
+            }
         }
+        view.post(apply)
+
         onDispose {
-            activity?.requestedOrientation =
-                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            activity?.window?.let { window ->
-                WindowCompat.getInsetsController(window, view)
-                    .show(WindowInsetsCompat.Type.systemBars())
+            runCatching {
+                activity?.requestedOrientation =
+                    android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
+            runCatching {
+                activity?.window?.let { window ->
+                    WindowCompat.getInsetsController(window, view)
+                        .show(WindowInsetsCompat.Type.systemBars())
+                }
             }
             PlayerStore.clear()
         }

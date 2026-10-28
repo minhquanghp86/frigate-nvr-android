@@ -1,4 +1,4 @@
-# Bàn giao — Frigate NVR Android
+# Bàn giao — FriCam (Frigate NVR Android)
 
 Ngày tạo: **28/10/2026**. Tài liệu này để phiên làm việc sau đọc là hiểu ngay trạng thái dự án.
 
@@ -223,6 +223,14 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - **Tiến trình tải**: thêm `onProgress` cho MediaSaver; app hiện "Đang tải… x%" ngay trong màn hình,
   xin quyền POST_NOTIFICATIONS khi bấm Tải; kênh `frigate_downloads` nâng lên IMPORTANCE_DEFAULT,
   thêm CATEGORY_PROGRESS, cập nhật mỗi 250ms; gọi `Notify.ensureChannels` trước khi đăng ký.
+
+## 3r. Cập nhật 28/10/2026 (lần 17) — đổi tên FriCam + logo mới
+
+- Đổi tên hiển thị: **FriCam** (bỏ chữ "NVR" gây hiểu nhầm là đầu ghi/server); applicationId giữ nguyên
+  `com.minhquanghp86.frigatenvr` để app vẫn cập nhật đè được (đổi id = app mới).
+- Logo mới: chim biển cách điệu (silhouette, cánh thuôn + đuôi chẻ) trên nền xanh đậm gradient,
+  có `monochrome` cho themed icon Android 13. Xem trước: `docs/icon.png`.
+- Ghi chú: repo vẫn tên `frigate-nvr-android` (GitHub sẽ redirect nếu đổi tên sau này).
 
 ## 4. Việc còn lại
 
