@@ -33,6 +33,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.minhquanghp86.frigatenvr.ui.IOSBlue
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Share
+import com.minhquanghp86.frigatenvr.ui.IOSRed
 import com.minhquanghp86.frigatenvr.ui.IOSCard
 import com.minhquanghp86.frigatenvr.ui.IOSGroupedBackground
 import com.minhquanghp86.frigatenvr.ui.IOSLabel
@@ -79,6 +83,7 @@ fun LogsScreen(onBack: () -> Unit) {
 
     LaunchedEffect(serviceIndex) {
         loading = true
+        follow = SERVICES[serviceIndex] != "app"
         load()
     }
     LaunchedEffect(serviceIndex, follow) {
@@ -105,6 +110,42 @@ fun LogsScreen(onBack: () -> Unit) {
                 color = IOSLabel,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(
+                onClick = {
+                    val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+                    cm?.setPrimaryClip(
+                        android.content.ClipData.newPlainText("log", text),
+                    )
+                    android.widget.Toast
+                        .makeText(context, "Đã copy log", android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                },
+                enabled = text.isNotBlank(),
+            ) {
+                Icon(Icons.Outlined.ContentCopy, contentDescription = "Copy", tint = IOSBlue)
+            }
+            IconButton(
+                onClick = {
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(android.content.Intent.EXTRA_TEXT, text)
+                    }
+                    context.startActivity(
+                        android.content.Intent.createChooser(send, "Chia sẻ log"),
+                    )
+                },
+                enabled = text.isNotBlank(),
+            ) {
+                Icon(Icons.Outlined.Share, contentDescription = "Chia sẻ", tint = IOSBlue)
+            }
+            if (SERVICES[serviceIndex] == "app") {
+                IconButton(onClick = {
+                    com.minhquanghp86.frigatenvr.notify.CrashLog.clear(context)
+                    text = "Chưa có lỗi nào được ghi."
+                }) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "Xoá log", tint = IOSRed)
+                }
+            }
             IconButton(onClick = { loading = true }) {
                 Icon(Icons.Outlined.Refresh, contentDescription = "Tải lại", tint = IOSBlue)
             }
@@ -140,6 +181,7 @@ fun LogsScreen(onBack: () -> Unit) {
                 text.isBlank() -> "Không có log."
                 else -> text
             }
+            androidx.compose.foundation.text.selection.SelectionContainer {
             Text(
                 body,
                 fontFamily = FontFamily.Monospace,
@@ -152,6 +194,7 @@ fun LogsScreen(onBack: () -> Unit) {
                     .horizontalScroll(rememberScrollState())
                     .padding(10.dp),
             )
+            }
         }
 
         Text(
