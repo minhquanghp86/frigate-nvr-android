@@ -109,6 +109,16 @@ class EventsViewModel(app: Application) : AndroidViewModel(app) {
     init {
         refresh()
         viewModelScope.launch {
+            var first = true
+            repo.dataVersion.collect {
+                if (first) {
+                    first = false
+                    return@collect
+                }
+                refresh()
+            }
+        }
+        viewModelScope.launch {
             _cameras.value = try {
                 repo.configCached().enabledCameras
             } catch (_: Exception) {

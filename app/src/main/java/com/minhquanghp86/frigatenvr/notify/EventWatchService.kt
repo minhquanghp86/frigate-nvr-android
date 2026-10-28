@@ -57,14 +57,14 @@ object Notify {
         )
     }
 
-    fun openEventIntent(context: Context, eventId: String): PendingIntent {
+    fun openCameraIntent(context: Context, camera: String): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            putExtra(MainActivity.EXTRA_EVENT_ID, eventId)
+            putExtra(MainActivity.EXTRA_CAMERA, camera)
         }
         return PendingIntent.getActivity(
             context,
-            eventId.hashCode(),
+            camera.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
@@ -172,7 +172,7 @@ class EventWatchService : Service() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(true)
-            .setContentIntent(Notify.openEventIntent(this, e.id))
+            .setContentIntent(Notify.openCameraIntent(this, e.camera))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
         runCatching { nm.notify(e.id.hashCode(), notification) }

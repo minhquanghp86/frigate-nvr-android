@@ -464,6 +464,7 @@ fun InfoCard(rows: List<Pair<String, String>>, modifier: Modifier = Modifier) {
 }
 
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
     val repo = rememberRepo()
@@ -475,7 +476,10 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             OutlinedButton(
                 onClick = {
                     scope.launch {

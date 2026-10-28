@@ -164,6 +164,21 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
   WebRTC/MP4/HLS là luồng gốc nên KHÔNG có box. Công tắc "Khung nhận diện" trong sheet (mặc định bật);
   ở chế độ Tự động, bật box sẽ giữ MJPEG thay vì nâng lên WebRTC.
 
+## 3m. Cập nhật 28/10/2026 (lần 12) — live theo ý người dùng
+
+- **Bỏ khung nhận diện** trên live (ưu tiên fps): xoá công tắc box; MJPEG chỉ còn là lớp ảnh
+  tức thời lúc mở (AUTO), sau đó WebRTC phủ lên.
+- **Toàn màn hình đúng nghĩa**: xoay ngang (`SCREEN_ORIENTATION_SENSOR_LANDSCAPE`), ẩn system bars,
+  video phủ kín; thoát bằng nút/chạm/Back, khôi phục orientation khi rời màn.
+- **Live mỗi camera**: bỏ nút refresh; thêm hàng điều khiển **Sự kiện** (mở panel danh sách sự kiện
+  ngay dưới video, chạm để mở chi tiết), **Xem lại** (mở timeline đúng camera qua `timeline?camera=`),
+  và **switch thông báo** cho riêng camera đó (lưu trong `notifyCameras`; tập rỗng = tất cả).
+- **Bấm thông báo → mở live camera** (không mở chi tiết sự kiện) — `EXTRA_CAMERA` + `DeepLinks.openCamera`.
+- **Tab Sự kiện**: bỏ mục "Cần xem" (xoá `ReviewScreen`), chỉ còn ô tìm kiếm + bộ lọc + lưới sự kiện.
+- **Sửa nút Xoá bị cắt**: hàng nút hành động đổi sang `FlowRow` (tự xuống dòng).
+- **Danh sách tự làm mới sau khi xoá**: `FrigateRepository.dataVersion` tăng khi xoá sự kiện;
+  `EventsViewModel` và panel sự kiện trong live theo dõi để refresh (hết cảnh 404 khi bấm ảnh cũ).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

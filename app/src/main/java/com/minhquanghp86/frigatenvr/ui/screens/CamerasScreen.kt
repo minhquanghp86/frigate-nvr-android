@@ -20,6 +20,18 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.key
 import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalContext
+import com.minhquanghp86.frigatenvr.ui.IOSCardHigh
+import com.minhquanghp86.frigatenvr.ui.fmtDateTime
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.ui.platform.LocalView
+import com.minhquanghp86.frigatenvr.ui.IOSGreen
+import com.minhquanghp86.frigatenvr.ui.IOSGroupedBackground
+import com.minhquanghp86.frigatenvr.ui.IOSLabel
+import com.minhquanghp86.frigatenvr.ui.IOSTertiaryLabel
+import com.minhquanghp86.frigatenvr.ui.Pill
 import androidx.compose.material.icons.outlined.PictureInPictureAlt
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
@@ -256,8 +268,18 @@ fun CameraLiveScreen(
     modifier: Modifier = Modifier,
     camera: String,
     onBack: () -> Unit,
+    onOpenEvent: (String) -> Unit = {},
+    onOpenTimeline: (String) -> Unit = {},
 ) {
     val repo = rememberRepo()
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+    val rootView = LocalView.current
+    val scope = rememberCoroutineScope()
+    val isPip by com.minhquanghp86.frigatenvr.PipState.visible.collectAsState()
+    val notifySet by repo.notifyCameras.collectAsState()
+    val dataVersion by repo.dataVersion.collectAsState()
+
     var modeName by rememberSaveable { mutableStateOf(LiveMode.AUTO.name) }
     var fps by rememberSaveable { mutableIntStateOf(8) }
     var height by rememberSaveable { mutableIntStateOf(480) }
@@ -265,6 +287,8 @@ fun CameraLiveScreen(
     var muted by rememberSaveable { mutableStateOf(true) }
     var showStats by rememberSaveable { mutableStateOf(false) }
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
+    var immersive by rememberSaveable { mutableStateOf(false) }
+    var panel by rememberSaveable { mutableIntStateOf(0) }
     var showSettings by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var streamName by remember(camera) { mutableStateOf(camera) }
@@ -273,45 +297,122 @@ fun CameraLiveScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var measuredFps by remember { mutableDoubleStateOf(0.0) }
     var webrtcReady by remember(camera) { mutableStateOf(false) }
-    var showBoxes by rememberSaveable { mutableStateOf(true) }
-    var immersive by rememberSaveable { mutableStateOf(false) }
-    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
-    val rootView = androidx.compose.ui.platform.LocalView.current
-    val isPip by com.minhquanghp86.frigatenvr.PipState.visible.collectAsState()
-    var onEnabled by remember(camera) { mutableStateOf(true) }
-    var onDetect by remember(camera) { mutableStateOf(true) }
-    var onRecord by remember(camera) { mutableStateOf(false) }
-    var onSnapshot by remember(camera) { mutableStateOf(false) }
-    var featureError by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
+    var events by remember(camera) { mutableStateOf<List<FrigateEvent>>(emptyList()) }
+    var eventsLoading by remember { mutableStateOf(false) }
+    var allCameras by remember { mutableStateOf<List<String>>(emptyList()) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val mode = runCatching { LiveMode.valueOf(modeName) }.getOrDefault(LiveMode.WEBRTC)
+    val mode = runCatching { LiveMode.valueOf(modeName) }.getOrDefault(LiveMode.AUTO)
+    val notifyOnForCamera = notifySet.isEmpty() || camera in notifySet
+
+    fun applyFullscreen(on: Boolean) {
+        immersive = on
+        chromeVisible = !on
+        panel = if (on) 0 else panel
+        val act = activity ?: return
+        act.requestedOrientation = if (on) {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+        val controller = androidx.core.view.WindowCompat.getInsetsController(act.window, rootView)
+        if (on) {
+            controller.systemBarsBehavior =
+                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            activity?.requestedOrientation =
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    androidx.activity.compose.BackHandler(enabled = immersive) { applyFullscreen(false) }
+
+    val notifyPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            scope.launch {
+                androidx.core.content.ContextCompat.startForegroundService(
+                    context,
+                    android.content.Intent(
+                        context,
+                        com.minhquanghp86.frigatenvr.notify.EventWatchService::class.java,
+                    ),
+                )
+                repo.setNotifyEnabled(true)
+            }
+        }
+    }
+
+    fun setCameraNotify(on: Boolean) {
+        scope.launch {
+            val newSet: Set<String> = when {
+                on -> if (notifySet.isEmpty()) emptySet() else notifySet + camera
+                else -> if (notifySet.isEmpty()) allCameras.toSet() - camera else notifySet - camera
+            }
+            repo.setNotifyCameras(newSet)
+            if (on) {
+                val needPerm = android.os.Build.VERSION.SDK_INT >= 33 &&
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.POST_NOTIFICATIONS,
+                    ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+                if (needPerm) {
+                    notifyPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    androidx.core.content.ContextCompat.startForegroundService(
+                        context,
+                        android.content.Intent(
+                            context,
+                            com.minhquanghp86.frigatenvr.notify.EventWatchService::class.java,
+                        ),
+                    )
+                    repo.setNotifyEnabled(true)
+                }
+            }
+        }
+    }
 
     LaunchedEffect(camera) {
-        // Làm nóng luồng go2rtc ngay khi vào màn (nếu 1984 truy cập được).
         runCatching { repo.warmStream(camera) }
         val cfg = runCatching { repo.configCached() }.getOrNull()
         val cam = cfg?.cameras?.get(camera)
         streamName = cam?.liveStreamNames?.firstOrNull() ?: camera
-        onEnabled = cam?.enabled ?: true
-        onDetect = cam?.detectOn ?: true
-        onRecord = cam?.recording ?: false
-        onSnapshot = cam?.snapshotsOn ?: false
+        allCameras = cfg?.enabledCameras.orEmpty()
     }
 
-    DisposableEffect(camera) {
-        onDispose { bitmap = null }
+    LaunchedEffect(panel, camera, dataVersion) {
+        if (panel != 1) return@LaunchedEffect
+        eventsLoading = true
+        events = runCatching {
+            repo.call {
+                events(
+                    mapOf(
+                        "cameras" to camera,
+                        "limit" to "30",
+                        "include_thumbnails" to "0",
+                    ),
+                )
+            }
+        }.getOrDefault(emptyList())
+        eventsLoading = false
     }
 
-    LaunchedEffect(camera, mode, fps, height, reloadKey, webrtcReady, showBoxes) {
+    LaunchedEffect(camera, mode, fps, height, reloadKey, webrtcReady) {
         bitmap = null
         error = null
         measuredFps = 0.0
         if (mode != LiveMode.MJPEG && mode != LiveMode.AUTO) return@LaunchedEffect
         if (mode == LiveMode.AUTO && webrtcReady) return@LaunchedEffect
 
-        val source = MjpegSource(repo.okhttp(), repo.cameraMjpeg(camera, fps, height, showBoxes))
+        val source = MjpegSource(repo.okhttp(), repo.cameraMjpeg(camera, fps, height))
         var windowStart = System.currentTimeMillis()
         var frames = 0
         try {
@@ -326,23 +427,11 @@ fun CameraLiveScreen(
                     windowStart = now
                 }
             }
-            if (error == null) error = "Luồng MJPEG đã đóng."
+            if (error == null && mode == LiveMode.MJPEG) error = "Luồng MJPEG đã đóng."
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            error = e.message ?: "Không mở được luồng MJPEG."
-        }
-    }
-
-    fun toggleFeature(feature: String, value: Boolean, revert: () -> Unit) {
-        scope.launch {
-            try {
-                repo.setCameraFeature(camera, feature, value)
-                featureError = null
-            } catch (e: Exception) {
-                revert()
-                featureError = e.message ?: "Không đổi được $feature"
-            }
+            if (mode == LiveMode.MJPEG) error = e.message ?: "Không mở được luồng MJPEG."
         }
     }
 
@@ -352,69 +441,59 @@ fun CameraLiveScreen(
         LiveMode.MP4 -> repo.go2rtcMp4(streamName)
     }
 
-    Box(modifier.fillMaxSize().background(Color.Black)) {
-        // Vùng video: chạm để ẩn/hiện thanh công cụ (như trình phát Frigate).
+    Column(modifier.fillMaxSize().background(Color.Black)) {
         Box(
             Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    if (immersive) {
-                        immersive = false
-                        activity?.window?.let { w ->
-                            androidx.core.view.WindowCompat.getInsetsController(w, rootView)
-                                .show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                        }
-                        chromeVisible = true
-                    } else {
-                        chromeVisible = !chromeVisible
-                    }
-                },
-            contentAlignment = Alignment.Center,
+                .then(if (panel == 1) Modifier.weight(0.45f) else Modifier.weight(1f))
+                .fillMaxWidth(),
         ) {
-            when {
-                mode == LiveMode.AUTO -> key(reloadKey) {
-                    Box(Modifier.fillMaxSize()) {
-                        if (!webrtcReady) {
-                            val current = bitmap
-                            if (current != null) {
-                                Image(
-                                    bitmap = current.asImageBitmap(),
-                                    contentDescription = "Camera $camera",
-                                    contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize(),
-                                )
-                            } else {
-                                FrigateImage(
-                                    url = repo.cameraLatest(camera),
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
-                                )
-                            }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        if (immersive) {
+                            applyFullscreen(false)
+                        } else {
+                            chromeVisible = !chromeVisible
                         }
-                        // WebRTC nối song song; khi có frame đầu thì phủ lên (không có khoảng đen).
-                        // Nếu bật khung nhận diện thì ở lại MJPEG (WebRTC là luồng gốc, không có box).
-                        if (!showBoxes) com.minhquanghp86.frigatenvr.ui.WebRtcLiveView(
-                            endpoint = repo.webRtcEndpoint(camera),
-                            modifier = if (webrtcReady) Modifier.fillMaxSize() else Modifier.size(1.dp),
-                            fit = fit,
-                            muted = muted,
-                            showStats = showStats,
-                            onFirstFrame = { webrtcReady = true },
-                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                when {
+                    mode == LiveMode.AUTO -> key(reloadKey) {
+                        Box(Modifier.fillMaxSize()) {
+                            if (!webrtcReady) {
+                                val current = bitmap
+                                if (current != null) {
+                                    Image(
+                                        bitmap = current.asImageBitmap(),
+                                        contentDescription = "Camera $camera",
+                                        contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                } else {
+                                    FrigateImage(
+                                        url = repo.cameraLatest(camera),
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                                    )
+                                }
+                            }
+                            com.minhquanghp86.frigatenvr.ui.WebRtcLiveView(
+                                endpoint = repo.webRtcEndpoint(camera),
+                                modifier = if (webrtcReady) Modifier.fillMaxSize() else Modifier.size(1.dp),
+                                fit = fit,
+                                muted = muted,
+                                showStats = showStats,
+                                onFirstFrame = { webrtcReady = true },
+                            )
+                        }
                     }
-                }
 
-                mode == LiveMode.WEBRTC -> key(reloadKey) {
-                    Box(Modifier.fillMaxSize()) {
-                        // Ảnh poster hiện ngay trong lúc WebRTC bắt tay -> không còn màn hình chờ.
-                        FrigateImage(
-                            url = repo.cameraLatest(camera),
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
-                        )
+                    mode == LiveMode.WEBRTC -> key(reloadKey) {
                         com.minhquanghp86.frigatenvr.ui.WebRtcLiveView(
                             endpoint = repo.webRtcEndpoint(camera),
                             modifier = Modifier.fillMaxSize(),
@@ -423,116 +502,195 @@ fun CameraLiveScreen(
                             showStats = showStats,
                         )
                     }
-                }
 
-                streamUrl != null -> key(reloadKey) {
-                    com.minhquanghp86.frigatenvr.ui.VideoPlayer(
-                        url = streamUrl,
-                        modifier = Modifier.fillMaxSize(),
-                        fit = fit,
-                    )
-                }
-
-                else -> {
-                    val current = bitmap
-                    if (current != null) {
-                        Image(
-                            bitmap = current.asImageBitmap(),
-                            contentDescription = "Camera $camera",
-                            contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                    streamUrl != null -> key(reloadKey) {
+                        com.minhquanghp86.frigatenvr.ui.VideoPlayer(
+                            url = streamUrl,
                             modifier = Modifier.fillMaxSize(),
+                            fit = fit,
                         )
-                    } else if (error == null) {
-                        CircularProgressIndicator()
                     }
-                }
-            }
 
-            if (error != null && mode == LiveMode.MJPEG) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(16.dp),
-                ) {
-                    Text(
-                        error ?: "",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Button(onClick = { modeName = LiveMode.WEBRTC.name }) {
-                        Text("Thử WebRTC")
-                    }
-                }
-            }
-
-            if (showStats && mode == LiveMode.MJPEG && bitmap != null) {
-                Text(
-                    buildString {
-                        append(String.format(Locale.getDefault(), "%.1f fps", measuredFps))
-                        if (bitmapSize.isNotEmpty()) append(" · $bitmapSize")
-                    },
-                    color = Color.White,
-                    fontSize = 11.sp,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(8.dp)
-                        .background(Color(0xAA111111), RoundedCornerShape(4.dp))
-                        .padding(horizontal = 6.dp, vertical = 3.dp),
-                )
-            }
-        }
-
-        if (chromeVisible && !isPip) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                LiveIconButton(Icons.Outlined.ArrowBack, "Quay lại", onBack)
-                LiveIconButton(Icons.Outlined.Refresh, "Kết nối lại") { reloadKey++ }
-                Spacer(Modifier.weight(1f))
-                LiveIconButton(
-                    Icons.Outlined.PictureInPictureAlt,
-                    "Hình trong hình",
-                ) {
-                    if (android.os.Build.VERSION.SDK_INT >= 26 && activity != null) {
-                        runCatching {
-                            activity.enterPictureInPictureMode(
-                                android.app.PictureInPictureParams.Builder()
-                                    .setAspectRatio(android.util.Rational(16, 9))
-                                    .build(),
+                    else -> {
+                        val current = bitmap
+                        if (current != null) {
+                            Image(
+                                bitmap = current.asImageBitmap(),
+                                contentDescription = "Camera $camera",
+                                contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else if (error == null) {
+                            FrigateImage(
+                                url = repo.cameraLatest(camera),
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit,
                             )
                         }
                     }
                 }
-                if (mode == LiveMode.WEBRTC) {
-                    LiveIconButton(
-                        if (muted) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,
-                        if (muted) "Bật tiếng" else "Tắt tiếng",
-                    ) { muted = !muted }
-                }
-                LiveIconButton(
-                    if (immersive) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen,
-                    "Toàn màn hình",
-                ) {
-                    immersive = !immersive
-                    val window = activity?.window
-                    if (window != null) {
-                        val controller = androidx.core.view.WindowCompat.getInsetsController(window, rootView)
-                        if (immersive) {
-                            controller.systemBarsBehavior =
-                                androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                            controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
-                        } else {
-                            controller.show(androidx.core.view.WindowInsetsCompat.Type.systemBars())
+
+                if (error != null && mode == LiveMode.MJPEG) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(16.dp),
+                    ) {
+                        Text(
+                            error ?: "",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { modeName = LiveMode.WEBRTC.name }) {
+                            Text("Thử WebRTC")
                         }
                     }
-                    chromeVisible = !immersive
                 }
-                LiveIconButton(Icons.Outlined.Settings, "Cài đặt") { showSettings = true }
+
+                if (showStats && bitmap != null && (mode == LiveMode.MJPEG || mode == LiveMode.AUTO)) {
+                    Text(
+                        buildString {
+                            append(String.format(Locale.getDefault(), "%.1f fps", measuredFps))
+                            if (bitmapSize.isNotEmpty()) append(" · $bitmapSize")
+                        },
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(8.dp)
+                            .background(Color(0xAA111111), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                    )
+                }
+            }
+
+            if (chromeVisible && !isPip) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    LiveIconButton(Icons.Outlined.ArrowBack, "Quay lại", onBack)
+                    Spacer(Modifier.weight(1f))
+                    LiveIconButton(Icons.Outlined.PictureInPictureAlt, "Hình trong hình") {
+                        if (android.os.Build.VERSION.SDK_INT >= 26 && activity != null) {
+                            runCatching {
+                                activity.enterPictureInPictureMode(
+                                    android.app.PictureInPictureParams.Builder()
+                                        .setAspectRatio(android.util.Rational(16, 9))
+                                        .build(),
+                                )
+                            }
+                        }
+                    }
+                    LiveIconButton(
+                        if (immersive) Icons.Outlined.FullscreenExit else Icons.Outlined.Fullscreen,
+                        "Toàn màn hình",
+                    ) { applyFullscreen(!immersive) }
+                    LiveIconButton(Icons.Outlined.Settings, "Cài đặt") { showSettings = true }
+                }
+            }
+        }
+
+        if (!isPip && !immersive) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Pill("Sự kiện", panel == 1, onClick = { panel = if (panel == 1) 0 else 1 })
+                Pill("Xem lại", false, onClick = { onOpenTimeline(camera) })
+                Spacer(Modifier.weight(1f))
+                Text(
+                    "Thông báo",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = IOSSecondaryLabel,
+                )
+                Switch(
+                    checked = notifyOnForCamera,
+                    onCheckedChange = { setCameraNotify(it) },
+                    colors = androidx.compose.material3.SwitchDefaults.colors(
+                        checkedTrackColor = IOSGreen,
+                        checkedThumbColor = Color.White,
+                        uncheckedTrackColor = IOSCardHigh,
+                        uncheckedThumbColor = Color.White,
+                    ),
+                )
+            }
+        }
+
+        if (panel == 1 && !isPip && !immersive) {
+            if (eventsLoading && events.isEmpty()) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(0.55f),
+                    contentAlignment = Alignment.Center,
+                ) { CircularProgressIndicator() }
+            } else if (events.isEmpty()) {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(0.55f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("Chưa có sự kiện cho camera này.", color = IOSSecondaryLabel)
+                }
+            } else {
+                LazyColumn(
+                    Modifier
+                        .fillMaxWidth()
+                        .weight(0.55f)
+                        .background(IOSGroupedBackground),
+                ) {
+                    items(events, key = { it.id }) { e ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenEvent(e.id) }
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(width = 96.dp, height = 54.dp)
+                                    .background(Color(0xFF000000), RoundedCornerShape(6.dp)),
+                            ) {
+                                if (e.hasSnapshot) {
+                                    FrigateImage(
+                                        url = repo.eventThumbnail(e.id),
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    e.label + (e.subLabelDisplay?.let { " · $it" } ?: ""),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = IOSLabel,
+                                    maxLines = 1,
+                                )
+                                Text(
+                                    "${relTime(e.startTime)} · ${fmtDateTime(e.startTime)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = IOSSecondaryLabel,
+                                )
+                            }
+                            Icon(
+                                Icons.Outlined.ChevronRight,
+                                contentDescription = null,
+                                tint = IOSTertiaryLabel,
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -550,32 +708,6 @@ fun CameraLiveScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text("Camera $camera", style = MaterialTheme.typography.titleMedium)
-
-                Text(
-                    "Bật/tắt tính năng (API yêu cầu tài khoản admin)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                ToggleRow("Camera", onEnabled) { v ->
-                    onEnabled = v
-                    toggleFeature("enabled", v) { onEnabled = !v }
-                }
-                ToggleRow("Phát hiện đối tượng", onDetect) { v ->
-                    onDetect = v
-                    toggleFeature("detect", v) { onDetect = !v }
-                }
-                ToggleRow("Ghi hình", onRecord) { v ->
-                    onRecord = v
-                    toggleFeature("recordings", v) { onRecord = !v }
-                }
-                ToggleRow("Ảnh chụp", onSnapshot) { v ->
-                    onSnapshot = v
-                    toggleFeature("snapshots", v) { onSnapshot = !v }
-                }
-                featureError?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-                }
-                HorizontalDivider()
 
                 DropdownField(
                     label = "Luồng",
@@ -598,31 +730,12 @@ fun CameraLiveScreen(
                             onSelect = { height = it.toIntOrNull() ?: height },
                         )
                     }
-                    Text(
-                        "MJPEG lấy từ luồng detect nên fps bị giới hạn (thường ~5). " +
-                            "WebRTC/MP4/HLS lấy fps gốc của camera.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
-
                 ToggleRow("Hiện thống kê", showStats) { showStats = it }
-                if (mode == LiveMode.WEBRTC) {
+                if (mode == LiveMode.WEBRTC || mode == LiveMode.AUTO) {
                     ToggleRow("Tắt tiếng", muted) { muted = it }
-                    Text(
-                        "WebRTC có âm thanh nếu camera/stream có audio.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 }
                 ToggleRow("Vừa khung (fit)", fit) { fit = it }
-                ToggleRow("Khung nhận diện", showBoxes) { showBoxes = it }
-                Text(
-                    "Khung nhận diện do Frigate vẽ trong luồng MJPEG (?bbox=1). " +
-                        "Ở chế độ Tự động, bật mục này sẽ giữ MJPEG thay vì nâng lên WebRTC.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
 
                 OutlinedButton(
                     onClick = {

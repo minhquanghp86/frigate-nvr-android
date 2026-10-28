@@ -9,6 +9,10 @@ object DeepLinks {
     private val _route = MutableStateFlow<String?>(null)
     val route: StateFlow<String?> = _route.asStateFlow()
 
+    fun openCamera(camera: String) {
+        _route.value = "camera/$camera"
+    }
+
     fun openEvent(eventId: String) {
         _route.value = "event/$eventId"
     }

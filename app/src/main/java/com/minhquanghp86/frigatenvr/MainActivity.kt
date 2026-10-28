@@ -53,12 +53,21 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
-        val eventId = intent?.getStringExtra(EXTRA_EVENT_ID) ?: return
+        if (intent == null) return
+        val camera = intent.getStringExtra(EXTRA_CAMERA)
+        if (camera != null) {
+            DeepLinks.openCamera(camera)
+            intent.removeExtra(EXTRA_CAMERA)
+            intent.removeExtra(EXTRA_EVENT_ID)
+            return
+        }
+        val eventId = intent.getStringExtra(EXTRA_EVENT_ID) ?: return
         DeepLinks.openEvent(eventId)
         intent.removeExtra(EXTRA_EVENT_ID)
     }
 
     companion object {
         const val EXTRA_EVENT_ID = "frigate_event_id"
+        const val EXTRA_CAMERA = "frigate_camera"
     }
 }
