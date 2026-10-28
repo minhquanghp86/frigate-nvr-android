@@ -33,6 +33,20 @@ Chi tiết API: [API-FRIGATE.md](API-FRIGATE.md).
 1. Repo **private** trên gói free → job không được cấp runner (fail sau ~3 s, 0 step) vì hết phút Actions. Đã chuyển repo sang **public** → dùng runner GitHub miễn phí.
 2. `android-actions/setup-android@v3` **đang hỏng**: nó gọi `sdkmanager tools`, package `tools` không còn trong SDK repo → `Failed to find package 'tools'`. Đã bỏ step này, chỉ ghi `sdk.dir` từ `ANDROID_SDK_ROOT` (runner ubuntu-latest có sẵn SDK + licenses, AGP tự tải package thiếu).
 
+## 3b. Cập nhật 28/10/2026 — sửa lỗi tương thích Frigate 0.18
+
+Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu source `v0.18.2`):
+
+| Lỗi hiển thị | Nguyên nhân | Sửa |
+|---|---|---|
+| `Unexpected JSON token ... $.cameras['x'].live.streams` | 0.18 đổi `live.streams` từ **mảng** sang **object** | `/api/config` đọc lỏng: `FrigateCameraConfig` giữ `record/audio/detect/live/ffmpeg` là `JsonObject`, UI dùng `recording`/`hasAudio` |
+| `Unexpected JSON token at offset 0 ... had '0'` (tab Cài đặt) | `GET /api/version` là `PlainTextResponse` (`0.18.2-cfa08c5`) | `version()` trả `ResponseBody`; `parseVersion()` nhận cả chuỗi và JSON |
+| `Server trả lỗi HTTP 422` (tab Cần xem) | 0.18 đổi `reviewed` thành **int 0/1** và body `/reviews/viewed` bắt buộc `{ids, reviewed}` | gửi `reviewed=0/1`, `IdsBody` thêm `reviewed: Boolean = true` |
+| (ẩn) mốc thời gian review hiện "—" | `ReviewSegmentResponse.start_time` là **datetime ISO**, không phải epoch | `asEpoch()` parse ISO có/không offset |
+
+Đã thêm `ModelsTest` (5 test) khoá các shape này và CI chạy `testReleaseUnitTest` cùng lúc build.
+
+
 
 ## 4. Việc còn lại
 

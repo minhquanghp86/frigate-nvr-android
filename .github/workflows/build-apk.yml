@@ -50,8 +50,8 @@ jobs:
           echo "name=${V}" >> "$GITHUB_OUTPUT"
           echo "Version: ${V}"
 
-      - name: Build APK
-        run: ./gradlew assembleRelease --no-daemon
+      - name: Build APK + unit test
+        run: ./gradlew assembleRelease testReleaseUnitTest --no-daemon
         env:
           APP_VERSION_NAME: ${{ steps.ver.outputs.name }}
 

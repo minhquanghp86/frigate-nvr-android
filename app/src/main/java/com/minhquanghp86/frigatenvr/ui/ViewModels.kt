@@ -8,6 +8,7 @@ import com.minhquanghp86.frigatenvr.data.DayRecordings
 import com.minhquanghp86.frigatenvr.data.FrigateApiException
 import com.minhquanghp86.frigatenvr.data.FrigateConfig
 import com.minhquanghp86.frigatenvr.data.FrigateEvent
+import com.minhquanghp86.frigatenvr.data.FrigateNet
 import com.minhquanghp86.frigatenvr.data.FrigateRepository
 import com.minhquanghp86.frigatenvr.data.IdsBody
 import com.minhquanghp86.frigatenvr.data.ReviewItem
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.JsonObject
 
 private fun repoOf(app: Application): FrigateRepository =
@@ -166,7 +168,8 @@ class ReviewViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 val params = buildMap {
                     put("limit", "50")
-                    put("reviewed", if (_unreadOnly.value) "false" else "true")
+                    // Frigate 0.18: reviewed là số (0 = chưa xem, 1 = đã xem), không phải boolean.
+                    put("reviewed", if (_unreadOnly.value) "0" else "1")
                 }
                 _items.value = repo.call { reviews(params) }
             } catch (e: Exception) {
@@ -291,7 +294,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() {
         viewModelScope.launch {
             _version.value = try {
-                UiState.Ok(repo.call { version() })
+                val text = repo.call { version() }.string().trim()
+                UiState.Ok(parseVersion(text))
             } catch (e: Exception) {
                 UiState.Error(e.message ?: "Không đọc được phiên bản Frigate.")
             }
@@ -344,3 +348,13 @@ suspend fun loadCameras(repo: FrigateRepository): List<String> =
     } catch (_: Exception) {
         emptyList()
     }
+
+/** /api/version: Frigate 0.18 trả chuỗi thuần, bản cũ hơn trả JSON object. */
+private fun parseVersion(text: String): VersionInfo {
+    if (text.startsWith("{")) {
+        runCatching { FrigateNet.json.decodeFromString<VersionInfo>(text) }
+            .getOrNull()
+            ?.let { return it }
+    }
+    return VersionInfo(version = text.ifBlank { null })
+}

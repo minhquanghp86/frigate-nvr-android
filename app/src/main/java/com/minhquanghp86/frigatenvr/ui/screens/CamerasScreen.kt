@@ -155,7 +155,7 @@ private fun CameraGrid(config: FrigateConfig, tick: Int, onOpenCamera: (String) 
                             contentScale = ContentScale.Crop,
                             cacheKey = tick.toString(),
                         )
-                        if (cam?.record?.enabled == true) {
+                        if (cam?.recording == true) {
                             Row(
                                 Modifier
                                     .align(Alignment.TopStart)
@@ -190,7 +190,7 @@ private fun CameraGrid(config: FrigateConfig, tick: Int, onOpenCamera: (String) 
                             modifier = Modifier.weight(1f),
                             maxLines = 1,
                         )
-                        if (cam?.audio?.enabled == true) {
+                        if (cam?.hasAudio == true) {
                             Icon(
                                 Icons.Outlined.MusicNote,
                                 contentDescription = "Có audio",

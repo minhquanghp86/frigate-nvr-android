@@ -68,8 +68,9 @@ interface FrigateApi {
         @Query("timezone") timezone: String,
     ): List<DayRecordings>
 
+    // Frigate 0.18 trả PlainTextResponse (vd "0.18.2-cfa08c5"), không phải JSON object.
     @GET("api/version")
-    suspend fun version(): VersionInfo
+    suspend fun version(): ResponseBody
 
     @GET("api/stats")
     suspend fun stats(): ResponseBody

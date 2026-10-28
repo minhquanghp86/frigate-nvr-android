@@ -4,6 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -14,7 +15,11 @@ data class LoginRequest(val user: String, val password: String)
 data class LoginBody(val message: String? = null, val access_token: String? = null)
 
 @Serializable
-data class IdsBody(val ids: List<String>)
+data class IdsBody(
+    val ids: List<String>,
+    // Frigate 0.18 yêu cầu field này khi đánh dấu đã xem/bỏ đánh dấu.
+    val reviewed: Boolean = true,
+)
 
 @Serializable
 data class FrigateEvent(
@@ -59,10 +64,13 @@ data class EventExtra(
     val box: List<Double>? = null,
 )
 
+/**
+ * /api/config thay đổi khá nhiều giữa các bản Frigate (vd 0.18 đổi live.streams từ mảng sang object),
+ * nên chỉ giữ phần app dùng và đọc các khối con dạng JsonObject để không vỡ khi schema đổi.
+ */
 @Serializable
 data class FrigateConfig(
     val cameras: Map<String, FrigateCameraConfig> = emptyMap(),
-    val go2rtc: Go2rtcConfig? = null,
 ) {
     val enabledCameras: List<String>
         get() = cameras.filter { it.value.enabled != false }.keys.toList()
@@ -72,37 +80,18 @@ data class FrigateConfig(
 data class FrigateCameraConfig(
     val enabled: Boolean = true,
     val name: String? = null,
-    val detect: DetectConfig? = null,
-    val ffmpeg: FfmpegConfig? = null,
-    val audio: AudioConfig? = null,
-    val record: RecordConfig? = null,
-    val live: LiveConfig? = null,
-)
+    val record: JsonObject? = null,
+    val audio: JsonObject? = null,
+    val detect: JsonObject? = null,
+    val live: JsonObject? = null,
+    val ffmpeg: JsonObject? = null,
+) {
+    val recording: Boolean get() = record.flag("enabled")
+    val hasAudio: Boolean get() = audio.flag("enabled")
+}
 
-@Serializable
-data class DetectConfig(
-    val enabled: Boolean? = null,
-    val width: Int? = null,
-    val height: Int? = null,
-)
-
-@Serializable
-data class FfmpegConfig(val inputs: List<FfmpegInput>? = null)
-
-@Serializable
-data class FfmpegInput(val path: String? = null, val roles: List<String>? = null)
-
-@Serializable
-data class AudioConfig(val enabled: Boolean? = null)
-
-@Serializable
-data class RecordConfig(val enabled: Boolean? = null)
-
-@Serializable
-data class LiveConfig(val streams: List<String>? = null)
-
-@Serializable
-data class Go2rtcConfig(val streams: Map<String, JsonElement> = emptyMap())
+private fun JsonObject?.flag(key: String): Boolean =
+    this?.get(key)?.jsonPrimitive?.booleanOrNull ?: false
 
 @Serializable
 data class VersionInfo(
@@ -140,8 +129,20 @@ data class ReviewItem(
 
 private fun JsonElement?.asEpoch(): Double? = when (this) {
     null -> null
-    is kotlinx.serialization.json.JsonPrimitive -> doubleOrNull ?: content.toDoubleOrNull()
+    is kotlinx.serialization.json.JsonPrimitive -> doubleOrNull ?: content.parseEpoch()
     else -> null
+}
+
+/** Chuỗi thời gian có thể là epoch, ISO-8601 có offset (Frigate 0.18 dùng datetime) hoặc không offset (UTC). */
+private fun String.parseEpoch(): Double? {
+    if (isBlank()) return null
+    toDoubleOrNull()?.let { return it }
+    val instant = runCatching { java.time.Instant.parse(this) }.getOrNull()
+        ?: runCatching { java.time.OffsetDateTime.parse(this).toInstant() }.getOrNull()
+        ?: runCatching {
+            java.time.LocalDateTime.parse(this).toInstant(java.time.ZoneOffset.UTC)
+        }.getOrNull()
+    return instant?.toEpochMilli()?.div(1000.0)
 }
 
 @Serializable

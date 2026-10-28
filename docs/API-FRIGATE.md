@@ -83,3 +83,20 @@ Response: `id, camera, start_time, end_time (epoch **hoặc** chuỗi ISO tùy v
 - `POST /api/events/search`, `/api/{camera}/search/motion` — tìm kiếm theo vector/motion.
 - `/api/review/activity/motion`, `/api/timeline`, `/api/stats/history`.
 - go2rtc WebRTC: `/api/go2rtc/webrtc`, `/live/webrtc/api/ws` (thay MJPEG cho tiết kiệm băng thông).
+
+## 8. Khác biệt của Frigate 0.18 (đã kiểm chứng bằng app + source v0.18.2)
+
+Đây là các điểm **đã từng làm app crash/422**, sửa rồi thì đừng đổi lại:
+
+| Chỗ | 0.18 | Xử lý trong app |
+|---|---|---|
+| `GET /api/version` | `PlainTextResponse`, trả `0.18.2-cfa08c5` (không phải JSON) | `version()` trả `ResponseBody`, tự nhận chuỗi hay object |
+| `cameras.*.live.streams` | **object** `{"ten":"ten_go2rtc"}` (bản cũ là mảng) | `/api/config` đọc lỏng bằng `JsonObject`, chỉ lấy `enabled/record/audio` |
+| `GET /api/review` | `reviewed` là **int** `0`/`1` (gửi `false` → 422) | gửi `reviewed=0` hoặc `1` |
+| `POST /api/reviews/viewed` | body bắt buộc `{"ids":[...], "reviewed": true}` | `IdsBody` có field `reviewed` mặc định `true` |
+| `ReviewSegmentResponse.start_time` | `datetime` → chuỗi ISO-8601 | `ReviewItem` nhận `JsonElement`, tự parse epoch/ISO |
+| `data.detections` (review) | vẫn là danh sách **event id** (`objects` là tên nhãn) | dùng `detections[0]` cho thumbnail |
+| `EventResponse` | `top_score` không còn ở top-level, nằm trong `data.top_score` | `bestScore` đọc `topScore ?: data.topScore` |
+| `include_thumbnails` | deprecated nhưng vẫn nhận | vẫn gửi `0` |
+
+Unit test khoá các shape này: `app/src/test/java/.../data/ModelsTest.kt` (`./gradlew testReleaseUnitTest`).
