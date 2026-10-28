@@ -70,6 +70,10 @@ class FrigateRepository(
     private val _notifyCameras = MutableStateFlow<Set<String>>(emptySet())
     val notifyCameras: StateFlow<Set<String>> = _notifyCameras.asStateFlow()
 
+    /** Tăng mỗi khi dữ liệu sự kiện thay đổi (xoá...) để các danh sách tự làm mới. */
+    private val _dataVersion = MutableStateFlow(0)
+    val dataVersion: StateFlow<Int> = _dataVersion.asStateFlow()
+
     private val current: ServerSession?
         get() = (state.value as? SessionState.Ready)?.session
 
@@ -89,6 +93,7 @@ class FrigateRepository(
 
     suspend fun deleteEvent(id: String) {
         call { deleteEvent(id) }
+        _dataVersion.value = _dataVersion.value + 1
     }
 
     suspend fun setRetained(id: String, retained: Boolean) {

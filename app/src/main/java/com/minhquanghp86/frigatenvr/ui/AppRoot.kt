@@ -45,7 +45,6 @@ import com.minhquanghp86.frigatenvr.ui.screens.CamerasScreen
 import com.minhquanghp86.frigatenvr.ui.screens.EventDetailScreen
 import com.minhquanghp86.frigatenvr.ui.screens.EventsScreen
 import com.minhquanghp86.frigatenvr.ui.screens.LoginScreen
-import com.minhquanghp86.frigatenvr.ui.screens.ReviewScreen
 import com.minhquanghp86.frigatenvr.ui.screens.SettingsScreen
 import com.minhquanghp86.frigatenvr.ui.screens.TimelineScreen
 
@@ -190,10 +189,12 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     modifier = Modifier,
                     camera = entry.arguments?.getString("name").orEmpty(),
                     onBack = { navController.popBackStack() },
+                    onOpenEvent = { navController.navigate("event/$it") },
+                    onOpenTimeline = { cam -> navController.navigate("timeline?camera=$cam") },
                 )
             }
             composable("events") {
-                com.minhquanghp86.frigatenvr.ui.screens.MediaScreen(
+                EventsScreen(
                     modifier = Modifier,
                     onOpenEvent = { navController.navigate("event/$it") },
                 )
@@ -208,8 +209,20 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     onBack = { navController.popBackStack() },
                 )
             }
-            composable("timeline") {
-                TimelineScreen(modifier = Modifier)
+            composable(
+                "timeline?camera={camera}",
+                arguments = listOf(
+                    navArgument("camera") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
+            ) { entry ->
+                TimelineScreen(
+                    modifier = Modifier,
+                    initialCamera = entry.arguments?.getString("camera"),
+                )
             }
             composable("settings") {
                 SettingsScreen(

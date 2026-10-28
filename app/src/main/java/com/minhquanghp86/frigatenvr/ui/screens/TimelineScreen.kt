@@ -61,7 +61,7 @@ private val dayFmt = DateTimeFormatter.ofPattern("dd/MM", Locale.getDefault())
 private val dayFullFmt = DateTimeFormatter.ofPattern("EEEE dd/MM/yyyy", Locale.getDefault())
 
 @Composable
-fun TimelineScreen(modifier: Modifier = Modifier) {
+fun TimelineScreen(modifier: Modifier = Modifier, initialCamera: String? = null) {
     val vm: TimelineViewModel = viewModel()
     val cameras by vm.cameras.collectAsState()
     val camera by vm.camera.collectAsState()
@@ -70,6 +70,12 @@ fun TimelineScreen(modifier: Modifier = Modifier) {
     val loading by vm.loading.collectAsState()
     val error by vm.error.collectAsState()
     val playing by vm.playing.collectAsState()
+
+    androidx.compose.runtime.LaunchedEffect(cameras, initialCamera) {
+        if (initialCamera != null && cameras.contains(initialCamera) && camera != initialCamera) {
+            vm.setCamera(initialCamera)
+        }
+    }
 
     var selectedDay by remember { mutableStateOf<String?>(null) }
     var playingSpec by remember { mutableStateOf<Pair<String, String>?>(null) }
