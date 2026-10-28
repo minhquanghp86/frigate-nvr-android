@@ -16,6 +16,10 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0-dev"
         vectorDrawables { useSupportLibrary = true }
+        ndk {
+            // WebRTC chỉ cần ABI của điện thoại — bỏ x86 để APK nhẹ hơn.
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     buildTypes {
@@ -75,6 +79,9 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
     implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
+
+    // WebRTC (WHEP) để xem live fps gốc qua proxy có xác thực của Frigate.
+    implementation("io.github.webrtc-sdk:android:137.7151.05")
 
     testImplementation("junit:junit:4.13.2")
 }

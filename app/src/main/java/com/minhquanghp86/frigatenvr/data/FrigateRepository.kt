@@ -388,6 +388,9 @@ class FrigateRepository(
         return "http://$host:1984"
     }
 
+    /** WHEP qua proxy có xác thực của Frigate (không cần mở port 1984). */
+    fun webRtcEndpoint(stream: String) = url("/api/go2rtc/webrtc?src=$stream")
+
     fun go2rtcHls(stream: String) = "${go2rtcBase()}/api/stream.m3u8?src=$stream"
 
     fun go2rtcMp4(stream: String) = "${go2rtcBase()}/api/stream.mp4?src=$stream"

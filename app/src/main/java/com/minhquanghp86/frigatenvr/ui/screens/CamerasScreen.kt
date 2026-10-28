@@ -217,7 +217,7 @@ fun CameraLiveScreen(
     onBack: () -> Unit,
 ) {
     val repo = rememberRepo()
-    var modeName by rememberSaveable { mutableStateOf(LiveMode.MJPEG.name) }
+    var modeName by rememberSaveable { mutableStateOf(LiveMode.WEBRTC.name) }
     var fps by rememberSaveable { mutableIntStateOf(8) }
     var height by rememberSaveable { mutableIntStateOf(480) }
     var streamName by remember(camera) { mutableStateOf(camera) }
@@ -266,7 +266,7 @@ fun CameraLiveScreen(
     }
 
     val streamUrl = when (mode) {
-        LiveMode.MJPEG -> null
+        LiveMode.MJPEG, LiveMode.WEBRTC -> null
         LiveMode.HLS -> repo.go2rtcHls(streamName)
         LiveMode.MP4 -> repo.go2rtcMp4(streamName)
     }
@@ -275,6 +275,7 @@ fun CameraLiveScreen(
         ScreenHeader(
             title = camera,
             subtitle = when (mode) {
+                LiveMode.WEBRTC -> "WebRTC (qua Frigate) · $streamName"
                 LiveMode.MJPEG -> "MJPEG · ${height}p · ${fps} fps"
                 LiveMode.HLS -> "HLS go2rtc · $streamName"
                 LiveMode.MP4 -> "MP4 go2rtc · $streamName"
@@ -323,7 +324,12 @@ fun CameraLiveScreen(
                 .background(Color(0xFF000000)),
             contentAlignment = Alignment.Center,
         ) {
-            if (streamUrl != null) {
+            if (mode == LiveMode.WEBRTC) {
+                com.minhquanghp86.frigatenvr.ui.WebRtcLiveView(
+                    endpoint = repo.webRtcEndpoint(streamName),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else if (streamUrl != null) {
                 com.minhquanghp86.frigatenvr.ui.VideoPlayer(
                     url = streamUrl,
                     modifier = Modifier.fillMaxSize(),
@@ -405,9 +411,10 @@ fun CameraLiveScreen(
 }
 
 private enum class LiveMode(val label: String) {
-    MJPEG("MJPEG (Frigate)"),
-    HLS("HLS (go2rtc)"),
+    WEBRTC("WebRTC (Frigate)"),
     MP4("MP4 (go2rtc)"),
+    HLS("HLS (go2rtc)"),
+    MJPEG("MJPEG (Frigate)"),
 }
 
 @Composable

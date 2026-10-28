@@ -56,6 +56,17 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - Thêm ô **go2rtc URL** trong Cài đặt (mặc định tự suy ra `http://<ip-frigate>:1984`).
 - fps chọn được: 1/2/3/5/8/10/15; độ phân giải: 240/360/480/720/1080.
 
+## 3d. Cập nhật 28/10/2026 (lần 3) — WebRTC qua Frigate
+
+- Thêm chế độ live **WebRTC** (mặc định): `WebRtcLiveView` gửi SDP offer tới
+  `POST /api/go2rtc/webrtc?src=<stream>` (Bearer JWT, Content-Type: application/sdp),
+  chờ ICE gathering (non-trickle, tối đa 3s) rồi nhận SDP answer.
+  Không cần mở port 1984, giữ fps gốc, độ trễ thấp.
+- Thư viện: `io.github.webrtc-sdk:android:137.7151.05`; `abiFilters` chỉ arm64-v8a + armeabi-v7a
+  → APK ~32 MB.
+- Vẫn giữ MP4/HLS (go2rtc 1984) và MJPEG (Frigate) để so sánh/fallback.
+- Lưu ý bảo mật: go2rtc 1984 đang mở, `/api/streams` lộ URL RTSP kèm user/mật khẩu camera.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

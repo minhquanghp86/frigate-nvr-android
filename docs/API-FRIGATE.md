@@ -110,7 +110,8 @@ Frigate chạy kèm go2rtc ở **port 1984** (trong addon host_network là IP m�
 | `GET /api/streams` | Danh sách stream (vd `dahua1`, `ezviz_sub`...) |
 | `GET /api/stream.m3u8?src=<stream>` | Master HLS → variant `hls/playlist.m3u8?id=...`; ExoPlayer phát trực tiếp |
 | `GET /api/stream.mp4?src=<stream>` | fMP4 liên tục (H264/AAC passthrough), độ trễ thấp nhất |
-| `POST /api/webrtc?src=<stream>` | WHEP (SDP offer/answer) nếu sau này cần WebRTC |
+| `POST /api/webrtc?src=<stream>` | WHEP (SDP offer/answer) |
+| `POST /api/go2rtc/webrtc?src=<stream>` | WHEP **qua Frigate (có auth)** — app dùng cái này; GET bị 403 vì nginx chỉ cho POST, thiếu token → 401 |
 
 App dùng HLS/MP4 với `src` = tên stream trong `cameras.<cam>.live.streams` (fallback: tên camera).
 Bảo mật: go2rtc 1984 không có auth — nếu không muốn mở, phải chặn ở firewall và dùng MJPEG (qua Frigate).
