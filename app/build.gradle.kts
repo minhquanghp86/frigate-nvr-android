@@ -22,12 +22,29 @@ android {
         }
     }
 
+    signingConfigs {
+        // Keystore cố định để APK cập nhật được qua nhau (debug key của runner đổi mỗi build
+        // -> Android báo "xung đột gói", phải gỡ cài lại).
+        create("release") {
+            val ks = rootProject.file("keystore/frigate-release.jks")
+            if (ks.exists()) {
+                storeFile = ks
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "frigate-nvr"
+                keyAlias = System.getenv("KEY_ALIAS") ?: "frigate"
+                keyPassword = System.getenv("KEY_PASSWORD") ?: "frigate-nvr"
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            // APK release ký bằng debug key để cài được ngay trên điện thoại (dự án cá nhân).
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (rootProject.file("keystore/frigate-release.jks").exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         debug {
             applicationIdSuffix = ".debug"

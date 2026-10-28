@@ -89,7 +89,9 @@ fun WebRtcLiveView(
     val renderer = remember {
         SurfaceViewRenderer(context).apply {
             init(eglBase.eglBaseContext, null)
-            setEnableHardwareScaler(true)
+            // FIT: hiện đủ khung hình (có viền đen), không phóng/cắt như FILL.
+            setScalingType(org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FIT)
+            setEnableHardwareScaler(false)
             setMirror(false)
         }
     }
