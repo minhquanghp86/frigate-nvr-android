@@ -59,6 +59,14 @@ class FrigateRepository(
     @Volatile
     private var apiKey: String? = null
 
+    /** Cache /api/config để màn live mở tức thì (khỏi chờ roundtrip). */
+    @Volatile
+    private var cfgCache: Pair<Long, FrigateConfig>? = null
+    private val cfgTtlMs = 60_000L
+
+    private val _notifyEnabled = MutableStateFlow(false)
+    val notifyEnabled: StateFlow<Boolean> = _notifyEnabled.asStateFlow()
+
     private val current: ServerSession?
         get() = (state.value as? SessionState.Ready)?.session
 
@@ -68,8 +76,50 @@ class FrigateRepository(
         scope.launch { loadStoredSession() }
     }
 
+    suspend fun configCached(): FrigateConfig {
+        val now = System.currentTimeMillis()
+        cfgCache?.let { (at, cfg) -> if (now - at < cfgTtlMs) return cfg }
+        val cfg = call { config() }
+        cfgCache = now to cfg
+        return cfg
+    }
+
+    suspend fun deleteEvent(id: String) {
+        call { deleteEvent(id) }
+    }
+
+    suspend fun setRetained(id: String, retained: Boolean) {
+        call { if (retained) retainEvent(id) else unretenEvent(id) }
+    }
+
+    suspend fun labels(): List<String> = call { labels() }
+
+    suspend fun logs(service: String): String = call { logs(service) }.string()
+
+    suspend fun storage(): kotlinx.serialization.json.JsonElement = call { storage() }
+
+    suspend fun notices(): kotlinx.serialization.json.JsonElement = call { notices() }
+
+    suspend fun setNotifyEnabled(enabled: Boolean) {
+        store.edit { it[KEY_NOTIFY] = enabled }
+        _notifyEnabled.value = enabled
+    }
+
+    /** Làm mới profile — role có thể đã đổi sau lần đăng nhập trước. */
+    fun refreshProfile() {
+        val session = current ?: return
+        if (session.token.isNullOrBlank()) return
+        scope.launch {
+            val profile = runCatching { apiFor(session).profile().body() }.getOrNull() ?: return@launch
+            val updated = session.copy(profile = profile)
+            runCatching { persist(updated) }
+            _state.value = SessionState.Ready(updated)
+        }
+    }
+
     private suspend fun loadStoredSession() {
         val prefs = store.data.first()
+        _notifyEnabled.value = prefs[KEY_NOTIFY] ?: false
         val base = prefs[KEY_BASE].orEmpty()
         if (base.isBlank()) {
             _state.value = SessionState.Anonymous
@@ -86,6 +136,7 @@ class FrigateRepository(
             go2rtcUrl = prefs[KEY_GO2RTC]?.takeIf { it.isNotBlank() },
         )
         _state.value = if (session.loggedIn) SessionState.Ready(session) else SessionState.Anonymous
+        if (session.loggedIn) refreshProfile()
     }
 
     private suspend fun persist(s: ServerSession) {
@@ -409,5 +460,6 @@ class FrigateRepository(
         private val KEY_TRUST = booleanPreferencesKey("trust_self_signed")
         private val KEY_AUTH_OFF = booleanPreferencesKey("auth_disabled")
         private val KEY_GO2RTC = stringPreferencesKey("go2rtc_url")
+        private val KEY_NOTIFY = booleanPreferencesKey("notify_enabled")
     }
 }

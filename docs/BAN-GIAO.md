@@ -102,6 +102,26 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
 - Mật khẩu admin của Frigate có thể reset bằng `auth: reset_admin_password: true` + restart
   (in ra trong log add-on), sau đó nhớ đặt lại `false`.
 
+## 3i. Cập nhật 28/10/2026 (lần 8) — iOS UI, live nhanh, thông báo, hành động sự kiện
+
+**Live mở nhanh hơn**
+- Hiện ảnh `latest.jpg` (poster) ngay khi vào camera, video WebRTC phủ lên khi có frame đầu.
+- Chờ ICE gathering giảm 3000ms → **700ms**; endpoint WebRTC dùng luôn tên camera (không chờ /api/config).
+- `configCached()` (TTL 60s) cho màn live/camera/events; `refreshProfile()` đồng bộ role khi mở app.
+
+**Giao diện iOS** (`ui/Theme.kt`, `ui/Ios.kt`): palette iOS dark, typography (large title 34), shape 14-18dp,
+`IosGroup/IosRow/IosSwitchRow/SectionTitle/Pill/SegmentedControl`; tab bar trong mờ; Cài đặt dạng inset-grouped.
+
+**Chức năng mới**
+- Thông báo sự kiện: `notify/EventWatchService` (foreground service, poll `/api/events?after=…` 10s/lần,
+  dedupe theo id, POST_NOTIFICATIONS, kênh HIGH; tự chạy lại khi app mở nếu đang bật).
+  Không dùng Web Push/VAPID của Frigate vì cần FCM/Google services, không hợp môi trường LAN.
+- Sự kiện: giữ/bỏ giữ (retain), xoá (có xác nhận), tải clip về `Downloads/Frigate` (OkHttp + MediaStore,
+  giữ được JWT + TLS self-signed — DownloadManager hệ thống sẽ fail với cert tự ký).
+- Nhật ký: `/api/logs/{frigate|go2rtc}` (tự cập nhật 3s).
+- Lưu trữ: `/api/recordings/storage` (admin) — thanh % theo camera.
+- Bộ lọc label lấy động từ `/api/labels`.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

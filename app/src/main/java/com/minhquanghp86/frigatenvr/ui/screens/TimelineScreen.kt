@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.minhquanghp86.frigatenvr.data.HourRecording
+import com.minhquanghp86.frigatenvr.ui.IOSCard
 import com.minhquanghp86.frigatenvr.ui.ErrorBox
 import com.minhquanghp86.frigatenvr.ui.LoadingBox
 import com.minhquanghp86.frigatenvr.ui.ScreenHeader
@@ -218,7 +219,7 @@ fun TimelineScreen(modifier: Modifier = Modifier) {
 private fun HourCard(day: String, hour: HourRecording, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = IOSCard),
         shape = RoundedCornerShape(10.dp),
     ) {
         Column(Modifier.padding(10.dp)) {

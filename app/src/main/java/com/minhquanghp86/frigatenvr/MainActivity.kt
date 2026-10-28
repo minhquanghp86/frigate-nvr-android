@@ -13,6 +13,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        com.minhquanghp86.frigatenvr.notify.Notify.ensureChannels(this)
         setContent {
             FrigateTheme {
                 AppRoot()

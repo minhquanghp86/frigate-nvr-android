@@ -262,7 +262,7 @@ fun WebRtcLiveView(
             val offer = pc.createOfferAwait()
             pc.setLocalDescriptionAwait(offer)
             // go2rtc dùng non-trickle: chờ gom ICE rồi mới gửi offer (tối đa 3s).
-            withTimeoutOrNull(3_000) { iceGathered.await() }
+            withTimeoutOrNull(700) { iceGathered.await() }
 
             status = "Đang trao đổi SDP…"
             val answer = withContext(Dispatchers.IO) { postOffer(client, endpoint, offer.description) }
@@ -276,7 +276,7 @@ fun WebRtcLiveView(
         }
     }
 
-    Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
+    Box(modifier, contentAlignment = Alignment.Center) {
         val aspect = videoAspect
         AndroidView(
             factory = { renderer },
@@ -307,7 +307,7 @@ fun WebRtcLiveView(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color(0x88000000)),
+                    .background(Color.Transparent),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(

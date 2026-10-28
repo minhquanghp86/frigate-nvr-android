@@ -1,8 +1,13 @@
 package com.minhquanghp86.frigatenvr.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Notifications
@@ -60,7 +65,23 @@ fun AppRoot() {
     val repo = app.container.repository
     val state by repo.state.collectAsState()
     val notice by repo.notice.collectAsState()
+    val notifyEnabled by repo.notifyEnabled.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Giữ foreground service theo cài đặt (khởi động lại sau khi app bị kill).
+    LaunchedEffect(notifyEnabled, state) {
+        val ctx = app.applicationContext
+        val ready = state is SessionState.Ready
+        val intent = android.content.Intent(
+            ctx,
+            com.minhquanghp86.frigatenvr.notify.EventWatchService::class.java,
+        )
+        if (notifyEnabled && ready) {
+            androidx.core.content.ContextCompat.startForegroundService(ctx, intent)
+        } else if (!notifyEnabled) {
+            ctx.stopService(intent)
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         when (val s = state) {
@@ -95,12 +116,23 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
     val onDetail = route != null && route !in tabs.map { it.route }
 
     Scaffold(
+        containerColor = IOSBackground,
         bottomBar = {
             if (!onDetail) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = Color(0xF20B0B0C),
+                    tonalElevation = 0.dp,
+                ) {
                     tabs.forEach { tab ->
                         NavigationBarItem(
                             selected = route == tab.route,
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = IOSBlue,
+                                selectedTextColor = IOSBlue,
+                                unselectedIconColor = IOSGray,
+                                unselectedTextColor = IOSGray,
+                                indicatorColor = Color.Transparent,
+                            ),
                             onClick = {
                                 navController.navigate(tab.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
@@ -119,9 +151,10 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                                         else -> Icons.Outlined.Settings
                                     },
                                     contentDescription = tab.label,
+                                    modifier = Modifier.size(22.dp),
                                 )
                             },
-                            label = { Text(tab.label, fontSize = 11.sp) },
+                            label = { Text(tab.label, fontSize = 10.sp) },
                         )
                     }
                 }
@@ -131,7 +164,9 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
         NavHost(
             navController = navController,
             startDestination = "cameras",
-            modifier = Modifier.padding(padding),
+            modifier = Modifier
+                .padding(padding)
+                .background(IOSGroupedBackground),
         ) {
             composable("cameras") {
                 CamerasScreen(
@@ -172,7 +207,22 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                 TimelineScreen(modifier = Modifier)
             }
             composable("settings") {
-                SettingsScreen(modifier = Modifier, session = state.session)
+                SettingsScreen(
+                    modifier = Modifier,
+                    session = state.session,
+                    onOpenLogs = { navController.navigate("logs") },
+                    onOpenStorage = { navController.navigate("storage") },
+                )
+            }
+            composable("logs") {
+                com.minhquanghp86.frigatenvr.ui.screens.LogsScreen(
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable("storage") {
+                com.minhquanghp86.frigatenvr.ui.screens.StorageScreen(
+                    onBack = { navController.popBackStack() },
+                )
             }
         }
     }

@@ -36,6 +36,7 @@ data class FrigateEvent(
     @SerialName("has_snapshot") val hasSnapshot: Boolean = false,
     @SerialName("top_score") val topScore: Double? = null,
     @SerialName("plus_id") val plusId: String? = null,
+    @SerialName("retain_indefinitely") val retained: Boolean = false,
     val score: Double? = null,
     val zones: List<String> = emptyList(),
     val attributes: List<String> = emptyList(),

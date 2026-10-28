@@ -1,6 +1,19 @@
 package com.minhquanghp86.frigatenvr.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.minhquanghp86.frigatenvr.data.MediaSaver
+import com.minhquanghp86.frigatenvr.ui.IOSCard
+import com.minhquanghp86.frigatenvr.ui.IOSRed
+import com.minhquanghp86.frigatenvr.ui.IOSSecondaryLabel
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -83,7 +96,11 @@ fun EventsScreen(
     val hasMore by vm.hasMore.collectAsState()
     val camera by vm.camera.collectAsState()
     val label by vm.label.collectAsState()
+    val apiLabels by vm.labels.collectAsState()
     val onlyClip by vm.onlyWithClip.collectAsState()
+    val labelOptions = remember(apiLabels) {
+        listOf<String?>(null) + (apiLabels.ifEmpty { LABEL_OPTIONS.filterNotNull() })
+    }
     val gridState = rememberLazyGridState()
 
     LaunchedEffect(gridState, items.size) {
@@ -128,8 +145,8 @@ fun EventsScreen(
             )
             AssistChip(
                 onClick = {
-                    val idx = LABEL_OPTIONS.indexOf(label)
-                    vm.setLabel(LABEL_OPTIONS[(idx + 1) % LABEL_OPTIONS.size])
+                    val idx = labelOptions.indexOf(label)
+                    vm.setLabel(labelOptions[(idx + 1) % labelOptions.size])
                 },
                 label = { Text("Nhãn: ${labelLabel(label)}", fontSize = 12.sp) },
             )
@@ -215,7 +232,7 @@ private fun EventCard(event: FrigateEvent, onClick: () -> Unit) {
     val repo = rememberRepo()
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = IOSCard),
         shape = RoundedCornerShape(10.dp),
     ) {
         Column {
@@ -383,6 +400,8 @@ fun EventDetailScreen(
                         ),
                     )
                 }
+
+                item { EventActions(current, onBack = onBack) }
             }
         }
     }
@@ -391,7 +410,7 @@ fun EventDetailScreen(
 @Composable
 fun InfoCard(rows: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = IOSCard),
         shape = RoundedCornerShape(10.dp),
         modifier = modifier.fillMaxWidth(),
     ) {
@@ -416,5 +435,107 @@ fun InfoCard(rows: List<Pair<String, String>>, modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
+
+
+@Composable
+private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
+    val repo = rememberRepo()
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var retained by remember(event.id) { mutableStateOf(event.retained) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        busy = true
+                        try {
+                            repo.setRetained(event.id, !retained)
+                            retained = !retained
+                            message = if (retained) "Đã giữ sự kiện vĩnh viễn" else "Đã bỏ giữ"
+                        } catch (e: Exception) {
+                            message = e.message ?: "Không đổi được trạng thái giữ"
+                        } finally {
+                            busy = false
+                        }
+                    }
+                },
+                enabled = !busy,
+            ) {
+                Icon(
+                    if (retained) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(if (retained) "Bỏ giữ" else "Giữ", fontSize = 13.sp)
+            }
+
+            if (event.hasClip) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            val saved = MediaSaver.save(
+                                context = context,
+                                client = repo.okhttp(),
+                                url = repo.eventClip(event.id),
+                                fileName = "frigate-${event.id}.mp4",
+                                mime = "video/mp4",
+                            )
+                            message = saved?.let { "Đã lưu: $it" } ?: "Không tải được clip"
+                            busy = false
+                        }
+                    },
+                    enabled = !busy,
+                ) {
+                    Icon(Icons.Outlined.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Tải clip", fontSize = 13.sp)
+                }
+            }
+
+            OutlinedButton(onClick = { confirmDelete = true }, enabled = !busy) {
+                Icon(Icons.Outlined.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Xoá", fontSize = 13.sp)
+            }
+        }
+
+        message?.let {
+            Text(it, fontSize = 12.sp, color = IOSSecondaryLabel)
+        }
+    }
+
+    if (confirmDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text("Xoá sự kiện?") },
+            text = { Text("Sự kiện và clip/snapshot sẽ bị xoá khỏi Frigate.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDelete = false
+                    scope.launch {
+                        busy = true
+                        try {
+                            repo.deleteEvent(event.id)
+                            onBack()
+                        } catch (e: Exception) {
+                            message = e.message ?: "Không xoá được sự kiện"
+                            busy = false
+                        }
+                    }
+                }) { Text("Xoá", color = IOSRed) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDelete = false }) { Text("Huỷ") }
+            },
+        )
     }
 }

@@ -76,11 +76,19 @@ class EventsViewModel(app: Application) : AndroidViewModel(app) {
     private val _cameras = MutableStateFlow<List<String>>(emptyList())
     val cameras: StateFlow<List<String>> = _cameras.asStateFlow()
 
+    private val _labels = MutableStateFlow<List<String>>(emptyList())
+    val labels: StateFlow<List<String>> = _labels.asStateFlow()
+
     init {
         refresh()
         viewModelScope.launch {
             _cameras.value = try {
-                repo.call { config() }.enabledCameras
+                repo.configCached().enabledCameras
+            } catch (_: Exception) {
+                emptyList()
+            }
+            _labels.value = try {
+                repo.labels()
             } catch (_: Exception) {
                 emptyList()
             }
@@ -199,6 +207,9 @@ class TimelineViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _cameras = MutableStateFlow<List<String>>(emptyList())
     val cameras: StateFlow<List<String>> = _cameras.asStateFlow()
+
+    private val _labels = MutableStateFlow<List<String>>(emptyList())
+    val labels: StateFlow<List<String>> = _labels.asStateFlow()
 
     private val _camera = MutableStateFlow<String?>(null)
     val camera: StateFlow<String?> = _camera.asStateFlow()

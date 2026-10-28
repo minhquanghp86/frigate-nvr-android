@@ -79,6 +79,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.minhquanghp86.frigatenvr.data.FrigateConfig
 import com.minhquanghp86.frigatenvr.data.MjpegSource
+import com.minhquanghp86.frigatenvr.ui.IOSCard
 import com.minhquanghp86.frigatenvr.ui.CamerasViewModel
 import com.minhquanghp86.frigatenvr.ui.CenteredMessage
 import com.minhquanghp86.frigatenvr.ui.ErrorBox
@@ -159,7 +160,7 @@ private fun CameraGrid(config: FrigateConfig, tick: Int, onOpenCamera: (String) 
             Card(
                 onClick = { onOpenCamera(name) },
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = IOSCard,
                 ),
                 shape = RoundedCornerShape(10.dp),
             ) {
@@ -259,7 +260,7 @@ fun CameraLiveScreen(
     val mode = runCatching { LiveMode.valueOf(modeName) }.getOrDefault(LiveMode.WEBRTC)
 
     LaunchedEffect(camera) {
-        val cfg = runCatching { repo.call { config() } }.getOrNull()
+        val cfg = runCatching { repo.configCached() }.getOrNull()
         val cam = cfg?.cameras?.get(camera)
         streamName = cam?.liveStreamNames?.firstOrNull() ?: camera
         onEnabled = cam?.enabled ?: true
@@ -332,13 +333,21 @@ fun CameraLiveScreen(
         ) {
             when {
                 mode == LiveMode.WEBRTC -> key(reloadKey) {
-                    com.minhquanghp86.frigatenvr.ui.WebRtcLiveView(
-                        endpoint = repo.webRtcEndpoint(streamName),
-                        modifier = Modifier.fillMaxSize(),
-                        fit = fit,
-                        muted = muted,
-                        showStats = showStats,
-                    )
+                    Box(Modifier.fillMaxSize()) {
+                        // Ảnh poster hiện ngay trong lúc WebRTC bắt tay -> không còn màn hình chờ.
+                        FrigateImage(
+                            url = repo.cameraLatest(camera),
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = if (fit) ContentScale.Fit else ContentScale.Crop,
+                        )
+                        com.minhquanghp86.frigatenvr.ui.WebRtcLiveView(
+                            endpoint = repo.webRtcEndpoint(camera),
+                            modifier = Modifier.fillMaxSize(),
+                            fit = fit,
+                            muted = muted,
+                            showStats = showStats,
+                        )
+                    }
                 }
 
                 streamUrl != null -> key(reloadKey) {
