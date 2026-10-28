@@ -232,6 +232,12 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
   có `monochrome` cho themed icon Android 13. Xem trước: `docs/icon.png`.
 - Ghi chú: repo vẫn tên `frigate-nvr-android` (GitHub sẽ redirect nếu đổi tên sau này).
 
+## 3s. Cập nhật 28/10/2026 (lần 18) — log chọn/copy được
+
+- Khung log bọc `SelectionContainer` nên nhấn giữ chọn/copy từng đoạn như văn bản thường.
+- Thêm nút **Copy** (clipboard), **Chia sẻ** (ACTION_SEND), và **Xoá log** (chỉ ở nguồn "Ứng dụng").
+- Xem log "Ứng dụng" tự tắt chế độ tự cập nhật để không phá vùng bôi đen.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
