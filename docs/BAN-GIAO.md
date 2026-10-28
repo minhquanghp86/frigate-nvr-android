@@ -84,6 +84,15 @@ Người dùng cài bản v0.1.0 và 4 tab đỏ. Nguyên nhân (đối chiếu 
   cho SurfaceViewRenderer (không còn phụ thuộc chế độ scale của renderer) + vẫn để `SCALE_ASPECT_FIT`.
 - Cài đặt hiện thêm `app v<versionName>` (BuildConfig.VERSION_NAME) để xác nhận bản đang cài.
 
+## 3g. Cập nhật 28/10/2026 (lần 6) — giao diện player kiểu Frigate
+
+- Thanh công cụ nổi: quay lại, kết nối lại, fit/crop, tắt/bật tiếng (WebRTC), toàn màn hình, cài đặt.
+- Sheet cài đặt kiểu Frigate: chọn Luồng, FPS + Chất lượng (MJPEG), công tắc Hiện thống kê / Tắt tiếng /
+  Vừa khung, nút Kết nối lại.
+- WebRTC: thêm audio (transceiver RECV_ONLY + `setAudioPlayout`), `getStats` 1s/lần để hiện
+  fps · độ phân giải · kbps; chip thống kê góc dưới-trái, không đè nút.
+- VideoPlayer (MP4/HLS): thêm tham số `fit` (RESIZE_MODE_FIT/ZOOM), cập nhật qua `AndroidView.update`.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

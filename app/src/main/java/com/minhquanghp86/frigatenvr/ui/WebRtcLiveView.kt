@@ -1,11 +1,15 @@
 package com.minhquanghp86.frigatenvr.ui
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,13 +26,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -46,6 +51,8 @@ import org.webrtc.MediaStream
 import org.webrtc.MediaStreamTrack
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
+import org.webrtc.RTCStatsCollectorCallback
+import org.webrtc.RendererCommon
 import org.webrtc.RtpReceiver
 import org.webrtc.RtpTransceiver
 import org.webrtc.SdpObserver
@@ -72,14 +79,20 @@ private fun ensureWebRtcInitialized(context: Context) {
 }
 
 /**
- * Xem live bằng WebRTC (WHEP) qua proxy có xác thực của Frigate:
- * POST /api/go2rtc/webrtc?src=<stream>  (Content-Type: application/sdp, Bearer JWT)
- * -> độ trễ thấp, fps gốc, không phải mở port go2rtc 1984 ra LAN.
+ * Live bằng WebRTC (WHEP) qua proxy có xác thực của Frigate:
+ * POST /api/go2rtc/webrtc?src=<stream> (Content-Type: application/sdp, Bearer JWT).
+ *
+ * @param fit true = hiện đủ khung (viền đen), false = lấp đầy (cắt bớt).
+ * @param muted tắt tiếng (WebRTC có audio).
+ * @param showStats hiện chip fps / độ phân giải / bitrate.
  */
 @Composable
 fun WebRtcLiveView(
     endpoint: String,
     modifier: Modifier = Modifier,
+    fit: Boolean = true,
+    muted: Boolean = false,
+    showStats: Boolean = false,
 ) {
     val context = LocalContext.current
     val repo = rememberRepo()
@@ -87,16 +100,14 @@ fun WebRtcLiveView(
 
     var status by remember(endpoint) { mutableStateOf("Đang kết nối WebRTC…") }
     var showOverlay by remember(endpoint) { mutableStateOf(true) }
-    // Tỉ lệ khung hình thật của video (đọc từ frame đầu tiên) để ép View đúng tỉ lệ,
-    // tránh việc renderer phóng/cắt khi view hình chữ nhật khác tỉ lệ.
     var videoAspect by remember(endpoint) { mutableStateOf<Float?>(null) }
+    var statsText by remember(endpoint) { mutableStateOf("") }
 
     val eglBase = remember { EglBase.create() }
     val renderer = remember {
         SurfaceViewRenderer(context).apply {
             init(eglBase.eglBaseContext, null)
-            // FIT: hiện đủ khung hình (có viền đen), không phóng/cắt như FILL.
-            setScalingType(org.webrtc.RendererCommon.ScalingType.SCALE_ASPECT_FIT)
+            setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
             setEnableHardwareScaler(false)
             setMirror(false)
         }
@@ -130,6 +141,57 @@ fun WebRtcLiveView(
             runCatching { factory.dispose() }
             runCatching { renderer.release() }
             runCatching { eglBase.release() }
+        }
+    }
+
+    LaunchedEffect(fit) {
+        renderer.setScalingType(
+            if (fit) RendererCommon.ScalingType.SCALE_ASPECT_FIT
+            else RendererCommon.ScalingType.SCALE_ASPECT_FILL,
+        )
+    }
+
+    LaunchedEffect(muted) {
+        pcHolder[0]?.setAudioPlayout(!muted)
+    }
+
+    LaunchedEffect(endpoint, showStats) {
+        if (!showStats) return@LaunchedEffect
+        var prevBytes = 0.0
+        var prevTs = 0L
+        val main = Handler(Looper.getMainLooper())
+        while (true) {
+            pcHolder[0]?.getStats(object : RTCStatsCollectorCallback {
+                override fun onStatsDelivered(report: org.webrtc.RTCStatsReport) {
+                    var fps = 0.0
+                    var res = ""
+                    var bytes = 0.0
+                    for (s in report.statsMap.values) {
+                        if (s.type != "inbound-rtp") continue
+                        if ((s.members["kind"] as? String) != "video") continue
+                        fps = (s.members["framesPerSecond"] as? Number)?.toDouble() ?: fps
+                        val w = (s.members["frameWidth"] as? Number)?.toInt()
+                        val h = (s.members["frameHeight"] as? Number)?.toInt()
+                        if (w != null && h != null && w > 0 && h > 0) res = "${w}x$h"
+                        bytes = (s.members["bytesReceived"] as? Number)?.toDouble() ?: bytes
+                    }
+                    val now = System.currentTimeMillis()
+                    val kbps = if (prevTs > 0 && now > prevTs && bytes >= prevBytes) {
+                        (bytes - prevBytes) * 8 / (now - prevTs)
+                    } else {
+                        0.0
+                    }
+                    prevBytes = bytes
+                    prevTs = now
+                    val text = buildString {
+                        append("%.1f fps".format(fps))
+                        if (res.isNotEmpty()) append(" · $res")
+                        if (kbps > 0) append(" · %.0f kbps".format(kbps))
+                    }
+                    main.post { statsText = text }
+                }
+            })
+            delay(1_000)
         }
     }
 
@@ -187,8 +249,13 @@ fun WebRtcLiveView(
             val pc = factory.createPeerConnection(config, observer)
                 ?: throw IllegalStateException("Không tạo được PeerConnection")
             pcHolder[0] = pc
+            pc.setAudioPlayout(!muted)
             pc.addTransceiver(
                 MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO,
+                RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
+            )
+            pc.addTransceiver(
+                MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
                 RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY),
             )
 
@@ -209,22 +276,33 @@ fun WebRtcLiveView(
         }
     }
 
-    Box(
-        modifier
-            .background(Color.Black),
-        contentAlignment = Alignment.Center,
-    ) {
+    Box(modifier.background(Color.Black), contentAlignment = Alignment.Center) {
         val aspect = videoAspect
         AndroidView(
             factory = { renderer },
-            modifier = if (aspect != null) {
-                Modifier
+            modifier = when {
+                !fit -> Modifier.fillMaxSize()
+                aspect != null -> Modifier
                     .align(Alignment.Center)
                     .aspectRatio(aspect)
-            } else {
-                Modifier.fillMaxSize()
+
+                else -> Modifier.fillMaxSize()
             },
         )
+
+        if (showStats && statsText.isNotEmpty()) {
+            Text(
+                statsText,
+                color = Color.White,
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(8.dp)
+                    .background(Color(0xAA111111), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+            )
+        }
+
         if (showOverlay) {
             Box(
                 Modifier
@@ -232,7 +310,7 @@ fun WebRtcLiveView(
                     .background(Color(0x88000000)),
                 contentAlignment = Alignment.Center,
             ) {
-                androidx.compose.foundation.layout.Column(
+                Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.padding(20.dp),
                 ) {
