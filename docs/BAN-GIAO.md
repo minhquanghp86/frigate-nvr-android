@@ -293,6 +293,18 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
 - **Khuôn mặt**: Cài đặt → Khuôn mặt đã đăng ký → `/api/faces` + ảnh `/clips/faces/<tên>/<file>`
   (dùng OkHttp có Bearer nên ảnh qua được auth).
 
+## 3y. Cập nhật 29/10/2026 — thiết kế lại tab Camera (trang chủ)
+
+- **Header**: tiêu đề lớn "Camera" + dòng trạng thái "N camera · M đang ghi" (chấm xanh) + nút tải lại.
+- **Carousel camera nổi bật**: thẻ 16:9 rộng 84% màn hình (lộ mép thẻ kế tiếp để vuốt), ảnh `latest.jpg`
+  làm nền + gradient tối, nhãn **LIVE** (đỏ), **REC**, chip **fps** (từ `/api/stats`), tên camera
+  và sự kiện gần nhất ("person · 5 phút trước"), nút chevron tròn. Chạm để mở live (kèm warmStream).
+- **3 thẻ số liệu nhanh**: sự kiện **hôm nay** (tổng `/api/events/summary` hôm nay), **đang ghi** x/y camera,
+  **lưu trữ %** (used/total lớn nhất trong `service.storage`).
+- **Danh sách "Tất cả camera"** (inset-grouped iOS): thumbnail, tên, chấm REC, fps, số sự kiện hôm nay,
+  icon audio nếu có, sự kiện gần nhất, chevron.
+- Dữ liệu tự làm mới mỗi 8 giây (stats + events summary + ảnh), tải lại thủ công bằng nút ở header.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
