@@ -275,6 +275,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     onOpenUsers = { navController.navigate("users") },
                     onOpenCameraConfig = { navController.navigate("cameraConfig") },
                     onOpenAlerts = { navController.navigate("alerts") },
+                    onOpenPrivacy = { navController.navigate("privacy") },
                 )
             }
             composable("faceEvents") {
@@ -308,6 +309,11 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                             restoreState = true
                         }
                     },
+                )
+            }
+            composable("privacy") {
+                com.minhquanghp86.frigatenvr.ui.screens.PrivacyScreen(
+                    onBack = { navController.popBackStack() },
                 )
             }
             composable("alerts") {
