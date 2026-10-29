@@ -83,6 +83,9 @@ import com.minhquanghp86.frigatenvr.ui.fmtDateTime
 import com.minhquanghp86.frigatenvr.ui.fmtDuration
 import com.minhquanghp86.frigatenvr.ui.pct
 import com.minhquanghp86.frigatenvr.ui.rememberRepo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.minhquanghp86.frigatenvr.data.FrigateRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 
@@ -385,6 +388,7 @@ fun EventDetailScreen(
     var faceName by remember { mutableStateOf("") }
     var faceBusy by remember { mutableStateOf(false) }
     var faceMessage by remember { mutableStateOf<String?>(null) }
+    var faceUploading by remember { mutableStateOf(false) }
     var showEdit by remember { mutableStateOf(false) }
     var editSubLabel by remember { mutableStateOf("") }
     var editPlate by remember { mutableStateOf("") }
@@ -764,5 +768,48 @@ private fun EventActions(event: FrigateEvent, onBack: () -> Unit) {
                 TextButton(onClick = { confirmDelete = false }) { Text("Huỷ") }
             },
         )
+    }
+}
+
+
+/**
+ * Tải snapshot sự kiện và cắt quanh box nhận diện (thêm 20% viền) rồi trả JPEG bytes
+ * để đăng ký vào thư viện khuôn mặt. Cắt sát giúp Frigate tìm thấy mặt dễ hơn ảnh toàn cảnh.
+ */
+private suspend fun loadFaceImageBytes(
+    repo: FrigateRepository,
+    event: FrigateEvent,
+): ByteArray? = withContext(Dispatchers.IO) {
+    val request = okhttp3.Request.Builder().url(repo.eventSnapshotRaw(event.id)).build()
+    repo.okhttp().newCall(request).execute().use { response ->
+        if (!response.isSuccessful) return@withContext null
+        val raw = response.body?.bytes() ?: return@withContext null
+        val box = event.data?.box?.takeIf { it.size >= 4 } ?: return@withContext raw
+
+        val bitmap = android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.size)
+            ?: return@withContext raw
+        val width = bitmap.width.toFloat()
+        val height = bitmap.height.toFloat()
+        val padX = (box[2] - box[0]).toFloat() * 0.2f
+        val padY = (box[3] - box[1]).toFloat() * 0.2f
+        val left = ((box[0].toFloat() - padX) * width).toInt().coerceIn(0, bitmap.width - 1)
+        val top = ((box[1].toFloat() - padY) * height).toInt().coerceIn(0, bitmap.height - 1)
+        val right = ((box[2].toFloat() + padX) * width).toInt()
+            .coerceIn(left + 1, bitmap.width)
+        val bottom = ((box[3].toFloat() + padY) * height).toInt()
+            .coerceIn(top + 1, bitmap.height)
+
+        val cropped = android.graphics.Bitmap.createBitmap(
+            bitmap,
+            left,
+            top,
+            right - left,
+            bottom - top,
+        )
+        val out = java.io.ByteArrayOutputStream()
+        cropped.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
+        cropped.recycle()
+        bitmap.recycle()
+        out.toByteArray()
     }
 }

@@ -480,6 +480,9 @@ class FrigateRepository(
         call { markViewed(IdsBody(ids, reviewed)) }
     }
     fun eventSnapshot(id: String) = url("/api/events/$id/snapshot.jpg?bbox=1")
+
+    /** Snapshot gốc, không vẽ box (dùng để train khuôn mặt). */
+    fun eventSnapshotRaw(id: String) = url("/api/events/$id/snapshot.jpg")
     fun eventClip(id: String) = url("/api/events/$id/clip.mp4")
     fun cameraLatest(camera: String) = url("/api/$camera/latest.jpg")
     fun cameraMjpeg(camera: String, fps: Int, height: Int, boxes: Boolean = false) =
