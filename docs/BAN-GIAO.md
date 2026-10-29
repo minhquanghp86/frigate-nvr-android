@@ -514,6 +514,23 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   tiến trình hiển thị “Đang tải nhanh… x%”, vẫn có notification trên thanh trạng thái.
 - Phù hợp khi cần lấy nhanh một khung giờ; “Tải” vẫn dành cho file MP4 hoàn chỉnh/ổn định hơn.
 
+## 4k. Cập nhật 29/10/2026 — thiết kế lại màn Hệ thống + xoá clip đã xuất
+
+- **Hero card** gradient navy ở đầu: phiên bản Frigate + thời gian chạy + 3 ô CPU / RAM / tốc độ phát hiện
+  (gộp các dòng rời rạc trước đây; nhóm "Hệ thống" giờ chỉ còn lối tắt Nhật ký/Dung lượng).
+- **Dung lượng**: thẻ bo 18dp, % lớn bên phải, **thanh tiến trình dày 14dp (gấp đôi bản cũ 7dp)**,
+  màu theo ngưỡng (xanh <70%, cam ≥70%, đỏ ≥90%), ghi chú “Bản ghi sớm nhất”.
+- **Bộ phát hiện**: 3 biểu đồ gọn hơn (64dp), giá trị hiện tại in đậm.
+- **Clip đã xuất**: mỗi dòng có 2 nút — **Tải** và **Xoá** (có hộp thoại xác nhận);
+  xoá gọi `POST /api/exports/delete` body `{ids:[...]}` rồi tải lại danh sách + dung lượng.
+
+## 4l. Cập nhật 29/10/2026 — sửa màu trang đăng nhập
+
+- Tiêu đề “FriCam” và nhãn checkbox trước đây dùng màu mặc định của theme (đen trên nền đen) →
+  đặt rõ `IOSLabel`.
+- `Checkbox` dùng `CheckboxDefaults.colors(checkedColor=IOSBlue, uncheckedColor=IOSSecondaryLabel,
+  checkmarkColor=White)`; ô nhập dùng `OutlinedTextFieldDefaults` (chữ trắng, label xám, viền xanh).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

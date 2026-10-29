@@ -39,6 +39,9 @@ data class PlateBody(
 data class AttributesBody(val attributes: List<String>)
 
 @Serializable
+data class ExportDeleteBody(val ids: List<String>)
+
+@Serializable
 data class RenameFaceBody(val new_name: String)
 
 @Serializable

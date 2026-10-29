@@ -196,6 +196,9 @@ interface FrigateApi {
     @GET("api/faces")
     suspend fun facesApi(): kotlinx.serialization.json.JsonElement
 
+    @POST("api/exports/delete")
+    suspend fun deleteExports(@Body body: ExportDeleteBody): ResponseBody
+
     @GET("api/exports")
     suspend fun exports(): kotlinx.serialization.json.JsonElement
 

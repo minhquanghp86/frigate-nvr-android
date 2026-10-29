@@ -25,6 +25,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.minhquanghp86.frigatenvr.ui.IOSBlue
+import com.minhquanghp86.frigatenvr.ui.IOSLabel
+import com.minhquanghp86.frigatenvr.ui.IOSSecondaryLabel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,11 +63,16 @@ fun LoginScreen(repo: FrigateRepository) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("FriCam", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "FriCam",
+            style = MaterialTheme.typography.headlineMedium,
+            color = IOSLabel,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+        )
         Text(
             "Trình xem Frigate NVR (không chính thức)",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = IOSSecondaryLabel,
         )
         Spacer(Modifier.height(24.dp))
 
@@ -73,6 +81,7 @@ fun LoginScreen(repo: FrigateRepository) {
             onValueChange = { baseUrl = it },
             label = { Text("Địa chỉ server (http://ip:8971)") },
             singleLine = true,
+            colors = loginFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
@@ -81,6 +90,7 @@ fun LoginScreen(repo: FrigateRepository) {
             onValueChange = { username = it },
             label = { Text("Tài khoản") },
             singleLine = true,
+            colors = loginFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
@@ -89,6 +99,7 @@ fun LoginScreen(repo: FrigateRepository) {
             onValueChange = { password = it },
             label = { Text("Mật khẩu") },
             singleLine = true,
+            colors = loginFieldColors(),
             visualTransformation = if (showPassword) VisualTransformation.None
             else PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -106,14 +117,27 @@ fun LoginScreen(repo: FrigateRepository) {
         Spacer(Modifier.height(8.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = keepPass, onCheckedChange = { keepPass = it })
-            Text("Ghi nhớ mật khẩu", style = MaterialTheme.typography.bodyMedium)
+            Checkbox(
+                checked = keepPass,
+                onCheckedChange = { keepPass = it },
+                colors = loginCheckboxColors(),
+            )
+            Text(
+                "Ghi nhớ mật khẩu",
+                style = MaterialTheme.typography.bodyMedium,
+                color = IOSLabel,
+            )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = trust, onCheckedChange = { trust = it })
+            Checkbox(
+                checked = trust,
+                onCheckedChange = { trust = it },
+                colors = loginCheckboxColors(),
+            )
             Text(
                 "Tin chứng chỉ tự ký (HTTPS nội bộ)",
                 style = MaterialTheme.typography.bodyMedium,
+                color = IOSLabel,
             )
         }
 
@@ -170,3 +194,22 @@ fun LoginScreen(repo: FrigateRepository) {
         )
     }
 }
+
+
+@Composable
+private fun loginCheckboxColors() = androidx.compose.material3.CheckboxDefaults.colors(
+    checkedColor = IOSBlue,
+    uncheckedColor = IOSSecondaryLabel,
+    checkmarkColor = androidx.compose.ui.graphics.Color.White,
+)
+
+@Composable
+private fun loginFieldColors() = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+    focusedTextColor = IOSLabel,
+    unfocusedTextColor = IOSLabel,
+    focusedLabelColor = IOSBlue,
+    unfocusedLabelColor = IOSSecondaryLabel,
+    cursorColor = IOSBlue,
+    focusedBorderColor = IOSBlue,
+    unfocusedBorderColor = androidx.compose.ui.graphics.Color(0x33FFFFFF),
+)
