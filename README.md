@@ -26,8 +26,7 @@
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
 - **Cast lên TV/Chromecast**:
   - **Google Cast (LAN)**: Cast SDK + Default Media Receiver, phát HLS go2rtc (cần điện thoại cùng WiFi).
-  - **Qua Home Assistant** (giống Advanced Camera): nhập HA URL + token (+ dashboard/view nếu muốn
-    “dashboard casting” độ trễ thấp). App thử `cast.show_lovelace_view` → `media_player.play_media`
+  - **Truyền màn hình qua Home Assistant**: nhập HA URL + token; app thử `media_player.play_media`
     (HLS/MP4) → `webostv.command` (LG) → `androidtv.adb_command` (Android TV).
 
 ### Sự kiện

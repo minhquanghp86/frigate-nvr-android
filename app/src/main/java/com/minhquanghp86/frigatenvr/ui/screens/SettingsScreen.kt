@@ -127,8 +127,6 @@ fun SettingsScreen(
     var confirmLogout by remember { mutableStateOf(false) }
     var haUrl by remember(integrations.haUrl) { mutableStateOf(integrations.haUrl) }
     var haToken by remember(integrations.haToken) { mutableStateOf(integrations.haToken) }
-    var dashPath by remember(integrations.dashboardPath) { mutableStateOf(integrations.dashboardPath) }
-    var viewPath by remember(integrations.viewPath) { mutableStateOf(integrations.viewPath) }
     var integrationMessage by remember { mutableStateOf<String?>(null) }
     var checks by remember { mutableStateOf<List<com.minhquanghp86.frigatenvr.data.FrigateRepository.CastCheck>?>(null) }
     var checking by remember { mutableStateOf(false) }
@@ -396,7 +394,7 @@ fun SettingsScreen(
 
             // ---------- Phát lên màn hình khác
             item {
-                SectionTitle("Phát lên màn hình khác")
+                SectionTitle("Truyền màn hình")
                 IosGroup {
                     IosTextField(
                         haUrl,
@@ -412,25 +410,12 @@ fun SettingsScreen(
                         "Dán token (Profile → Security)",
                         password = true,
                     )
-                    IosDivider(16)
-                    IosTextField(
-                        dashPath,
-                        { dashPath = it },
-                        "Dashboard cast (tuỳ chọn)",
-                        "vd. dashboard-cast",
-                    )
-                    IosDivider(16)
-                    IosTextField(
-                        viewPath,
-                        { viewPath = it },
-                        "View cast (tuỳ chọn)",
-                        "vd. office",
-                    )
+
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
                             scope.launch {
-                                repo.setIntegrations(haUrl, haToken, dashPath, viewPath)
+                                repo.setIntegrations(haUrl, haToken)
                                 integrationMessage = "Đã lưu cấu hình phát lên màn hình"
                             }
                         },
@@ -452,7 +437,7 @@ fun SettingsScreen(
                             checking = true
                             checks = null
                             scope.launch {
-                                repo.setIntegrations(haUrl, haToken, dashPath, viewPath)
+                                repo.setIntegrations(haUrl, haToken)
                                 val result = mutableListOf<com.minhquanghp86.frigatenvr.data.FrigateRepository.CastCheck>()
                                 result += repo.testHomeAssistant()
                                 checks = result
@@ -479,8 +464,7 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        "Cast qua HA dùng: cast.show_lovelace_view (nếu nhập dashboard/view), " +
-                            "media_player.play_media (HLS/MP4), webOS và Android TV (adb).",
+                        "Truyền qua HA: media_player.play_media (HLS/MP4), webOS và Android TV (adb).",
                         color = IOSSecondaryLabel,
                         fontSize = 11.sp,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
