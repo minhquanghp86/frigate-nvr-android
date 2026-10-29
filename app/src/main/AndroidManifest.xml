@@ -29,6 +29,10 @@
             </intent-filter>
         </activity>
 
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.minhquanghp86.frigatenvr.cast.CastOptionsProvider" />
+
         <service
             android:name=".notify.EventWatchService"
             android:exported="false"
