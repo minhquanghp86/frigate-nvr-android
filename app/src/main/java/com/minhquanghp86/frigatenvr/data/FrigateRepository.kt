@@ -685,6 +685,54 @@ class FrigateRepository(
         )
     }
 
+    data class CastCheck(val label: String, val ok: Boolean, val detail: String)
+
+    /** Kiểm tra nhanh cấu hình Darboard: URL + số panel online. */
+    suspend fun testDarboard(): CastCheck = runCatching {
+        val base = _integrations.value.darboardUrl
+        if (base.isBlank()) return@runCatching CastCheck(
+            "Darboard",
+            false,
+            "Chưa cấu hình URL Darboard (Cài đặt → Phát lên màn hình khác).",
+        )
+        val body = plainCall(okhttp3.Request.Builder().url("$base/screens/list").build())
+        val arr = (kotlinx.serialization.json.Json.parseToJsonElement(body)
+                as? kotlinx.serialization.json.JsonObject)
+            ?.get("screens") as? kotlinx.serialization.json.JsonArray
+        val names = arr?.mapNotNull { (it as? kotlinx.serialization.json.JsonObject)
+            ?.get("name")?.let { n -> (n as? kotlinx.serialization.json.JsonPrimitive)?.content } }
+            .orEmpty()
+        CastCheck(
+            "Darboard",
+            true,
+            "$base/screens/list → HTTP 200 · ${arr?.size ?: 0} panel" +
+                if (names.isNotEmpty()) " (${names.joinToString(", ")})" else "",
+        )
+    }.getOrElse { CastCheck("Darboard", false, it.message ?: "Lỗi không xác định") }
+
+    /** Kiểm tra cấu hình HA: token + số media_player. */
+    suspend fun testHomeAssistant(): CastCheck = runCatching {
+        val cfg = _integrations.value
+        if (cfg.haUrl.isBlank() || cfg.haToken.isBlank()) {
+            return@runCatching CastCheck(
+                "Home Assistant",
+                false,
+                "Chưa nhập HA URL hoặc token (Cài đặt → Phát lên màn hình khác).",
+            )
+        }
+        val players = haMediaPlayers()
+        CastCheck(
+            "Home Assistant",
+            true,
+            "${cfg.haUrl}/api/states → ${players.size} media_player" +
+                if (players.isNotEmpty()) {
+                    " (${players.take(5).joinToString(", ") { it.second }})"
+                } else {
+                    " — chưa có media_player nào trong HA"
+                },
+        )
+    }.getOrElse { CastCheck("Home Assistant", false, it.message ?: "Lỗi không xác định") }
+
     /** URL trang camera trên Darboard (server tự proxy go2rtc). */
     fun darboardCamUrl(camera: String): String? {
         val base = _integrations.value.darboardUrl.ifBlank { return null }

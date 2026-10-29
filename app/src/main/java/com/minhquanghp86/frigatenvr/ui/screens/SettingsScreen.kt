@@ -42,6 +42,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -72,6 +74,7 @@ import com.minhquanghp86.frigatenvr.ui.IOSBlue
 import com.minhquanghp86.frigatenvr.ui.IOSGreen
 import com.minhquanghp86.frigatenvr.ui.IOSLabel
 import com.minhquanghp86.frigatenvr.ui.IOSOrange
+import com.minhquanghp86.frigatenvr.ui.IOSRed
 import com.minhquanghp86.frigatenvr.ui.IOSSecondaryLabel
 import com.minhquanghp86.frigatenvr.ui.IosDivider
 import com.minhquanghp86.frigatenvr.ui.IosGroup
@@ -126,6 +129,8 @@ fun SettingsScreen(
     var haUrl by remember(integrations.haUrl) { mutableStateOf(integrations.haUrl) }
     var haToken by remember(integrations.haToken) { mutableStateOf(integrations.haToken) }
     var integrationMessage by remember { mutableStateOf<String?>(null) }
+    var checks by remember { mutableStateOf<List<com.minhquanghp86.frigatenvr.data.FrigateRepository.CastCheck>?>(null) }
+    var checking by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         allCameras = runCatching { repo.configCached().enabledCameras }.getOrDefault(emptyList())
@@ -433,6 +438,46 @@ fun SettingsScreen(
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
                         )
                     }
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedButton(
+                        onClick = {
+                            checking = true
+                            checks = null
+                            scope.launch {
+                                repo.setIntegrations(darboardUrl, haUrl, haToken)
+                                val result = mutableListOf<com.minhquanghp86.frigatenvr.data.FrigateRepository.CastCheck>()
+                                result += repo.testDarboard()
+                                result += repo.testHomeAssistant()
+                                checks = result
+                                checking = false
+                            }
+                        },
+                        enabled = !checking,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    ) {
+                        if (checking) {
+                            CircularProgressIndicator(Modifier.height(14.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(if (checking) "Đang kiểm tra…" else "Kiểm tra kết nối cast")
+                    }
+                    checks?.forEach { check ->
+                        Text(
+                            "• ${check.label}: ${if (check.ok) "OK" else "LỖI"} — ${check.detail}",
+                            color = if (check.ok) IOSGreen else IOSRed,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp),
+                        )
+                    }
+                    Text(
+                        "Google Cast (LAN) cần điện thoại ở cùng WiFi; 2 mục còn lại chỉ cần tới được " +
+                            "Darboard/Home Assistant.",
+                        color = IOSSecondaryLabel,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                    )
                 }
             }
 

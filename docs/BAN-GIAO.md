@@ -594,6 +594,12 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Cấu hình lưu DataStore (`darboard_url`, `ha_url`, `ha_token`), có nút “Lưu cấu hình cast”.
 - Không có endpoint cast trong Frigate API: cả 2 hướng đều là điều phối từ server (HA/Darboard) tới thiết bị.
 
+## 4s. Cập nhật 29/10/2026 — chẩn đoán cast (3 hướng)
+
+- Thêm nút **“Kiểm tra kết nối cast”** trong Cài đặt: gọi `GET /screens/list` (Darboard) và
+  `GET /api/states` (HA), hiện kết quả từng dòng kèm URL + HTTP + số thiết bị, hoặc lỗi cụ thể.
+- Hộp thoại Cast luôn hiện gợi ý khi chưa cấu hình Darboard/HA (trước đây ẩn hẳn mục nên dễ tưởng “không có thiết bị”).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
