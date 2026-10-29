@@ -125,9 +125,10 @@ fun SettingsScreen(
     var keepPass by remember { mutableStateOf(session.rememberPassword) }
     var trustCert by remember { mutableStateOf(session.trustSelfSigned) }
     var confirmLogout by remember { mutableStateOf(false) }
-    var darboardUrl by remember(integrations.darboardUrl) { mutableStateOf(integrations.darboardUrl) }
     var haUrl by remember(integrations.haUrl) { mutableStateOf(integrations.haUrl) }
     var haToken by remember(integrations.haToken) { mutableStateOf(integrations.haToken) }
+    var dashPath by remember(integrations.dashboardPath) { mutableStateOf(integrations.dashboardPath) }
+    var viewPath by remember(integrations.viewPath) { mutableStateOf(integrations.viewPath) }
     var integrationMessage by remember { mutableStateOf<String?>(null) }
     var checks by remember { mutableStateOf<List<com.minhquanghp86.frigatenvr.data.FrigateRepository.CastCheck>?>(null) }
     var checking by remember { mutableStateOf(false) }
@@ -398,13 +399,6 @@ fun SettingsScreen(
                 SectionTitle("Phát lên màn hình khác")
                 IosGroup {
                     IosTextField(
-                        darboardUrl,
-                        { darboardUrl = it },
-                        "Darboard server",
-                        "http://192.168.10.126:18080",
-                    )
-                    IosDivider(16)
-                    IosTextField(
                         haUrl,
                         { haUrl = it },
                         "Home Assistant URL",
@@ -418,11 +412,25 @@ fun SettingsScreen(
                         "Dán token (Profile → Security)",
                         password = true,
                     )
+                    IosDivider(16)
+                    IosTextField(
+                        dashPath,
+                        { dashPath = it },
+                        "Dashboard cast (tuỳ chọn)",
+                        "vd. dashboard-cast",
+                    )
+                    IosDivider(16)
+                    IosTextField(
+                        viewPath,
+                        { viewPath = it },
+                        "View cast (tuỳ chọn)",
+                        "vd. office",
+                    )
                     Spacer(Modifier.height(8.dp))
                     Button(
                         onClick = {
                             scope.launch {
-                                repo.setIntegrations(darboardUrl, haUrl, haToken)
+                                repo.setIntegrations(haUrl, haToken, dashPath, viewPath)
                                 integrationMessage = "Đã lưu cấu hình phát lên màn hình"
                             }
                         },
@@ -444,9 +452,8 @@ fun SettingsScreen(
                             checking = true
                             checks = null
                             scope.launch {
-                                repo.setIntegrations(darboardUrl, haUrl, haToken)
+                                repo.setIntegrations(haUrl, haToken, dashPath, viewPath)
                                 val result = mutableListOf<com.minhquanghp86.frigatenvr.data.FrigateRepository.CastCheck>()
-                                result += repo.testDarboard()
                                 result += repo.testHomeAssistant()
                                 checks = result
                                 checking = false
@@ -472,8 +479,8 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        "Google Cast (LAN) cần điện thoại ở cùng WiFi; 2 mục còn lại chỉ cần tới được " +
-                            "Darboard/Home Assistant.",
+                        "Cast qua HA dùng: cast.show_lovelace_view (nếu nhập dashboard/view), " +
+                            "media_player.play_media (HLS/MP4), webOS và Android TV (adb).",
                         color = IOSSecondaryLabel,
                         fontSize = 11.sp,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
