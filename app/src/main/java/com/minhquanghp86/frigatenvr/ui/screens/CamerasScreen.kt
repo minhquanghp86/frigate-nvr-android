@@ -996,7 +996,17 @@ fun CameraLiveScreen(
                     LiveIconButton(
                         if (cast.connected) Icons.Outlined.CastConnected else Icons.Outlined.Cast,
                         if (cast.connected) "Đang phát lên TV" else "Phát lên TV",
-                    ) { showCastDialog = true }
+                    ) {
+                        if (!cast.available) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Máy không có Google Play Services hoặc Cast chưa sẵn sàng.",
+                                android.widget.Toast.LENGTH_LONG,
+                            ).show()
+                        } else {
+                            showCastDialog = true
+                        }
+                    }
                     LiveIconButton(Icons.Outlined.PictureInPictureAlt, "Hình trong hình") {
                         if (android.os.Build.VERSION.SDK_INT >= 26 && activity != null) {
                             runCatching {
@@ -1123,6 +1133,13 @@ fun CameraLiveScreen(
                 }
             }
         }
+    }
+
+    if (showCastDialog) {
+        com.minhquanghp86.frigatenvr.ui.cast.CastDeviceDialog(
+            onDismiss = { showCastDialog = false },
+            onStop = if (cast.connected) cast.stop else null,
+        )
     }
 
     if (showSettings) {
