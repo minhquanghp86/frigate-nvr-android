@@ -133,8 +133,8 @@ fun OverviewScreen(
                 }
             }
             i++
-            if (i % 6 == 0) loadSlow()
-            delay(5_000)
+            if (i % 10 == 0) loadSlow()
+            delay(3_000)
         }
     }
 
@@ -186,11 +186,13 @@ fun OverviewScreen(
         LazyColumn(contentPadding = PaddingValues(bottom = 28.dp)) {
             // ---- Hero: phiên bản + chỉ số nhanh
             item {
+                val fullSystem = (stats?.get("cpu_usages") as? JsonObject)
+                    ?.get("frigate.full_system") as? JsonObject
                 HeroCard(
                     version = version,
                     uptime = service?.d("uptime"),
-                    cpuUsage = service?.d("cpu_usage"),
-                    memUsage = service?.d("mem_usage"),
+                    cpuUsage = fullSystem?.d("cpu") ?: service?.d("cpu_usage"),
+                    memUsage = fullSystem?.d("mem") ?: service?.d("mem_usage"),
                     detectionFps = stats?.d("detection_fps"),
                 )
             }
@@ -238,17 +240,33 @@ fun OverviewScreen(
                         Modifier.padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        storagePaths.entries.forEach { (path, value) ->
-                            val obj = value as? JsonObject ?: return@forEach
+                        storagePaths.entries
+                            .mapNotNull { (p, v) -> (v as? JsonObject)?.let { p to it } }
+                            .sortedBy { (p, _) ->
+                                when {
+                                    p.contains("recordings") -> 0
+                                    p.contains("/clips") -> 1
+                                    p == "/tmp/cache" -> 2
+                                    else -> 3
+                                }
+                            }
+                            .distinctBy { (_, obj) -> "${obj.d("total")}|${obj.d("used")}" }
+                            .forEach { (path, obj) ->
                             val total = obj.d("total") ?: 0.0
                             val used = obj.d("used") ?: 0.0
                             val pct = if (total > 0) used / total * 100 else 0.0
                             StorageCard(
-                                title = if (path.contains("frigate")) "Bản ghi" else path,
+                                title = when {
+                                    path.contains("recordings") -> "Bản ghi"
+                                    path.contains("/clips") -> "Ảnh & clip"
+                                    else -> path
+                                },
                                 used = used,
                                 total = total,
                                 percent = pct,
-                                footnote = if (path.contains("frigate") && earliestDay != null) {
+                                footnote = if (
+                                    path.contains("recordings") && earliestDay != null
+                                ) {
                                     "Bản ghi sớm nhất: $earliestDay"
                                 } else {
                                     null
@@ -708,9 +726,10 @@ private fun StorageCard(
     }
 }
 
-/** Biểu đồ cột nhỏ kiểu Frigate: giá trị hiện tại + 160 mẫu gần nhất. */
+/** Biểu đồ cột kiểu Frigate: cửa sổ 60 điểm gần nhất, cột mảnh vẽ từ phải sang. */
 @Composable
 private fun BarChart(title: String, current: String, values: List<Float>) {
+    val slots = 60
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = IOSLabel)
@@ -723,18 +742,32 @@ private fun BarChart(title: String, current: String, values: List<Float>) {
             )
         }
         Spacer(Modifier.height(6.dp))
-        val maxValue = (values.maxOrNull() ?: 0f).coerceAtLeast(1f)
-        Canvas(Modifier.fillMaxWidth().height(64.dp)) {
-            if (values.isEmpty()) return@Canvas
-            val n = values.size
-            val barW = size.width / n
-            values.forEachIndexed { index, v ->
-                val h = ((v / maxValue) * size.height).coerceIn(0f, size.height)
-                drawRect(
-                    color = if (v >= maxValue * 0.85f) IOSOrange else IOSGreen,
-                    topLeft = Offset(index * barW, size.height - h),
-                    size = Size((barW * 0.7f).coerceAtLeast(1f), h),
-                )
+        val shown = values.takeLast(slots)
+        val maxValue = (shown.maxOrNull() ?: 0f).coerceAtLeast(1f)
+        Box(Modifier.fillMaxWidth()) {
+            Canvas(Modifier.fillMaxWidth().height(64.dp)) {
+                if (shown.isEmpty()) return@Canvas
+                val slotW = size.width / slots
+                val start = slots - shown.size
+                // Ngưỡng "cao" chỉ tô cam khi đã có đủ mẫu để tránh 1 cột cam khổng lồ lúc mới mở.
+                val hotThreshold = if (shown.size >= 8) maxValue * 0.85f else Float.MAX_VALUE
+                shown.forEachIndexed { index, v ->
+                    val h = ((v / maxValue) * size.height).coerceIn(0f, size.height)
+                    drawRect(
+                        color = if (v >= hotThreshold) IOSOrange else IOSGreen,
+                        topLeft = Offset((start + index) * slotW, size.height - h),
+                        size = Size((slotW * 0.6f).coerceAtLeast(1f), h),
+                    )
+                }
+            }
+            if (shown.size < 3) {
+                Box(Modifier.fillMaxSize(), Alignment.Center) {
+                    Text(
+                        "Đang thu thập mẫu… (${shown.size}/$slots)",
+                        color = IOSSecondaryLabel,
+                        fontSize = 10.sp,
+                    )
+                }
             }
         }
         Row(Modifier.fillMaxWidth()) {
@@ -748,8 +781,11 @@ private fun BarChart(title: String, current: String, values: List<Float>) {
 private fun JsonObject.s(key: String): String? =
     (this[key] as? JsonPrimitive)?.content?.takeIf { it.isNotBlank() && it != "null" }
 
-private fun JsonObject.d(key: String): Double? =
-    (this[key] as? JsonPrimitive)?.doubleOrNull
+private fun JsonObject.d(key: String): Double? {
+    val prim = this[key] as? JsonPrimitive ?: return null
+    // Frigate 0.18 trả một số field dạng chuỗi (vd. detectors.cpu = "15.1", full_system.cpu).
+    return prim.doubleOrNull ?: prim.content.toDoubleOrNull()
+}
 
 private fun formatMb(mb: Double): String =
     if (mb >= 1024) "%.1f GiB".format(mb / 1024.0) else "%.0f MiB".format(mb)
