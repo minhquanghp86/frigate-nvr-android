@@ -570,6 +570,16 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Đã chèn dialog đúng vị trí (trước bottom sheet cài đặt) + Toast cảnh báo khi
   `CastContext` không khả dụng (máy không có Google Play Services).
 
+## 4q. Cập nhật 29/10/2026 — cast không tìm thấy thiết bị
+
+- Dùng **`CastContext.mergedSelector`** thay selector tự dựng; thêm **multicast lock** khi mở hộp thoại
+  (`CHANGE_WIFI_MULTICAST_STATE`) — một số router/OEM chặn mDNS nếu app không giữ lock.
+- Hộp thoại chẩn đoán: báo điện thoại có đang ở **WiFi** hay 4G/VPN (cast không dò được qua 4G/VPN
+  hoặc khác VLAN), và nút **“Sao chép URL luồng HLS”** để kiểm tra URL trên TV.
+- Lưu ý: HA Advanced Camera cast chạy trên **máy chủ HA trong LAN** (pychromecast), còn app dò trực tiếp
+  từ điện thoại — nếu điện thoại dùng 4G/VPN/Tailscale thì không thấy thiết bị dù HA thấy.
+  Hướng bổ sung (chưa làm): cast qua HA REST (`media_player.play_media`) với URL HLS go2rtc.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
