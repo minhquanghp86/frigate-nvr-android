@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -144,7 +145,6 @@ data class CastHandle(
 @Composable
 fun CastDeviceDialog(
     onDismiss: () -> Unit,
-    streamUrl: String? = null,
     onStop: (() -> Unit)? = null,
     haConfigured: Boolean = false,
     onLoadHaPlayers: (suspend () -> List<Pair<String, String>>)? = null,
@@ -180,7 +180,6 @@ fun CastDeviceDialog(
     }
     val router = remember { MediaRouter.getInstance(context) }
     var routes by remember { mutableStateOf<List<MediaRouter.RouteInfo>>(emptyList()) }
-    var onWifi by remember { mutableStateOf<Boolean?>(null) }
 
     // Một số mạng/OEM chặn mDNS nếu app không giữ multicast lock trong lúc dò.
     DisposableEffect(Unit) {
@@ -195,153 +194,23 @@ fun CastDeviceDialog(
         onDispose { runCatching { if (lock?.isHeld == true) lock.release() } }
     }
 
-    // Chẩn đoán: cast cần điện thoại ở cùng WiFi với TV (không phải 4G/VPN).
-    LaunchedEffect(Unit) {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE)
-            as? android.net.ConnectivityManager
-        val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
-        onWifi = caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
-    }
-
-    DisposableEffect(router, selector) {
-        val callback = object : MediaRouter.Callback() {
-            override fun onRouteAdded(mediaRouter: MediaRouter, route: MediaRouter.RouteInfo) {
-                routes = mediaRouter.routes.filter { it.matchesSelector(selector) }
-            }
-
-            override fun onRouteRemoved(mediaRouter: MediaRouter, route: MediaRouter.RouteInfo) {
-                routes = mediaRouter.routes.filter { it.matchesSelector(selector) }
-            }
-
-            override fun onRouteChanged(mediaRouter: MediaRouter, route: MediaRouter.RouteInfo) {
-                routes = mediaRouter.routes.filter { it.matchesSelector(selector) }
-            }
-        }
-        router.addCallback(selector, callback, MediaRouter.CALLBACK_FLAG_REQUEST_DISCOVERY)
-        routes = router.routes.filter { it.matchesSelector(selector) }
-        onDispose { router.removeCallback(callback) }
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Truyền màn hình") },
         text = {
-            Column(Modifier.height(260.dp).verticalScroll(rememberScrollState())) {
-                Text(
-                    "Thiết bị cast phải truy cập được go2rtc (port 1984) trong cùng mạng LAN.",
-                    fontSize = 11.sp,
-                    color = IOSSecondaryLabel,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    when (onWifi) {
-                        true -> "Điện thoại đang dùng WiFi — nên thấy được TV/Chromecast."
-                        false -> "Điện thoại KHÔNG ở WiFi (đang 4G/VPN). " +
-                            "Cast không dò được thiết bị — hãy bật WiFi cùng mạng với TV."
-                        null -> "Đang kiểm tra kết nối mạng…"
-                    },
-                    fontSize = 11.sp,
-                    color = if (onWifi == false) IOSRed else IOSGreen,
-                )
-                if (streamUrl != null) {
-                    Spacer(Modifier.height(6.dp))
-                    TextButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
-                                as? android.content.ClipboardManager
-                            clipboard?.setPrimaryClip(
-                                android.content.ClipData.newPlainText("HLS", streamUrl),
-                            )
-                        },
-                    ) { Text("Sao chép URL luồng HLS", fontSize = 12.sp) }
-                }
-                Spacer(Modifier.height(8.dp))
-                if (routes.isEmpty()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-                        Spacer(Modifier.width(8.dp))
-                        Text("Đang tìm thiết bị…", fontSize = 12.sp, color = IOSSecondaryLabel)
-                    }
-                    Spacer(Modifier.height(6.dp))
-                }
-                if (routes.isEmpty()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Outlined.Tv,
-                            contentDescription = null,
-                            tint = IOSSecondaryLabel,
-                            modifier = Modifier.size(18.dp),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "Chưa thấy thiết bị nào. Bật TV/Chromecast, đảm bảo điện thoại cùng WiFi và router cho phép mDNS (không bật AP isolation).",
-                            fontSize = 12.sp,
-                            color = IOSSecondaryLabel,
-                        )
-                    }
-                }
-                if (haConfigured) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("Qua Home Assistant", color = IOSLabel, fontSize = 12.sp)
-                    when {
-                        haError != null -> Text(haError!!, color = IOSRed, fontSize = 11.sp)
-                        players == null -> Text(
-                            "Đang tải media_player…",
-                            fontSize = 11.sp,
-                            color = IOSSecondaryLabel,
-                        )
-                        players!!.isEmpty() -> Text(
-                            "Không có media_player khả dụng trong HA.",
-                            fontSize = 11.sp,
-                            color = IOSSecondaryLabel,
-                        )
-                        else -> players!!.forEach { (entityId, name) ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        scope.launch {
-                                            try {
-                                                val method = onCastHa?.invoke(entityId)
-                                                status = "Đã cast tới $name · $method"
-                                            } catch (e: Exception) {
-                                                status = e.message ?: "HA từ chối lệnh"
-                                            }
-                                        }
-                                    }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Outlined.Tv,
-                                    contentDescription = null,
-                                    tint = IOSGreen,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(name, color = IOSLabel, fontSize = 14.sp, maxLines = 1)
-                                    Text(entityId, color = IOSSecondaryLabel, fontSize = 10.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (!haConfigured) {
-                    Spacer(Modifier.height(4.dp))
+            Column(
+                Modifier
+                    .heightIn(max = 340.dp)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                val hasAny = routes.isNotEmpty() || !players.isNullOrEmpty()
+                if (!hasAny && haError == null) {
                     Text(
-                        "Chưa cấu hình Home Assistant URL/token → Cài đặt → Phát lên màn hình khác.",
+                        "Không tìm thấy thiết bị nào.",
                         color = IOSSecondaryLabel,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                     )
                 }
-
-                status?.let {
-                    Spacer(Modifier.height(8.dp))
-                    Text(it, color = IOSSecondaryLabel, fontSize = 11.sp)
-                }
-
                 routes.forEach { route ->
                     Row(
                         Modifier
@@ -350,28 +219,52 @@ fun CastDeviceDialog(
                                 runCatching { router.selectRoute(route) }
                                 onDismiss()
                             }
-                            .padding(vertical = 10.dp),
+                            .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Icon(
                             Icons.Outlined.Cast,
                             contentDescription = null,
                             tint = IOSBlue,
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(20.dp),
                         )
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                route.name,
-                                color = IOSLabel,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                            )
-                            route.description?.takeIf { it.isNotBlank() }?.let {
-                                Text(it, color = IOSSecondaryLabel, fontSize = 11.sp, maxLines = 1)
-                            }
-                        }
+                        Spacer(Modifier.width(12.dp))
+                        Text(route.name, color = IOSLabel, fontSize = 15.sp, maxLines = 1)
                     }
+                }
+                players.orEmpty().forEach { (entityId, name) ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                scope.launch {
+                                    try {
+                                        val method = onCastHa?.invoke(entityId)
+                                        status = "Đã truyền tới $name · $method"
+                                    } catch (e: Exception) {
+                                        status = e.message ?: "HA từ chối lệnh"
+                                    }
+                                }
+                            }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            Icons.Outlined.Tv,
+                            contentDescription = null,
+                            tint = IOSGreen,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(name, color = IOSLabel, fontSize = 15.sp, maxLines = 1)
+                    }
+                }
+                haError?.let {
+                    Text(it, color = IOSRed, fontSize = 11.sp)
+                }
+                status?.let {
+                    Spacer(Modifier.height(6.dp))
+                    Text(it, color = IOSSecondaryLabel, fontSize = 11.sp)
                 }
             }
         },

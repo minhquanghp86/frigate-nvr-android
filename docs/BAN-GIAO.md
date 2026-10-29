@@ -670,3 +670,44 @@ git tag v0.2.0 && git push --tags  # tạo Release kèm APK
 ```
 
 Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) — xem `~/.ssh/config`.
+
+
+## 5. Bàn giao v1.0.0 (29/10/2026)
+
+### 5.1 Trạng thái
+- Bản ổn định: **v1.0.0** (APK + AAB), CI xanh, build local xanh.
+- 18+ màn hình Compose, ~10.500 dòng Kotlin, unit test hợp đồng JSON.
+- Dùng ~45/181 endpoint Frigate 0.18.2 (đã đối chiếu OpenAPI).
+
+### 5.2 Chức năng đã hoàn thiện
+| Nhóm | Nội dung |
+|---|---|
+| Camera | Lưới + LIVE/REC/fps/sự kiện hôm nay; live WebRTC-first (MJPEG first paint), MP4/HLS, fullscreen landscape, PiP, fit/crop, mute, overlay stats; header cố định + chip thông báo + sáng/tối |
+| Sự kiện | Lưới/lọc (camera, nhãn, vùng, thời gian, có clip), tìm text, sự kiện tương tự, chi tiết + giữ/xoá/tải, sửa nhãn phụ/biển số/thuộc tính, false positive, thêm ảnh vào thư viện khuôn mặt |
+| Xem lại | Timeline 24h kiểu Frigate, phát tại thời điểm hiện tại, chặn tua vượt giờ, ảnh xem trước khi kéo playhead, Tải (export job 2 bước) + Tải nhanh (clip.mp4) |
+| Khuôn mặt | Thư viện (tạo/đăng ký/xoá/đổi tên), chi tiết xem toàn bộ ảnh, sự kiện khuôn mặt (đã biết/chưa rõ), train từ sự kiện (event_id hoặc cắt box +20% rồi register) |
+| Cảnh báo | Review alert/detection, lọc chưa xem/đã xem, phát clip, đánh dấu đã xem |
+| Hệ thống | Hero CPU/RAM/fps (đọc `cpu_usages.frigate.full_system`), biểu đồ detector 60 điểm, dung lượng (14dp, màu ngưỡng), lưu trữ camera + bandwidth, cảnh báo (ack/mute), clip đã xuất (tải/xoá) |
+| Quản trị | Cấu hình camera 10 tính năng + profile, người dùng (tạo/role/password/xoá), LPR, nhật ký, dung lượng |
+| Thông báo | Foreground service, lọc camera/nhãn, ảnh phát hiện trong thông báo, icon logo mới, chạm mở live + panel sự kiện |
+| Truyền màn hình | Google Cast LAN + qua HA: `media_player.play_media` (HLS/MP4) → `webostv.command` (LG) → `androidtv.adb_command` (Android TV); cấu hình HA URL + token, nút kiểm tra kết nối |
+| Khác | Sáng/tối (lưu lựa chọn), demo mode (demo.frigate.video), privacy trong app, crash log có version/device |
+
+### 5.3 Quy trình phát hành
+1. Commit + tag `vX.Y.Z` trên `main` → GitHub Actions build **APK + AAB**, chạy unit test, tạo Release.
+2. Tải APK ở Releases; AAB dùng để nộp Google Play.
+3. APK ký bằng `keystore/frigate-release.jks` cố định → cập nhật đè được.
+
+### 5.4 Việc còn lại (ngoài phạm vi code)
+1. Bật GitHub Pages (Settings → Pages → main /docs) để có URL privacy cho Play.
+2. Tạo app trên Play Console (25 USD một lần), upload AAB, khai App content
+   (Sign-in: “bấm Dùng bản demo”), Ads = Không, Data safety, content rating.
+3. Closed test 12 tester / 14 ngày (tài khoản cá nhân) → apply production.
+4. Tuỳ chọn: i18n EN toàn bộ UI, widget/Quick tile, tìm chuyển động, timeline API.
+
+### 5.5 Ghi chú kỹ thuật quan trọng
+- Frigate API **không có** endpoint cast/DLNA; truyền màn hình đi qua HA.
+- Tên feature camera đúng: `recordings` (không phải `record`).
+- CPU/RAM hệ thống: `cpu_usages["frigate.full_system"]` (chuỗi %), không phải `service.cpu_usage`.
+- Icon app là adaptive icon → không dùng `painterResource(R.mipmap.ic_launcher)`; logo header vẽ bằng Canvas.
+- `targetSdk 36` bắt buộc cho Google Play từ 31/08/2026; WebRTC AAR đã đạt 16 KB page size.
