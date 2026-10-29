@@ -540,6 +540,17 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Palette sáng: nền `#F2F2F7`, card trắng, chữ đen, xám `#3C3C43`; đã thay các màu tối hardcode
   trong Events/Faces/FacePerson/Cameras và bottom navigation bằng biến palette.
 
+## 4n. Cập nhật 29/10/2026 — login mặc định + sửa CPU/RAM & biểu đồ Hệ thống
+
+- Trang đăng nhập: địa chỉ mặc định **https://192.168.10.2:8071**.
+- CPU/RAM trong hero trước đây đọc `service.cpu_usage|mem_usage` — **không tồn tại ở Frigate 0.18**.
+  Nay đọc `cpu_usages["frigate.full_system"] = {cpu, mem}` (chuỗi %), có fallback field cũ.
+- `JsonObject.d()` đọc được cả số và **chuỗi số** (0.18 trả `detectors.cpu = "15.1"`).
+- Biểu đồ detector: cửa sổ cố định **60 cột vẽ từ phải sang**, cột mảnh; hiện “Đang thu thập mẫu… (n/60)”
+  khi <3 mẫu; chỉ tô cam khi ≥8 mẫu (trước đây 1 mẫu = 1 thanh cam khổng lồ) và poll 3 giây/lần.
+- Dung lượng: bỏ thẻ trùng khi recordings và clips cùng ổ (`total|used` giống nhau), nhãn rõ
+  “Bản ghi” / “Ảnh & clip”.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
