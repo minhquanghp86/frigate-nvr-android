@@ -474,6 +474,41 @@ class FrigateRepository(
         return url("/vod/$y-$m/$d/$hour/$camera/$tz/master.m3u8")
     }
 
+    // ------------------------------------------------------------ advanced search
+
+    /** Tìm các sự kiện có ảnh giống sự kiện đã cho (thumbnail search của Frigate). */
+    suspend fun similarEvents(eventId: String, limit: Int = 12): List<FrigateEvent> =
+        call {
+            eventsSearch(
+                mapOf(
+                    "event_id" to eventId,
+                    "search_type" to "thumbnail",
+                    "limit" to limit.toString(),
+                    "include_thumbnails" to "0",
+                ),
+            )
+        }
+
+    /** Danh sách biển số đã nhận diện (LPR), đã tách các biển ghép. */
+    suspend fun licensePlates(): List<String> = runCatching {
+        val element = call { recognizedLicensePlates("1") }
+        (element as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+    }.getOrDefault(emptyList())
+
+    /** Khuôn mặt đã đăng ký: tên -> danh sách file ảnh. */
+    suspend fun faces(): Map<String, List<String>> = runCatching {
+        val element = call { facesApi() }
+        val obj = element as? kotlinx.serialization.json.JsonObject ?: return emptyMap()
+        obj.mapValues { (_, value) ->
+            (value as? kotlinx.serialization.json.JsonArray)
+                ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+                ?: emptyList()
+        }
+    }.getOrDefault(emptyMap())
+
     // ------------------------------------------------------------------ export
 
     data class ExportProgress(val status: String, val step: String, val percent: Double)

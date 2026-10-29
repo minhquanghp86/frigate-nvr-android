@@ -95,6 +95,14 @@ interface FrigateApi {
     @GET("api/jobs/export/{id}")
     suspend fun exportJob(@Path("id") id: String): kotlinx.serialization.json.JsonElement
 
+    @GET("api/recognized_license_plates")
+    suspend fun recognizedLicensePlates(
+        @Query("split_joined") splitJoined: String? = null,
+    ): kotlinx.serialization.json.JsonElement
+
+    @GET("api/faces")
+    suspend fun facesApi(): kotlinx.serialization.json.JsonElement
+
     @GET("api/exports")
     suspend fun exports(): kotlinx.serialization.json.JsonElement
 
