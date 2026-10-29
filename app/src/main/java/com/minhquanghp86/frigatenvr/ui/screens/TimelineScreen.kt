@@ -112,6 +112,7 @@ fun TimelineScreen(
     var selectedDay by rememberSaveable { mutableStateOf<String?>(null) }
     var minutes by rememberSaveable { mutableFloatStateOf(12f * 60f) }
     var startPosMs by rememberSaveable { mutableLongStateOf(0L) }
+    var autoPlayed by rememberSaveable { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
 
@@ -129,8 +130,8 @@ fun TimelineScreen(
         vm.stop()
         val day = selectedDay ?: return@LaunchedEffect
         vm.loadDayEvents(day)
-        val firstHour = hours.firstOrNull { it.day == day }?.hours?.firstOrNull()?.hour?.toIntOrNull()
-        minutes = ((firstHour ?: 0) * 60 + 5).toFloat().coerceIn(0f, 1439f)
+        minutes = 0f
+        autoPlayed = false
     }
 
     fun playAt(value: Float) {
@@ -139,6 +140,20 @@ fun TimelineScreen(
         val hour = total / 60
         startPosMs = ((total % 60) * 60L) * 1000L
         vm.play(day, hour.toString())
+    }
+
+    // Phát ngay khi vào tab: 00:00 của camera đang chọn (nếu giờ 0 không có bản ghi
+    // thì phát khung sớm nhất có dữ liệu để không hiện lỗi).
+    LaunchedEffect(selectedDay, camera, hours) {
+        if (autoPlayed) return@LaunchedEffect
+        val day = selectedDay ?: return@LaunchedEffect
+        if (camera == null) return@LaunchedEffect
+        val dayHours = hours.firstOrNull { it.day == day }?.hours ?: return@LaunchedEffect
+        val firstHour = dayHours.mapNotNull { it.hour.toIntOrNull() }.minOrNull() ?: 0
+        val minute = if (firstHour <= 0) 0f else firstHour * 60f
+        minutes = minute
+        autoPlayed = true
+        playAt(minute)
     }
 
     val notifyPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(

@@ -42,6 +42,8 @@ import com.minhquanghp86.frigatenvr.data.FrigateRepository
 import com.minhquanghp86.frigatenvr.data.SessionState
 import com.minhquanghp86.frigatenvr.ui.screens.CameraLiveScreen
 import com.minhquanghp86.frigatenvr.ui.screens.CamerasScreen
+import com.minhquanghp86.frigatenvr.ui.screens.FacesScreen
+import com.minhquanghp86.frigatenvr.ui.screens.LicensePlateScreen
 import com.minhquanghp86.frigatenvr.ui.screens.EventDetailScreen
 import com.minhquanghp86.frigatenvr.ui.screens.EventsScreen
 import com.minhquanghp86.frigatenvr.ui.screens.LoginScreen
@@ -224,6 +226,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     cameraHint = entry.arguments?.getString("camera"),
                     onBack = { navController.popBackStack() },
                     onOpenCamera = { cam -> navController.navigate("camera/$cam") },
+                    onOpenEvent = { id -> navController.navigate("event/$id") },
                     onFullscreen = { url, pos ->
                         com.minhquanghp86.frigatenvr.ui.PlayerStore.open(url, pos)
                         navController.navigate("player")
@@ -261,6 +264,26 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     onOpenLogs = { navController.navigate("logs") },
                     onOpenStorage = { navController.navigate("storage") },
                     onOpenOverview = { navController.navigate("overview") },
+                    onOpenPlates = { navController.navigate("lpr") },
+                    onOpenFaces = { navController.navigate("faces") },
+                )
+            }
+            composable("faces") {
+                FacesScreen(onBack = { navController.popBackStack() })
+            }
+            composable("lpr") {
+                LicensePlateScreen(
+                    onBack = { navController.popBackStack() },
+                    onSearch = { query ->
+                        com.minhquanghp86.frigatenvr.ui.SearchStore.request(query)
+                        navController.navigate("events") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                 )
             }
             composable("overview") {

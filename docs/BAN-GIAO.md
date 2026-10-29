@@ -281,6 +281,18 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
   (field `bandwidth`).
 - Giữ nguyên các mục cũ: hệ thống/uptime/CPU/RAM, camera fps, cảnh báo, clip đã xuất (tải được).
 
+## 3x. Cập nhật 29/10/2026 — tự phát Xem lại + tìm tương tự + LPR/Faces
+
+- **Tab Xem lại tự phát khi mở**: vào tab (hoặc đổi camera/ngày) là phát ngay **00:00** của camera;
+  nếu khung 00h không có bản ghi thì phát **khung sớm nhất có dữ liệu** (tránh màn hình lỗi 404).
+  Chỉ tự phát một lần cho mỗi cặp (ngày, camera) — không giành quyền điều khiển khi người dùng đã chọn giờ.
+- **Tìm sự kiện tương tự**: nút trong trang sự kiện gọi `/api/events/search?event_id=...&search_type=thumbnail`,
+  hiện dải thumbnail bên dưới; bấm để mở sự kiện đó.
+- **Biển số xe (LPR)**: Cài đặt → Biển số đã nhận diện → `/api/recognized_license_plates?split_joined=1`;
+  bấm một biển số sẽ nhảy sang tab Sự kiện với truy vấn đã điền (`SearchStore`).
+- **Khuôn mặt**: Cài đặt → Khuôn mặt đã đăng ký → `/api/faces` + ảnh `/clips/faces/<tên>/<file>`
+  (dùng OkHttp có Bearer nên ảnh qua được auth).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

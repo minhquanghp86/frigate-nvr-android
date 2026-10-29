@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -132,6 +133,12 @@ fun EventsScreen(
         )
 
         var searchInput by remember { mutableStateOf("") }
+        val pendingQuery by com.minhquanghp86.frigatenvr.ui.SearchStore.pending.collectAsState()
+        LaunchedEffect(pendingQuery) {
+            val q = com.minhquanghp86.frigatenvr.ui.SearchStore.consume() ?: return@LaunchedEffect
+            searchInput = q
+            vm.setQuery(q)
+        }
         Row(
             Modifier
                 .fillMaxWidth()
@@ -364,12 +371,16 @@ fun EventDetailScreen(
     onBack: () -> Unit,
     cameraHint: String? = null,
     onOpenCamera: (String) -> Unit = {},
+    onOpenEvent: (String) -> Unit = {},
     onFullscreen: (String, Long) -> Unit = { _, _ -> },
 ) {
     val repo = rememberRepo()
     var event by remember(eventId) { mutableStateOf<FrigateEvent?>(null) }
     var error by remember(eventId) { mutableStateOf<String?>(null) }
     var showClip by remember(eventId) { mutableStateOf(true) }
+    var similar by remember(eventId) { mutableStateOf<List<FrigateEvent>?>(null) }
+    var loadingSimilar by remember(eventId) { mutableStateOf(false) }
+    val similarScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(eventId) {
         event = null
@@ -477,6 +488,76 @@ fun EventDetailScreen(
                 }
 
                 item { EventActions(current, onBack = onBack) }
+
+                item {
+                    if (similar == null) {
+                        OutlinedButton(
+                            onClick = {
+                                loadingSimilar = true
+                                similarScope.launch {
+                                    similar = runCatching {
+                                        repo.similarEvents(current.id).filter { it.id != current.id }
+                                    }.getOrDefault(emptyList())
+                                    loadingSimilar = false
+                                }
+                            },
+                            enabled = !loadingSimilar,
+                        ) {
+                            Text(if (loadingSimilar) "Đang tìm…" else "Tìm sự kiện tương tự")
+                        }
+                    } else {
+                        val list = similar.orEmpty()
+                        Text(
+                            if (list.isEmpty()) {
+                                "Không có sự kiện tương tự"
+                            } else {
+                                "Sự kiện tương tự (${list.size})"
+                            },
+                            color = Color(0xFF8E8E93),
+                            fontSize = 12.sp,
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            items(list, key = { it.id }) { item ->
+                                Column(
+                                    Modifier
+                                        .width(128.dp)
+                                        .clickable { onOpenEvent(item.id) },
+                                ) {
+                                    Card(
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = Color(0xFF1C1C1E),
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .aspectRatio(16f / 9f),
+                                    ) {
+                                        FrigateImage(
+                                            url = repo.eventSnapshot(item.id),
+                                            modifier = Modifier.fillMaxSize(),
+                                            contentScale = ContentScale.Crop,
+                                        )
+                                    }
+                                    Text(
+                                        item.label.ifBlank { "sự kiện" },
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFEBEBF5),
+                                        maxLines = 1,
+                                    )
+                                    Text(
+                                        fmtDateTime(item.startTime),
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF8E8E93),
+                                        maxLines = 1,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

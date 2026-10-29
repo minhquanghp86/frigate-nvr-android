@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Article
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.Storage
@@ -76,6 +78,8 @@ fun SettingsScreen(
     onOpenLogs: () -> Unit = {},
     onOpenStorage: () -> Unit = {},
     onOpenOverview: () -> Unit = {},
+    onOpenPlates: () -> Unit = {},
+    onOpenFaces: () -> Unit = {},
 ) {
     val vm: SettingsViewModel = viewModel()
     val repo = vm.repo()
@@ -211,6 +215,20 @@ fun SettingsScreen(
             item {
                 SectionTitle("Dữ liệu")
                 IosGroup {
+                    IosRow(
+                        "Biển số đã nhận diện",
+                        icon = Icons.Outlined.DirectionsCar,
+                        chevron = true,
+                        onClick = onOpenPlates,
+                    )
+                    IosDivider(16)
+                    IosRow(
+                        "Khuôn mặt đã đăng ký",
+                        icon = Icons.Outlined.Face,
+                        chevron = true,
+                        onClick = onOpenFaces,
+                    )
+                    IosDivider(16)
                     IosRow(
                         "Nhật ký hệ thống",
                         icon = Icons.Outlined.Article,
