@@ -29,6 +29,11 @@ import com.minhquanghp86.frigatenvr.ui.IOSOrange
 import com.minhquanghp86.frigatenvr.ui.SectionTitle
 import com.minhquanghp86.frigatenvr.ui.IosGroup
 import com.minhquanghp86.frigatenvr.ui.IosDivider
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.compose.material.icons.outlined.NotificationsActive
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.foundation.background
 import androidx.compose.ui.platform.LocalContext
 import com.minhquanghp86.frigatenvr.ui.IOSCardHigh
@@ -141,6 +146,46 @@ fun CamerasScreen(
     var todayCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var tick by remember { mutableIntStateOf(0) }
     var refreshing by remember { mutableStateOf(false) }
+    val notifyEnabled by repo.notifyEnabled.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val notifyPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        if (granted) {
+            ContextCompat.startForegroundService(
+                context,
+                android.content.Intent(context, com.minhquanghp86.frigatenvr.notify.EventWatchService::class.java),
+            )
+            scope.launch { repo.setNotifyEnabled(true) }
+        } else {
+            scope.launch { repo.setNotifyEnabled(false) }
+        }
+    }
+
+    fun toggleNotifications(on: Boolean) {
+        if (!on) {
+            context.stopService(
+                android.content.Intent(context, com.minhquanghp86.frigatenvr.notify.EventWatchService::class.java),
+            )
+            scope.launch { repo.setNotifyEnabled(false) }
+            return
+        }
+        val needPermission = android.os.Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS,
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (needPermission) {
+            notifyPermLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            ContextCompat.startForegroundService(
+                context,
+                android.content.Intent(context, com.minhquanghp86.frigatenvr.notify.EventWatchService::class.java),
+            )
+            scope.launch { repo.setNotifyEnabled(true) }
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -188,6 +233,8 @@ fun CamerasScreen(
                     HomeHeader(
                         cameraCount = cameras.size,
                         recordingCount = recordingCount,
+                        notifyEnabled = notifyEnabled,
+                        onToggleNotifications = { toggleNotifications(!notifyEnabled) },
                         refreshing = refreshing,
                         onRefresh = {
                             refreshing = true
@@ -247,6 +294,8 @@ fun CamerasScreen(
 private fun HomeHeader(
     cameraCount: Int,
     recordingCount: Int,
+    notifyEnabled: Boolean,
+    onToggleNotifications: () -> Unit,
     refreshing: Boolean,
     onRefresh: () -> Unit,
 ) {
@@ -277,6 +326,31 @@ private fun HomeHeader(
                 )
             }
         }
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(99.dp))
+                .background(
+                    if (notifyEnabled) IOSBlue.copy(alpha = 0.18f) else Color(0x1AFFFFFF),
+                )
+                .clickable(onClick = onToggleNotifications)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                if (notifyEnabled) Icons.Outlined.NotificationsActive else Icons.Outlined.NotificationsOff,
+                contentDescription = if (notifyEnabled) "Tắt thông báo" else "Bật thông báo",
+                tint = if (notifyEnabled) IOSBlue else IOSSecondaryLabel,
+                modifier = Modifier.size(15.dp),
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                if (notifyEnabled) "Thông báo" else "Đã tắt",
+                fontSize = 11.sp,
+                color = if (notifyEnabled) IOSBlue else IOSSecondaryLabel,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+        Spacer(Modifier.width(2.dp))
         IconButton(onClick = onRefresh) {
             if (refreshing) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
