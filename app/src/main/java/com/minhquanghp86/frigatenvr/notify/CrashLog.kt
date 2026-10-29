@@ -21,8 +21,12 @@ object CrashLog {
             runCatching {
                 val stamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
                     .format(Date())
+                val version = com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME
+                val versionCode = com.minhquanghp86.frigatenvr.BuildConfig.VERSION_CODE
+                val device = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                val android = "Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})"
                 val text = buildString {
-                    append("\n===== $stamp · ${thread.name} =====\n")
+                    append("\n===== $stamp · app v$version ($versionCode) · $device · $android · ${thread.name} =====\n")
                     append(throwable.stackTraceToString())
                     append("\n")
                 }
