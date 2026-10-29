@@ -220,7 +220,16 @@ fun TimelineScreen(
                         finished = true
                         break
                     }
-                    message = "Đang xuất: ${progress.step} ${progress.percent.toInt()}%"
+                    val stepLabel = when (progress.step) {
+                        "queued" -> "xếp hàng"
+                        "preparing" -> "chuẩn bị"
+                        "encoding", "copying" -> "cắt/copy bản ghi"
+                        "encoding_retry" -> "thử lại"
+                        "finalizing" -> "hoàn tất file"
+                        else -> progress.step
+                    }
+                    message = "Bước 1/2 · Frigate đang tạo file ($stepLabel) " +
+                        "${progress.percent.toInt()}%"
                     if (progress.status == "success") {
                         finished = true
                         break
@@ -254,9 +263,9 @@ fun TimelineScreen(
                 mime = "video/mp4",
                 onProgress = { percent ->
                     message = if (percent == null) {
-                        "Đang tải…"
+                        "Bước 2/2 · Đang tải về máy…"
                     } else {
-                        "Đang tải… $percent%"
+                        "Bước 2/2 · Đang tải về máy $percent%"
                     }
                 },
             )
