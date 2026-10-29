@@ -311,6 +311,14 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
 - Chạm để bật: xin quyền POST_NOTIFICATIONS (Android 13+) rồi start `EventWatchService` + `setNotifyEnabled(true)`;
   tắt: `stopService` + `setNotifyEnabled(false)`. Dùng chung logic với Cài đặt nên trạng thái luôn đồng bộ.
 
+## 3za. Cập nhật 29/10/2026 — tab Camera dạng lưới gọn
+
+- Bỏ carousel vuốt ngang (thẻ quá to) và bỏ mục "Tất cả camera" ở dưới.
+- Toàn bộ tab là **lưới thẻ 16:9** (`LazyVerticalGrid`, `Adaptive(158dp)`), header và 3 thẻ số liệu
+  chiếm toàn chiều ngang (`GridItemSpan(maxLineSpan)`).
+- Mỗi thẻ: ảnh latest + LIVE/REC + chip fps + tên + sự kiện gần nhất + số sự kiện hôm nay
+  (+ icon audio nếu có) — đủ thông tin nên không cần danh sách riêng.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
