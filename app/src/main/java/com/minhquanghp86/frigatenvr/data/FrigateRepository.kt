@@ -498,6 +498,23 @@ class FrigateRepository(
             ?: emptyList()
     }.getOrDefault(emptyList())
 
+    /** Số sự kiện hôm nay theo từng camera (dùng /api/events/summary). */
+    suspend fun eventsToday(): Map<String, Int> = runCatching {
+        val element = call { eventsSummary(java.util.TimeZone.getDefault().id) }
+        val rows = element as? kotlinx.serialization.json.JsonArray ?: return emptyMap()
+        val today = java.time.LocalDate.now().toString()
+        val counts = mutableMapOf<String, Int>()
+        rows.mapNotNull { it as? kotlinx.serialization.json.JsonObject }
+            .filter { it.str("day") == today }
+            .forEach { row ->
+                val camera = row.str("camera") ?: return@forEach
+                val count = (row["count"] as? kotlinx.serialization.json.JsonPrimitive)
+                    ?.content?.toIntOrNull() ?: 0
+                counts[camera] = (counts[camera] ?: 0) + count
+            }
+        counts
+    }.getOrDefault(emptyMap())
+
     /** Khuôn mặt đã đăng ký: tên -> danh sách file ảnh. */
     suspend fun faces(): Map<String, List<String>> = runCatching {
         val element = call { facesApi() }

@@ -47,6 +47,11 @@ interface FrigateApi {
         @QueryMap params: Map<String, @JvmSuppressWildcards String>,
     ): List<FrigateEvent>
 
+    @GET("api/events/summary")
+    suspend fun eventsSummary(
+        @Query("timezone") timezone: String,
+    ): kotlinx.serialization.json.JsonElement
+
     @GET("api/events/search")
     suspend fun eventsSearch(
         @QueryMap params: Map<String, @JvmSuppressWildcards String>,
