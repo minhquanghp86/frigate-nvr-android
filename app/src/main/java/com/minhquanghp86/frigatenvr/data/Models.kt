@@ -143,11 +143,21 @@ data class EventExtra(
  * nên chỉ giữ phần app dùng và đọc các khối con dạng JsonObject để không vỡ khi schema đổi.
  */
 @Serializable
+data class FaceRecognitionConfig(
+    val enabled: Boolean = false,
+)
+
+@Serializable
 data class FrigateConfig(
     val cameras: Map<String, FrigateCameraConfig> = emptyMap(),
+    @SerialName("face_recognition") val faceRecognition: FaceRecognitionConfig? = null,
 ) {
     val enabledCameras: List<String>
         get() = cameras.filter { it.value.enabled != false }.keys.toList()
+
+    /** Frigate có bật nhận diện khuôn mặt không (face_recognition.enabled). */
+    val faceRecognitionEnabled: Boolean
+        get() = faceRecognition?.enabled == true
 }
 
 @Serializable

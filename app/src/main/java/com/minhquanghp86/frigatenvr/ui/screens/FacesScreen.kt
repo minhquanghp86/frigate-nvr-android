@@ -65,6 +65,7 @@ fun FacesScreen(onBack: () -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var faceEnabled by remember { mutableStateOf<Boolean?>(null) }
 
     var showCreate by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
@@ -110,20 +111,29 @@ fun FacesScreen(onBack: () -> Unit) {
         }
     }
 
-    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(Unit) {
+        faceEnabled = runCatching { repo.configCached().faceRecognitionEnabled }.getOrNull()
+        reload()
+    }
 
     Column(Modifier.fillMaxSize()) {
         LargeTitleHeader(
             title = "Khuôn mặt",
             subtitle = faces?.let { "${it.size} người đã đăng ký" } ?: "Đang tải…",
             trailing = {
-                IconButton(
-                    onClick = {
-                        newName = ""
-                        showCreate = true
-                    },
-                ) {
-                    Icon(Icons.Outlined.PersonAdd, contentDescription = "Thêm người", tint = IOSBlue)
+                if (faceEnabled != false) {
+                    IconButton(
+                        onClick = {
+                            newName = ""
+                            showCreate = true
+                        },
+                    ) {
+                        Icon(
+                            Icons.Outlined.PersonAdd,
+                            contentDescription = "Thêm người",
+                            tint = IOSBlue,
+                        )
+                    }
                 }
                 IconButton(onClick = onBack) {
                     Icon(Icons.Outlined.ArrowBack, contentDescription = "Quay lại", tint = IOSLabel)
@@ -131,6 +141,15 @@ fun FacesScreen(onBack: () -> Unit) {
             },
         )
 
+        if (faceEnabled == false) {
+            Text(
+                "Nhận diện khuôn mặt đang TẮT trong Frigate (face_recognition.enabled = false). " +
+                    "Bật trong cấu hình Frigate rồi khởi động lại để dùng thư viện này.",
+                color = IOSSecondaryLabel,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+            )
+        }
         error?.let {
             Text(
                 it,
