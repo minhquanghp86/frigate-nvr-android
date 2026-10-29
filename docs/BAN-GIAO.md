@@ -324,6 +324,20 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
 - Thêm hàng brand trên cùng tab Camera: icon app (bo góc 7dp) + **FriCam** (đậm) + "Frigate NVR" (mờ)
   và phiên bản `v<versionName>` bên phải; nằm trên tiêu đề lớn "Camera".
 
+## 3zc. Cập nhật 29/10/2026 — thiết kế lại trang Cài đặt
+
+Bố cục mới theo nhóm chức năng:
+1. **Tài khoản**: người dùng hiện tại, vai trò, "Danh sách người dùng" (`/api/users`, chỉ admin thấy dữ liệu),
+   Đăng xuất (có hộp thoại xác nhận).
+2. **Kết nối** (thu gọn mặc định, chạm để mở): địa chỉ server, tài khoản, mật khẩu, go2rtc URL,
+   ghi nhớ mật khẩu, tin chứng chỉ tự ký, nút "Lưu & kết nối". Header hiển thị host hiện tại.
+3. **Cấu hình Frigate** (nhóm mới, đặt tên theo chức năng): Tổng quan hệ thống, **Cấu hình Camera**
+   (màn mới: bật/tắt Phát hiện / Ghi hình / Chụp ảnh / Âm thanh cho từng camera qua
+   `PUT /api/camera/{cam}/set/{feature}`, cập nhật lạc quan + hoàn tác khi lỗi), **Thư viện khuôn mặt**,
+   Biển số đã nhận diện, Nhật ký, Dung lượng ghi hình, Phiên bản Frigate.
+4. **Thông báo**: bật/tắt, lọc theo camera, lọc theo nhãn.
+5. **Ứng dụng**: phiên bản FriCam (versionCode), mở giao diện web Frigate.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

@@ -42,8 +42,10 @@ import com.minhquanghp86.frigatenvr.data.FrigateRepository
 import com.minhquanghp86.frigatenvr.data.SessionState
 import com.minhquanghp86.frigatenvr.ui.screens.CameraLiveScreen
 import com.minhquanghp86.frigatenvr.ui.screens.CamerasScreen
+import com.minhquanghp86.frigatenvr.ui.screens.CameraConfigScreen
 import com.minhquanghp86.frigatenvr.ui.screens.FacesScreen
 import com.minhquanghp86.frigatenvr.ui.screens.LicensePlateScreen
+import com.minhquanghp86.frigatenvr.ui.screens.UsersScreen
 import com.minhquanghp86.frigatenvr.ui.screens.EventDetailScreen
 import com.minhquanghp86.frigatenvr.ui.screens.EventsScreen
 import com.minhquanghp86.frigatenvr.ui.screens.LoginScreen
@@ -266,7 +268,18 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     onOpenOverview = { navController.navigate("overview") },
                     onOpenPlates = { navController.navigate("lpr") },
                     onOpenFaces = { navController.navigate("faces") },
+                    onOpenUsers = { navController.navigate("users") },
+                    onOpenCameraConfig = { navController.navigate("cameraConfig") },
                 )
+            }
+            composable("users") {
+                UsersScreen(
+                    currentUsername = state.session.username,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable("cameraConfig") {
+                CameraConfigScreen(onBack = { navController.popBackStack() })
             }
             composable("faces") {
                 FacesScreen(onBack = { navController.popBackStack() })
