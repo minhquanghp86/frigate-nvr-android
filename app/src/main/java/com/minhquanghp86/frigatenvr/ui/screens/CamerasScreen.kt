@@ -339,7 +339,7 @@ private fun BrandBar() {
         )
         Spacer(Modifier.weight(1f))
         Text(
-            "v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}",
+            com.minhquanghp86.frigatenvr.ui.appVersionLabel,
             color = IOSTertiaryLabel,
             fontSize = 10.sp,
         )

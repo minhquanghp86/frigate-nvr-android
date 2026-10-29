@@ -381,6 +381,13 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   `POST /api/faces/train/{name}/classify` với `event_id`), danh sách tên có sẵn hiển thị để chọn nhanh.
 - Dữ liệu lấy qua `/api/events?label=person&has_snapshot=1` rồi lọc client-side theo sub_label.
 
+## 3zg. Cập nhật 29/10/2026 — sửa nhãn phiên bản bị "vv0.13.0"
+
+- Nguyên nhân: CI đặt `APP_VERSION_NAME` = tên tag (`v0.13.0`) nên `BuildConfig.VERSION_NAME` đã có "v",
+  trong khi UI lại ghép thêm `"v..."` -> "vv0.13.0".
+- Thêm `ui/appVersionLabel`: bỏ tiền tố v/V rồi ghép đúng một chữ **V** (vd. `V0.13.0`);
+  dùng ở header Cài đặt, hàng "Phiên bản FriCam" và header brand tab Camera; bỏ hậu tố `(build code)`.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

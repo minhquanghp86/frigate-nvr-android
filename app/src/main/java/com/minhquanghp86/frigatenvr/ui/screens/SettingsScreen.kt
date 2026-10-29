@@ -159,7 +159,7 @@ fun SettingsScreen(
     Column(modifier.fillMaxSize()) {
         LargeTitleHeader(
             title = "Cài đặt",
-            subtitle = "${session.username} · ${session.role} · v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}",
+            subtitle = "${session.username} · ${session.role} · ${com.minhquanghp86.frigatenvr.ui.appVersionLabel}",
         )
 
         LazyColumn(contentPadding = PaddingValues(bottom = 28.dp)) {
@@ -407,8 +407,7 @@ fun SettingsScreen(
                     IosRow(
                         "Phiên bản FriCam",
                         icon = Icons.Outlined.Info,
-                        value = "v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}" +
-                            " (${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_CODE})",
+                        value = com.minhquanghp86.frigatenvr.ui.appVersionLabel,
                     )
                     IosDivider(56)
                     IosRow(
