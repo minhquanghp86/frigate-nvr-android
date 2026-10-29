@@ -56,7 +56,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun FacesScreen(onBack: () -> Unit) {
+fun FacesScreen(
+    onBack: () -> Unit,
+    onOpenPerson: (String) -> Unit = {},
+) {
     val repo = rememberRepo()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -69,10 +72,6 @@ fun FacesScreen(onBack: () -> Unit) {
 
     var showCreate by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("") }
-    var selectedName by remember { mutableStateOf<String?>(null) }
-    var pendingName by remember { mutableStateOf<String?>(null) }
-    var renameName by remember { mutableStateOf("") }
-    var showRename by remember { mutableStateOf(false) }
 
     fun reload() {
         scope.launch {
@@ -81,32 +80,6 @@ fun FacesScreen(onBack: () -> Unit) {
             } catch (e: Exception) {
                 error = e.message ?: "Không tải được thư viện khuôn mặt"
                 faces = emptyMap()
-            }
-        }
-    }
-
-    val pickImage = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent(),
-    ) { uri ->
-        val name = pendingName ?: return@rememberLauncherForActivityResult
-        pendingName = null
-        if (uri == null) return@rememberLauncherForActivityResult
-        busy = true
-        error = null
-        scope.launch {
-            try {
-                val bytes = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                } ?: throw IllegalStateException("Không đọc được ảnh")
-                val mime = context.contentResolver.getType(uri) ?: "image/jpeg"
-                val fileName = uri.lastPathSegment?.substringAfterLast('/') ?: "face.jpg"
-                repo.registerFace(name, bytes, fileName, mime)
-                message = "Đã thêm ảnh cho $name"
-                reload()
-            } catch (e: Exception) {
-                error = e.message ?: "Không thêm được ảnh"
-            } finally {
-                busy = false
             }
         }
     }
@@ -201,7 +174,7 @@ fun FacesScreen(onBack: () -> Unit) {
                     val file = files.firstOrNull()
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { selectedName = name },
+                        modifier = Modifier.clickable { onOpenPerson(name) },
                     ) {
                         Card(
                             colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1E)),
@@ -273,92 +246,4 @@ fun FacesScreen(onBack: () -> Unit) {
         )
     }
 
-    if (showRename && selectedName != null) {
-        val from = selectedName!!
-        AlertDialog(
-            onDismissRequest = { showRename = false },
-            title = { Text("Đổi tên") },
-            text = {
-                OutlinedTextField(
-                    value = renameName,
-                    onValueChange = { renameName = it },
-                    label = { Text("Tên mới", fontSize = 13.sp) },
-                    singleLine = true,
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val to = renameName.trim()
-                        if (to.isBlank() || to == from) return@TextButton
-                        showRename = false
-                        selectedName = null
-                        busy = true
-                        scope.launch {
-                            try {
-                                repo.renameFace(from, to)
-                                message = "Đã đổi tên $from → $to"
-                                reload()
-                            } catch (e: Exception) {
-                                error = e.message ?: "Không đổi tên được"
-                            } finally {
-                                busy = false
-                            }
-                        }
-                    },
-                ) { Text("Lưu") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRename = false }) { Text("Huỷ") }
-            },
-        )
-    }
-
-    val current = selectedName
-    if (current != null) {
-        val files = faces?.get(current).orEmpty()
-        AlertDialog(
-            onDismissRequest = { selectedName = null },
-            title = { Text(current.replace('_', ' ')) },
-            text = {
-                Column {
-                    Text("${files.size} ảnh đã đăng ký", fontSize = 12.sp, color = IOSSecondaryLabel)
-                    Spacer(Modifier.height(8.dp))
-                    TextButton(
-                        onClick = {
-                            pendingName = current
-                            selectedName = null
-                            pickImage.launch("image/*")
-                        },
-                    ) { Text("Thêm ảnh từ thư viện") }
-                    TextButton(
-                        onClick = {
-                            renameName = current
-                            showRename = true
-                        },
-                    ) { Text("Đổi tên người này") }
-                    TextButton(
-                        onClick = {
-                            selectedName = null
-                            busy = true
-                            scope.launch {
-                                try {
-                                    repo.deleteFaceImages(current, files)
-                                    message = "Đã xoá $current"
-                                    reload()
-                                } catch (e: Exception) {
-                                    error = e.message ?: "Không xoá được"
-                                } finally {
-                                    busy = false
-                                }
-                            }
-                        },
-                    ) { Text("Xoá người này", color = IOSRed) }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedName = null }) { Text("Đóng") }
-            },
-        )
-    }
 }

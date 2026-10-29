@@ -472,6 +472,15 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   create/register/train/rename/delete trả **400 `Face recognition is not enabled.`**; person events
   không có `sub_label` nên thẻ Khuôn mặt/Sự kiện khuôn mặt trống.
 
+## 4f. Cập nhật 29/10/2026 — xem toàn bộ ảnh của một người
+
+- Chạm một người trong **Thư viện khuôn mặt** → màn `FacePersonScreen` (`face/{name}`):
+  lưới **tất cả ảnh đã train** của người đó (ảnh lấy từ `/clips/faces/<tên>/<file>`).
+- Mỗi ảnh có nút ✕ để xoá riêng (`POST /api/faces/{name}/delete` với `ids=[file]`).
+- Hàng nút: **Thêm ảnh** (thư viện, multipart `register`), **Đổi tên** (`/faces/{old}/rename`),
+  **Xoá người** (xoá toàn bộ ảnh).
+- Danh sách người vẫn hiển thị ảnh đại diện + số ảnh; hộp thoại cũ đã bỏ để tránh trùng chức năng.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
