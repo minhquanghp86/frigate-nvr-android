@@ -33,6 +33,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Cast
+import androidx.compose.material.icons.outlined.CastConnected
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsOff
@@ -667,6 +669,19 @@ fun CameraLiveScreen(
     var showSettings by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var streamName by remember(camera) { mutableStateOf(camera) }
+    var showCastDialog by remember { mutableStateOf(false) }
+    // Frigate API không có endpoint cast -> cast HLS của go2rtc tới Chromecast/Android TV.
+    val cast = com.minhquanghp86.frigatenvr.ui.cast.rememberCastSession(
+        context = context,
+        streamUrl = { runCatching { repo.go2rtcHls(streamName) }.getOrNull() },
+        title = { "Camera $camera" },
+    )
+    androidx.compose.runtime.LaunchedEffect(cast.error) {
+        cast.error?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+            cast.clearError()
+        }
+    }
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     var bitmapSize by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -978,6 +993,10 @@ fun CameraLiveScreen(
                 ) {
                     LiveIconButton(Icons.Outlined.ArrowBack, "Quay lại", onBack)
                     Spacer(Modifier.weight(1f))
+                    LiveIconButton(
+                        if (cast.connected) Icons.Outlined.CastConnected else Icons.Outlined.Cast,
+                        if (cast.connected) "Đang phát lên TV" else "Phát lên TV",
+                    ) { showCastDialog = true }
                     LiveIconButton(Icons.Outlined.PictureInPictureAlt, "Hình trong hình") {
                         if (android.os.Build.VERSION.SDK_INT >= 26 && activity != null) {
                             runCatching {

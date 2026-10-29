@@ -24,6 +24,8 @@
   - **MJPEG** (Frigate, chọn fps/độ phân giải, đo fps thực)
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
+- **Cast lên TV/Chromecast** (Google Cast SDK, Default Media Receiver) — phát HLS của go2rtc;
+  yêu cầu TV cùng LAN và truy cập được go2rtc port 1984.
 
 ### Sự kiện
 - Lưới thumbnail; lọc **camera / nhãn / vùng / thời gian (1h, 24h, 7 ngày) / chỉ có clip**.
@@ -202,6 +204,7 @@ Phân tích API & lộ trình Play: [`docs/PHAN-TICH-2026-10-29.md`](docs/PHAN-T
 | Không có thông báo | Bật chip **Thông báo**, cấp quyền POST_NOTIFICATIONS, kiểm tra bộ lọc camera/nhãn |
 | Khuôn mặt trống | Bật `face_recognition.enabled` trong Frigate rồi khởi động lại |
 | Cấu hình Camera báo lỗi | Cần tài khoản **admin** (API trả 400/403) |
+| Cast không thấy TV | TV/Chromecast cùng WiFi; go2rtc port 1984 mở, không đặt auth; HLS phải được hỗ trợ |
 | Muốn xem log | Cài đặt → Cấu hình Frigate → **Nhật ký** → nguồn `app` (có Copy/Share) |
 
 ---

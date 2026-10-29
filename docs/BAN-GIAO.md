@@ -551,6 +551,18 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Dung lượng: bỏ thẻ trùng khi recordings và clips cùng ổ (`total|used` giống nhau), nhãn rõ
   “Bản ghi” / “Ảnh & clip”.
 
+## 4o. Cập nhật 29/10/2026 — Cast lên TV/Chromecast
+
+- **Frigate API KHÔNG có endpoint cast/DLNA/Chromecast** (đã grep toàn bộ 181 endpoint). Vì vậy cast làm
+  phía app bằng **Google Cast SDK** (`play-services-cast-framework:21.4.0`), dùng **Default Media Receiver**.
+- Nguồn phát: **HLS của go2rtc** `…:1984/api/stream.m3u8?src=<camera>` — TV tự tải được, không cần JWT
+  (endpoint `/api/go2rtc/...` của Frigate có xác thực nên Chromecast không dùng được).
+- UI: nút **Cast/CastConnected** trên toolbar live → hộp thoại liệt kê thiết bị (MediaRouter discovery,
+  12 giây/lần mở), chọn thiết bị → tải media vào phiên; nút **Ngắt cast**; lỗi hiện Toast.
+- Điều kiện: TV/Chromecast cùng LAN với go2rtc, port 1984 mở và không đặt auth; HLS được hỗ trợ.
+- `CastOptionsProvider` đăng ký qua meta-data trong manifest; `MediaMetadata` 21.4.0 không có Builder
+  nên dùng constructor + `putString`.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

@@ -99,6 +99,8 @@ dependencies {
 
     // WebRTC (WHEP) để xem live fps gốc qua proxy có xác thực của Frigate.
     implementation("io.github.webrtc-sdk:android:137.7151.05")
+    // Google Cast: phát live lên TV/Chromecast trong LAN (Frigate API không có endpoint cast).
+    implementation("com.google.android.gms:play-services-cast-framework:21.4.0")
 
     testImplementation("junit:junit:4.13.2")
 }
