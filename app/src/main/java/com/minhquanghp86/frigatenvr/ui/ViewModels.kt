@@ -95,6 +95,25 @@ class EventsViewModel(app: Application) : AndroidViewModel(app) {
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
+    private val _rangeHours = MutableStateFlow<Int?>(null)
+    val rangeHours: StateFlow<Int?> = _rangeHours.asStateFlow()
+
+    private val _zone = MutableStateFlow<String?>(null)
+    val zone: StateFlow<String?> = _zone.asStateFlow()
+
+    private val _zones = MutableStateFlow<List<String>>(emptyList())
+    val zones: StateFlow<List<String>> = _zones.asStateFlow()
+
+    fun setRange(hours: Int?) {
+        _rangeHours.value = hours
+        refresh()
+    }
+
+    fun setZone(value: String?) {
+        _zone.value = value
+        refresh()
+    }
+
     fun setQuery(value: String) {
         _query.value = value.trim()
         refresh()
@@ -126,6 +145,14 @@ class EventsViewModel(app: Application) : AndroidViewModel(app) {
             }
             _labels.value = try {
                 repo.labels()
+            } catch (_: Exception) {
+                emptyList()
+            }
+            _zones.value = try {
+                repo.configCached().cameras.values
+                    .flatMap { it.zoneNames }
+                    .distinct()
+                    .sorted()
             } catch (_: Exception) {
                 emptyList()
             }
@@ -166,6 +193,11 @@ class EventsViewModel(app: Application) : AndroidViewModel(app) {
                     _camera.value?.takeIf { it.isNotBlank() }?.let { put("cameras", it) }
                     _label.value?.takeIf { it.isNotBlank() }?.let { put("labels", it) }
                     if (_onlyWithClip.value) put("has_clip", "1")
+                    _rangeHours.value?.let {
+                        val after = System.currentTimeMillis() / 1000 - it * 3600L
+                        put("after", after.toString())
+                    }
+                    _zone.value?.let { put("zones", it) }
                     if (before != null) put("before", before.toString())
                 }
                 val q = _query.value

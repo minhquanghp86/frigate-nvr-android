@@ -182,12 +182,20 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                 )
             }
             composable(
-                "camera/{name}",
-                arguments = listOf(navArgument("name") { type = NavType.StringType }),
+                "camera/{name}?panel={panel}",
+                arguments = listOf(
+                    navArgument("name") { type = NavType.StringType },
+                    navArgument("panel") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
             ) { entry ->
                 CameraLiveScreen(
                     modifier = Modifier,
                     camera = entry.arguments?.getString("name").orEmpty(),
+                    initialPanel = if (entry.arguments?.getString("panel") == "events") 1 else 0,
                     onBack = { navController.popBackStack() },
                     onOpenEvent = { navController.navigate("event/$it") },
                     onOpenTimeline = { cam -> navController.navigate("timeline/$cam") },
@@ -200,13 +208,22 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                 )
             }
             composable(
-                "event/{id}",
-                arguments = listOf(navArgument("id") { type = NavType.StringType }),
+                "event/{id}?camera={camera}",
+                arguments = listOf(
+                    navArgument("id") { type = NavType.StringType },
+                    navArgument("camera") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                ),
             ) { entry ->
                 EventDetailScreen(
                     modifier = Modifier,
                     eventId = entry.arguments?.getString("id").orEmpty(),
+                    cameraHint = entry.arguments?.getString("camera"),
                     onBack = { navController.popBackStack() },
+                    onOpenCamera = { cam -> navController.navigate("camera/$cam") },
                     onFullscreen = { url, pos ->
                         com.minhquanghp86.frigatenvr.ui.PlayerStore.open(url, pos)
                         navController.navigate("player")
@@ -241,6 +258,14 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                 SettingsScreen(
                     modifier = Modifier,
                     session = state.session,
+                    onOpenLogs = { navController.navigate("logs") },
+                    onOpenStorage = { navController.navigate("storage") },
+                    onOpenOverview = { navController.navigate("overview") },
+                )
+            }
+            composable("overview") {
+                com.minhquanghp86.frigatenvr.ui.screens.OverviewScreen(
+                    onBack = { navController.popBackStack() },
                     onOpenLogs = { navController.navigate("logs") },
                     onOpenStorage = { navController.navigate("storage") },
                 )

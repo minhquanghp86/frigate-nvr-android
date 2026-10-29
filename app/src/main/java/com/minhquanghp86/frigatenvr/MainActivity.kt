@@ -54,21 +54,24 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        // Ưu tiên mở đúng sự kiện; nếu không có id thì mở live camera.
-        val eventId = intent.getStringExtra(EXTRA_EVENT_ID)
-        if (eventId != null) {
-            DeepLinks.openEvent(eventId)
-            intent.removeExtra(EXTRA_EVENT_ID)
+        // Thông báo: mở live của camera kèm panel sự kiện (đúng yêu cầu).
+        val camera = intent.getStringExtra(EXTRA_CAMERA)
+        if (camera != null) {
+            val openEvents = intent.getBooleanExtra(EXTRA_OPEN_EVENTS, false)
+            DeepLinks.openCamera(camera, openEvents)
             intent.removeExtra(EXTRA_CAMERA)
+            intent.removeExtra(EXTRA_EVENT_ID)
+            intent.removeExtra(EXTRA_OPEN_EVENTS)
             return
         }
-        val camera = intent.getStringExtra(EXTRA_CAMERA) ?: return
-        DeepLinks.openCamera(camera)
-        intent.removeExtra(EXTRA_CAMERA)
+        val eventId = intent.getStringExtra(EXTRA_EVENT_ID) ?: return
+        DeepLinks.openEvent(eventId)
+        intent.removeExtra(EXTRA_EVENT_ID)
     }
 
     companion object {
         const val EXTRA_EVENT_ID = "frigate_event_id"
         const val EXTRA_CAMERA = "frigate_camera"
+        const val EXTRA_OPEN_EVENTS = "frigate_open_events"
     }
 }

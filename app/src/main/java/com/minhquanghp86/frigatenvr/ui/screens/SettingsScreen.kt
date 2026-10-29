@@ -75,6 +75,7 @@ fun SettingsScreen(
     session: ServerSession,
     onOpenLogs: () -> Unit = {},
     onOpenStorage: () -> Unit = {},
+    onOpenOverview: () -> Unit = {},
 ) {
     val vm: SettingsViewModel = viewModel()
     val repo = vm.repo()
@@ -84,8 +85,11 @@ fun SettingsScreen(
     val message by vm.message.collectAsState()
     val notifyEnabled by repo.notifyEnabled.collectAsState()
     val notifyCameras by repo.notifyCameras.collectAsState()
+    val notifyLabels by repo.notifyLabels.collectAsState()
     var showCameraPicker by remember { mutableStateOf(false) }
+    var showLabelPicker by remember { mutableStateOf(false) }
     var allCameras by remember { mutableStateOf<List<String>>(emptyList()) }
+    var allLabels by remember { mutableStateOf<List<String>>(emptyList()) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -99,6 +103,7 @@ fun SettingsScreen(
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         allCameras = runCatching { repo.configCached().enabledCameras }.getOrDefault(emptyList())
+        allLabels = runCatching { repo.labels() }.getOrDefault(emptyList())
     }
 
     val permLauncher = rememberLauncherForActivityResult(
@@ -193,6 +198,13 @@ fun SettingsScreen(
                         chevron = true,
                         onClick = { showCameraPicker = true },
                     )
+                    IosDivider(16)
+                    IosRow(
+                        "Nhãn nhận thông báo",
+                        value = if (notifyLabels.isEmpty()) "Tất cả" else notifyLabels.joinToString(", "),
+                        chevron = true,
+                        onClick = { showLabelPicker = true },
+                    )
                 }
             }
 
@@ -254,6 +266,12 @@ fun SettingsScreen(
             item {
                 SectionTitle("Hệ thống")
                 IosGroup {
+                    IosRow(
+                        "Tổng quan (sức khỏe, cảnh báo, export)",
+                        chevron = true,
+                        onClick = onOpenOverview,
+                    )
+                    IosDivider(16)
                     IosRow(
                         "Frigate",
                         icon = Icons.Outlined.Info,
@@ -329,6 +347,42 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showCameraPicker = false }) { Text("Xong") }
+            },
+        )
+    }
+
+    if (showLabelPicker) {
+        AlertDialog(
+            onDismissRequest = { showLabelPicker = false },
+            title = { Text("Nhãn nhận thông báo") },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    Text(
+                        "Bỏ chọn hết = nhận mọi nhãn.",
+                        fontSize = 12.sp,
+                        color = IOSSecondaryLabel,
+                    )
+                    allLabels.forEach { label ->
+                        androidx.compose.foundation.layout.Row(
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.Checkbox(
+                                checked = label in notifyLabels,
+                                onCheckedChange = { on ->
+                                    scope.launch {
+                                        repo.setNotifyLabels(
+                                            if (on) notifyLabels + label else notifyLabels - label,
+                                        )
+                                    }
+                                },
+                            )
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLabelPicker = false }) { Text("Xong") }
             },
         )
     }

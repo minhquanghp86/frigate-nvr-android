@@ -248,12 +248,27 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
 - thêm `heightIn(min = 40.dp)` cho Canvas
 (Đây chính là crash khi bấm Toàn màn hình ở trình xem lại — xoay ngang làm Canvas measure lại.)
 
-## 3u. Cập nhật 29/10/2026 — bấm thông báo mở trang sự kiện
+## 3u. Cập nhật 29/10/2026 — bấm thông báo mở live camera + panel sự kiện
 
-- Notification mang `EXTRA_EVENT_ID` (+ `EXTRA_CAMERA` dự phòng); `MainActivity` ưu tiên mở
-  `event/{id}`, chỉ mở live camera khi không có event id.
-- PendingIntent requestCode = hash(event id) để mỗi thông báo mở đúng sự kiện của nó.
-- Nếu sự kiện đã bị xoá, trang chi tiết hiện lỗi 404 (chấp nhận; có thể thêm nút "Mở live" sau).
+- Notification mang `EXTRA_CAMERA` + `EXTRA_OPEN_EVENTS`; `MainActivity` gọi
+  `DeepLinks.openCamera(camera, openEvents = true)`.
+- Route `camera/{name}?panel=events` -> `CameraLiveScreen(initialPanel = 1)`: mở **live của camera
+  đang báo** kèm **panel sự kiện của camera đó** bên dưới (không mở trình xem sự kiện).
+- Deep link `event/{id}` vẫn giữ cho các luồng khác (ví dụ từ panel sự kiện).
+
+## 3v. Cập nhật 29/10/2026 — hoàn tất các việc còn treo
+
+- **Màn Tổng quan** (`overview`, mở từ Cài đặt → Hệ thống): phiên bản, uptime/CPU/RAM, detection fps,
+  cảnh báo (`/api/notices`), fps từng camera, dung lượng theo camera, và **danh sách clip đã xuất**
+  (`/api/exports`) có nút tải; lối tắt tới Nhật ký/Dung lượng.
+- **Export có theo dõi job**: nút Tải ở Xem lại tạo `POST /api/export/{cam}/start/{s}/end/{e}`,
+  poll `GET /api/jobs/export/{id}` (dùng `current_step` + `progress_percent`) rồi tải file qua
+  `/exports/<tên>`; nếu job lỗi/không có thì **fallback** cắt trực tiếp `clip.mp4`.
+- **Lọc sự kiện nâng cao**: thêm pill **thời gian** (Mọi lúc/1 giờ/24 giờ/7 ngày → `after`)
+  và **vùng** (`zones` lấy từ config camera → `zones=`).
+- **Thông báo theo nhãn**: Cài đặt → Thông báo → "Nhãn nhận thông báo" (DataStore + service lọc `e.label`).
+- **Sự kiện 404**: nếu sự kiện đã bị xoá, màn chi tiết hiện nút "Mở live camera <cam>"
+  (deep link thông báo giờ mang kèm camera).
 
 ## 4. Việc còn lại
 

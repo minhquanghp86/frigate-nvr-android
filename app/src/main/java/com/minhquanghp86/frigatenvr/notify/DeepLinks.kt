@@ -9,12 +9,16 @@ object DeepLinks {
     private val _route = MutableStateFlow<String?>(null)
     val route: StateFlow<String?> = _route.asStateFlow()
 
-    fun openCamera(camera: String) {
-        _route.value = "camera/$camera"
+    fun openCamera(camera: String, openEvents: Boolean = false) {
+        _route.value = if (openEvents) "camera/$camera?panel=events" else "camera/$camera"
     }
 
-    fun openEvent(eventId: String) {
-        _route.value = "event/$eventId"
+    fun openEvent(eventId: String, camera: String? = null) {
+        _route.value = if (camera.isNullOrBlank()) {
+            "event/$eventId"
+        } else {
+            "event/$eventId?camera=$camera"
+        }
     }
 
     fun clear() {
