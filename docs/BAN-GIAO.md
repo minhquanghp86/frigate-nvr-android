@@ -338,6 +338,14 @@ Bố cục mới theo nhóm chức năng:
 4. **Thông báo**: bật/tắt, lọc theo camera, lọc theo nhãn.
 5. **Ứng dụng**: phiên bản FriCam (versionCode), mở giao diện web Frigate.
 
+## 3zd. Hotfix 29/10/2026 — crash tab Camera sau ~2 giây
+
+- Nguyên nhân: header brand dùng `painterResource(R.mipmap.ic_launcher)` — đây là **adaptive icon**
+  (`mipmap-anydpi-v26/ic_launcher.xml`), Compose không vẽ được trực tiếp nên ném lỗi khi header
+  được compose (header chỉ render sau khi `/api/config` xong, tức ~2 giây sau khi mở app).
+- Sửa: thay bằng logo vẽ trực tiếp (Box 26dp, gradient xanh `IOSBlue → #5E5CE6`, icon Videocam trắng).
+  Không còn phụ thuộc resource mipmap.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
