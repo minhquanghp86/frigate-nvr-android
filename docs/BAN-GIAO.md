@@ -450,6 +450,15 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Bỏ hàng **“Mã nguồn / Báo lỗi”** (không bắt buộc với Google Play).
 - Lưu ý: Play **vẫn yêu cầu URL privacy policy** trong store listing → vẫn cần bật GitHub Pages.
 
+## 4d. Cập nhật 29/10/2026 — thêm ảnh sự kiện vào thư viện khuôn mặt
+
+- Trang sự kiện: nút **“Thêm vào thư viện khuôn mặt”** mở hộp thoại chọn/tạo tên, có 2 cách:
+  1. **Train** (`POST /api/faces/train/{name}/classify` với `event_id` — Frigate tự cắt mặt).
+  2. **Thêm ảnh này vào thư viện** — app tải snapshot gốc (`/api/events/{id}/snapshot.jpg`), **cắt quanh
+     box nhận diện + 20% viền**, nén JPEG rồi `POST /api/faces/{name}/register` (multipart).
+     Cách này dùng khi Frigate không tự tìm thấy mặt trong ảnh toàn cảnh.
+- Lỗi từ Frigate (vd. "No face detected") hiển thị nguyên văn ngay dưới nút.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
