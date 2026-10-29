@@ -45,6 +45,7 @@ import com.minhquanghp86.frigatenvr.ui.screens.CamerasScreen
 import com.minhquanghp86.frigatenvr.ui.screens.AlertsScreen
 import com.minhquanghp86.frigatenvr.ui.screens.CameraConfigScreen
 import com.minhquanghp86.frigatenvr.ui.screens.FaceEventsScreen
+import com.minhquanghp86.frigatenvr.ui.screens.FacePersonScreen
 import com.minhquanghp86.frigatenvr.ui.screens.FacesScreen
 import com.minhquanghp86.frigatenvr.ui.screens.LicensePlateScreen
 import com.minhquanghp86.frigatenvr.ui.screens.UsersScreen
@@ -294,7 +295,21 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                 CameraConfigScreen(onBack = { navController.popBackStack() })
             }
             composable("faces") {
-                FacesScreen(onBack = { navController.popBackStack() })
+                FacesScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenPerson = { name ->
+                        navController.navigate("face/" + android.net.Uri.encode(name))
+                    },
+                )
+            }
+            composable(
+                "face/{name}",
+                arguments = listOf(navArgument("name") { type = NavType.StringType }),
+            ) { entry ->
+                FacePersonScreen(
+                    name = entry.arguments?.getString("name").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
             }
             composable("lpr") {
                 LicensePlateScreen(
