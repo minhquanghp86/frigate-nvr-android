@@ -46,10 +46,16 @@ fun LicensePlateScreen(
 ) {
     val repo = rememberRepo()
     var plates by remember { mutableStateOf<List<String>?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
     var filter by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
-        plates = runCatching { repo.licensePlates() }.getOrDefault(emptyList())
+        try {
+            plates = repo.licensePlates()
+        } catch (e: Exception) {
+            error = e.message ?: "Không tải được biển số"
+            plates = emptyList()
+        }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -82,7 +88,7 @@ fun LicensePlateScreen(
 
             data.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 Text(
-                    "Chưa có biển số nào.\nCần bật LPR trong cấu hình Frigate.",
+                    error ?: "Chưa có biển số nào được nhận diện.\nKiểm tra LPR đã bật trong Frigate và đã có sự kiện xe.",
                     color = IOSSecondaryLabel,
                     fontSize = 13.sp,
                 )

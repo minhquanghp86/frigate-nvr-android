@@ -24,6 +24,34 @@ data class FrigateUser(
 data class CameraSetBody(val value: String)
 
 @Serializable
+data class NewUserBody(
+    val username: String,
+    val password: String,
+    val role: String? = "viewer",
+)
+
+@Serializable
+data class RoleBody(val role: String)
+
+@Serializable
+data class PasswordBody(
+    val password: String,
+    val old_password: String? = null,
+)
+
+@Serializable
+data class FaceDeleteBody(val ids: List<String>)
+
+@Serializable
+data class FaceReclassifyBody(val id: String, val new_name: String)
+
+@Serializable
+data class FaceTrainBody(
+    val event_id: String? = null,
+    val training_file: String? = null,
+)
+
+@Serializable
 data class ExportBody(
     val source: String = "recordings",
     val name: String? = null,
