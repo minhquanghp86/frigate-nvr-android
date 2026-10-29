@@ -563,6 +563,13 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - `CastOptionsProvider` đăng ký qua meta-data trong manifest; `MediaMetadata` 21.4.0 không có Builder
   nên dùng constructor + `putString`.
 
+## 4p. Hotfix 29/10/2026 — nút Cast không phản hồi
+
+- Nguyên nhân: khối `if (showCastDialog) { CastDeviceDialog(...) }` **chưa được chèn** vào
+  `CameraLiveScreen` (patch trước trượt anchor) nên bấm nút chỉ đổi state mà không có UI.
+- Đã chèn dialog đúng vị trí (trước bottom sheet cài đặt) + Toast cảnh báo khi
+  `CastContext` không khả dụng (máy không có Google Play Services).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
