@@ -318,23 +318,7 @@ private fun BrandBar() {
             .padding(top = 12.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier
-                .size(28.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    Brush.linearGradient(listOf(Color(0xFF0A1526), Color(0xFF12375E))),
-                ),
-            Alignment.Center,
-        ) {
-            Image(
-                painter = androidx.compose.ui.res.painterResource(
-                    com.minhquanghp86.frigatenvr.R.drawable.ic_launcher_foreground,
-                ),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+        com.minhquanghp86.frigatenvr.ui.FriCamLogo(size = 28.dp)
         Spacer(Modifier.width(8.dp))
         Text(
             "FriCam",
