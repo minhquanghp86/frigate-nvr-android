@@ -694,6 +694,10 @@ class FrigateRepository(
         return url("/exports/" + path.substringAfterLast('/'))
     }
 
+    suspend fun deleteExport(exportId: String) {
+        call { deleteExports(ExportDeleteBody(listOf(exportId))) }
+    }
+
     suspend fun exportsList(): List<kotlinx.serialization.json.JsonObject> {
         val arr = call { exports() } as? kotlinx.serialization.json.JsonArray ?: return emptyList()
         return arr.mapNotNull { it as? kotlinx.serialization.json.JsonObject }

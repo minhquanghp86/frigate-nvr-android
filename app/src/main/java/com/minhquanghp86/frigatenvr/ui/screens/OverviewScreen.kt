@@ -13,19 +13,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.minhquanghp86.frigatenvr.data.MediaSaver
@@ -87,12 +92,12 @@ fun OverviewScreen(
     var message by remember { mutableStateOf<String?>(null) }
     var selectedNotice by remember { mutableStateOf<JsonObject?>(null) }
     var noticeMessage by remember { mutableStateOf<String?>(null) }
+    var deleteExportTarget by remember { mutableStateOf<JsonObject?>(null) }
 
     // Chuỗi mẫu cho biểu đồ bộ phát hiện (poll /api/stats mỗi 5s).
     val inference = remember { mutableListOf<Float>() }
     val cpu = remember { mutableListOf<Float>() }
     val mem = remember { mutableListOf<Float>() }
-    var tick by remember { mutableStateOf(0) }
 
     suspend fun loadSlow() {
         version = runCatching { repo.versionText() }.getOrDefault("—")
@@ -126,7 +131,6 @@ fun OverviewScreen(
                         if (mem.size > MAX_SAMPLES) mem.removeAt(0)
                     }
                 }
-                tick++
             }
             i++
             if (i % 6 == 0) loadSlow()
@@ -180,6 +184,17 @@ fun OverviewScreen(
         val detectorName = (stats?.get("detectors") as? JsonObject)?.keys?.firstOrNull() ?: "detector"
 
         LazyColumn(contentPadding = PaddingValues(bottom = 28.dp)) {
+            // ---- Hero: phiên bản + chỉ số nhanh
+            item {
+                HeroCard(
+                    version = version,
+                    uptime = service?.d("uptime"),
+                    cpuUsage = service?.d("cpu_usage"),
+                    memUsage = service?.d("mem_usage"),
+                    detectionFps = stats?.d("detection_fps"),
+                )
+            }
+
             // ---- Bộ phát hiện
             if (detector != null) {
                 item {
@@ -188,24 +203,25 @@ fun OverviewScreen(
                         Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(18.dp))
                             .background(IOSCard)
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 4.dp),
                     ) {
                         BarChart(
                             title = "Tốc độ suy luận",
-                            current = detector.d("inference_speed")?.let { "%.2f ms".format(it) } ?: "—",
+                            current = detector.d("inference_speed")
+                                ?.let { "%.2f ms".format(it) } ?: "—",
                             values = inference,
                         )
                         IosDivider(16)
                         BarChart(
-                            title = "Mức sử dụng CPU",
+                            title = "CPU",
                             current = detector.d("cpu")?.let { "%.1f%%".format(it) } ?: "—",
                             values = cpu,
                         )
                         IosDivider(16)
                         BarChart(
-                            title = "Mức sử dụng bộ nhớ",
+                            title = "Bộ nhớ",
                             current = detector.d("mem")?.let { "%.1f%%".format(it) } ?: "—",
                             values = mem,
                         )
@@ -213,7 +229,7 @@ fun OverviewScreen(
                 }
             }
 
-            // ---- Dung lượng lưu trữ
+            // ---- Dung lượng
             val storagePaths = service?.get("storage") as? JsonObject
             if (storagePaths != null && storagePaths.isNotEmpty()) {
                 item {
@@ -227,51 +243,17 @@ fun OverviewScreen(
                             val total = obj.d("total") ?: 0.0
                             val used = obj.d("used") ?: 0.0
                             val pct = if (total > 0) used / total * 100 else 0.0
-                            Column(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(IOSCard)
-                                    .padding(12.dp),
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        if (path.contains("frigate")) "Bản ghi" else path,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = IOSLabel,
-                                    )
-                                    Spacer(Modifier.weight(1f))
-                                    Text(
-                                        "%.1f%%".format(pct),
-                                        fontSize = 12.sp,
-                                        color = IOSSecondaryLabel,
-                                    )
-                                }
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    "${formatMb(used)} / ${formatMb(total)}",
-                                    fontSize = 13.sp,
-                                    color = IOSSecondaryLabel,
-                                )
-                                Spacer(Modifier.height(6.dp))
-                                LinearProgressIndicator(
-                                    progress = { (pct / 100.0).toFloat().coerceIn(0f, 1f) },
-                                    color = if (pct >= 90) IOSRed else IOSBlue,
-                                    trackColor = Color(0x33FFFFFF),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(7.dp)
-                                        .clip(RoundedCornerShape(99.dp)),
-                                )
-                                if (path.contains("frigate") && earliestDay != null) {
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(
-                                        "Bản ghi sớm nhất: $earliestDay",
-                                        fontSize = 12.sp,
-                                        color = IOSSecondaryLabel,
-                                    )
-                                }
-                            }
+                            StorageCard(
+                                title = if (path.contains("frigate")) "Bản ghi" else path,
+                                used = used,
+                                total = total,
+                                percent = pct,
+                                footnote = if (path.contains("frigate") && earliestDay != null) {
+                                    "Bản ghi sớm nhất: $earliestDay"
+                                } else {
+                                    null
+                                },
+                            )
                         }
                     }
                 }
@@ -288,10 +270,30 @@ fun OverviewScreen(
                                 .fillMaxWidth()
                                 .padding(horizontal = 12.dp, vertical = 8.dp),
                         ) {
-                            Text("Camera", fontSize = 11.sp, color = IOSSecondaryLabel, modifier = Modifier.weight(1.2f))
-                            Text("Lưu trữ", fontSize = 11.sp, color = IOSSecondaryLabel, modifier = Modifier.weight(0.9f))
-                            Text("%", fontSize = 11.sp, color = IOSSecondaryLabel, modifier = Modifier.weight(0.7f))
-                            Text("MiB/giờ", fontSize = 11.sp, color = IOSSecondaryLabel, modifier = Modifier.weight(1f))
+                            Text(
+                                "Camera",
+                                fontSize = 11.sp,
+                                color = IOSSecondaryLabel,
+                                modifier = Modifier.weight(1.2f),
+                            )
+                            Text(
+                                "Lưu trữ",
+                                fontSize = 11.sp,
+                                color = IOSSecondaryLabel,
+                                modifier = Modifier.weight(0.9f),
+                            )
+                            Text(
+                                "%",
+                                fontSize = 11.sp,
+                                color = IOSSecondaryLabel,
+                                modifier = Modifier.weight(0.7f),
+                            )
+                            Text(
+                                "MiB/giờ",
+                                fontSize = 11.sp,
+                                color = IOSSecondaryLabel,
+                                modifier = Modifier.weight(1f),
+                            )
                         }
                         IosDivider(12)
                         val entries = storageObj.entries.toList()
@@ -306,11 +308,13 @@ fun OverviewScreen(
                                     .padding(horizontal = 12.dp, vertical = 9.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Row(Modifier.weight(1.2f), verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    Modifier.weight(1.2f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
                                     Box(
                                         Modifier
-                                            .width(8.dp)
-                                            .height(8.dp)
+                                            .size(8.dp)
                                             .clip(RoundedCornerShape(99.dp))
                                             .background(IOSBlue),
                                     )
@@ -324,13 +328,13 @@ fun OverviewScreen(
                                     modifier = Modifier.weight(0.9f),
                                 )
                                 Text(
-                                    "%.2f%%".format(pct),
+                                    "%.1f%%".format(pct),
                                     fontSize = 12.sp,
                                     color = IOSSecondaryLabel,
                                     modifier = Modifier.weight(0.7f),
                                 )
                                 Text(
-                                    "%.2f".format(bandwidth),
+                                    "%.1f".format(bandwidth),
                                     fontSize = 12.sp,
                                     color = IOSSecondaryLabel,
                                     modifier = Modifier.weight(1f),
@@ -342,25 +346,10 @@ fun OverviewScreen(
                 }
             }
 
-            // ---- Hệ thống
+            // ---- Lối tắt
             item {
                 SectionTitle("Hệ thống")
                 IosGroup {
-                    IosRow("Phiên bản", value = version)
-                    if (service != null) {
-                        IosDivider(16)
-                        IosRow("Thời gian chạy", value = service.d("uptime")?.let { fmtDuration(it) })
-                        IosDivider(16)
-                        IosRow("Bộ nhớ", value = service.d("mem_usage")?.let { "%.0f%%".format(it) })
-                        IosDivider(16)
-                        IosRow("CPU", value = service.d("cpu_usage")?.let { "%.0f%%".format(it) })
-                    }
-                    IosDivider(16)
-                    IosRow(
-                        "Tốc độ phát hiện",
-                        value = stats?.d("detection_fps")?.let { "%.1f fps".format(it) },
-                    )
-                    IosDivider(16)
                     IosRow("Nhật ký hệ thống", chevron = true, onClick = onOpenLogs)
                     IosDivider(56)
                     IosRow("Dung lượng ghi hình", chevron = true, onClick = onOpenStorage)
@@ -413,7 +402,7 @@ fun OverviewScreen(
                 }
             }
 
-            // ---- Export
+            // ---- Clip đã xuất (tải + xoá)
             item {
                 SectionTitle("Clip đã xuất")
                 IosGroup {
@@ -436,26 +425,44 @@ fun OverviewScreen(
                                             Modifier
                                         },
                                     )
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    .padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Column(Modifier.weight(1f)) {
-                                    Text(name, color = IOSLabel, style = MaterialTheme.typography.bodyLarge)
+                                    Text(
+                                        name,
+                                        color = IOSLabel,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        maxLines = 1,
+                                    )
                                     Text(
                                         "$camera · ${fmtDateTime(date)}" +
                                             if (inProgress) " · đang xử lý" else "",
                                         color = IOSSecondaryLabel,
                                         fontSize = 12.sp,
+                                        maxLines = 1,
                                     )
                                 }
-                                if (!inProgress) {
-                                    Icon(
-                                        Icons.Outlined.Download,
-                                        contentDescription = "Tải",
-                                        tint = IOSBlue,
+                                if (inProgress) {
+                                    CircularProgressIndicator(
+                                        Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
                                     )
                                 } else {
-                                    CircularProgressIndicator(Modifier.width(16.dp), strokeWidth = 2.dp)
+                                    IconButton(onClick = { downloadExport(row) }) {
+                                        Icon(
+                                            Icons.Outlined.Download,
+                                            contentDescription = "Tải",
+                                            tint = IOSBlue,
+                                        )
+                                    }
+                                    IconButton(onClick = { deleteExportTarget = row }) {
+                                        Icon(
+                                            Icons.Outlined.Delete,
+                                            contentDescription = "Xoá clip",
+                                            tint = IOSRed,
+                                        )
+                                    }
                                 }
                             }
                             if (index != minOf(exports.size, 10) - 1) IosDivider(56)
@@ -474,9 +481,42 @@ fun OverviewScreen(
         }
     }
 
+    deleteExportTarget?.let { row ->
+        val id = row.s("id")
+        AlertDialog(
+            onDismissRequest = { deleteExportTarget = null },
+            title = { Text("Xoá clip đã xuất?") },
+            text = {
+                Text("File sẽ bị xoá khỏi máy chủ Frigate để giải phóng dung lượng.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deleteExportTarget = null
+                        if (id == null) return@TextButton
+                        scope.launch {
+                            try {
+                                repo.deleteExport(id)
+                                message = "Đã xoá clip"
+                                exports = runCatching { repo.exportsList() }
+                                    .getOrDefault(exports)
+                                storage = runCatching { repo.storage() as? JsonObject }.getOrNull()
+                            } catch (e: Exception) {
+                                message = e.message ?: "Không xoá được clip"
+                            }
+                        }
+                    },
+                ) { Text("Xoá", color = IOSRed) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteExportTarget = null }) { Text("Huỷ") }
+            },
+        )
+    }
+
     selectedNotice?.let { notice ->
         val noticeId = notice.s("id") ?: notice.s("notice_id")
-        androidx.compose.material3.AlertDialog(
+        AlertDialog(
             onDismissRequest = { selectedNotice = null },
             title = { Text("Cảnh báo") },
             text = {
@@ -531,6 +571,143 @@ fun OverviewScreen(
     }
 }
 
+/** Thẻ tổng quan: phiên bản + thời gian chạy + 3 chỉ số tức thời. */
+@Composable
+private fun HeroCard(
+    version: String,
+    uptime: Double?,
+    cpuUsage: Double?,
+    memUsage: Double?,
+    detectionFps: Double?,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF0F1A2C), Color(0xFF16294A))))
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "FRIGATE NVR",
+                    color = Color(0x99FFFFFF),
+                    fontSize = 10.sp,
+                    letterSpacing = 1.2.sp,
+                )
+                Text(
+                    version,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
+            Box(
+                Modifier
+                    .clip(RoundedCornerShape(99.dp))
+                    .background(Color(0x33FFFFFF))
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Text(
+                    uptime?.let { fmtDuration(it) } ?: "—",
+                    color = Color.White,
+                    fontSize = 11.sp,
+                )
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HeroMetric("CPU", cpuUsage?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
+            HeroMetric("RAM", memUsage?.let { "%.0f%%".format(it) } ?: "—", Modifier.weight(1f))
+            HeroMetric(
+                "Phát hiện",
+                detectionFps?.let { "%.0f fps".format(it) } ?: "—",
+                Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeroMetric(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0x1FFFFFFF))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Text(label, color = Color(0x99FFFFFF), fontSize = 10.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            value,
+            color = Color.White,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+    }
+}
+
+/** Thẻ dung lượng: thanh tiến trình dày gấp đôi bản cũ (14dp thay vì 7dp). */
+@Composable
+private fun StorageCard(
+    title: String,
+    used: Double,
+    total: Double,
+    percent: Double,
+    footnote: String?,
+) {
+    val tint = when {
+        percent >= 90 -> IOSRed
+        percent >= 70 -> IOSOrange
+        else -> IOSBlue
+    }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(IOSCard)
+            .padding(14.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                color = IOSLabel,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                "%.1f%%".format(percent),
+                color = tint,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "${formatMb(used)} / ${formatMb(total)}",
+            fontSize = 12.sp,
+            color = IOSSecondaryLabel,
+        )
+        Spacer(Modifier.height(10.dp))
+        LinearProgressIndicator(
+            progress = { (percent / 100.0).toFloat().coerceIn(0f, 1f) },
+            color = tint,
+            trackColor = Color(0x26FFFFFF),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(14.dp)
+                .clip(RoundedCornerShape(99.dp)),
+        )
+        if (footnote != null) {
+            Spacer(Modifier.height(8.dp))
+            Text(footnote, fontSize = 11.sp, color = IOSSecondaryLabel)
+        }
+    }
+}
+
 /** Biểu đồ cột nhỏ kiểu Frigate: giá trị hiện tại + 160 mẫu gần nhất. */
 @Composable
 private fun BarChart(title: String, current: String, values: List<Float>) {
@@ -538,11 +715,16 @@ private fun BarChart(title: String, current: String, values: List<Float>) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, style = MaterialTheme.typography.titleSmall, color = IOSLabel)
             Spacer(Modifier.weight(1f))
-            Text(current, fontSize = 12.sp, color = IOSSecondaryLabel)
+            Text(
+                current,
+                fontSize = 12.sp,
+                color = IOSSecondaryLabel,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
         Spacer(Modifier.height(6.dp))
         val maxValue = (values.maxOrNull() ?: 0f).coerceAtLeast(1f)
-        Canvas(Modifier.fillMaxWidth().height(72.dp)) {
+        Canvas(Modifier.fillMaxWidth().height(64.dp)) {
             if (values.isEmpty()) return@Canvas
             val n = values.size
             val barW = size.width / n
