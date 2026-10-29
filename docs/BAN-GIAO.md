@@ -305,6 +305,12 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
   icon audio nếu có, sự kiện gần nhất, chevron.
 - Dữ liệu tự làm mới mỗi 8 giây (stats + events summary + ảnh), tải lại thủ công bằng nút ở header.
 
+## 3z. Cập nhật 29/10/2026 — nút bật/tắt thông báo nhanh trên tab Camera
+
+- Chip cạnh nút tải lại ở header tab Camera: **"Thông báo"** (xanh dương khi bật) / **"Đã tắt"** (xám).
+- Chạm để bật: xin quyền POST_NOTIFICATIONS (Android 13+) rồi start `EventWatchService` + `setNotifyEnabled(true)`;
+  tắt: `stopService` + `setNotifyEnabled(false)`. Dùng chung logic với Cài đặt nên trạng thái luôn đồng bộ.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
