@@ -270,6 +270,17 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
 - **Sự kiện 404**: nếu sự kiện đã bị xoá, màn chi tiết hiện nút "Mở live camera <cam>"
   (deep link thông báo giờ mang kèm camera).
 
+## 3w. Cập nhật 29/10/2026 — màn Hệ thống kiểu Frigate (biểu đồ + dung lượng)
+
+- Poll `/api/stats` mỗi 5s, giữ 160 mẫu cho bộ phát hiện đầu tiên:
+  `detectors.<name>.inference_speed` (ms), `.cpu` (%), `.mem` (%) → **3 biểu đồ cột**
+  (cột xanh, cam khi gần đỉnh), kèm giá trị hiện tại — giống trang System của Frigate.
+- **Dung lượng**: `service.storage` (Bản ghi, /tmp/cache, /dev/shm) với used/total + % + thanh tiến trình;
+  thêm "Bản ghi sớm nhất" lấy từ key nhỏ nhất của `/api/recordings/summary`.
+- **Bảng Lưu trữ Camera**: từ `/api/recordings/storage` — camera, dung lượng, %, **băng thông MiB/giờ**
+  (field `bandwidth`).
+- Giữ nguyên các mục cũ: hệ thống/uptime/CPU/RAM, camera fps, cảnh báo, clip đã xuất (tải được).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
