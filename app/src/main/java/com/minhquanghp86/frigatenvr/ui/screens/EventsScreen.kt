@@ -5,6 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.OutlinedTextField
+import com.minhquanghp86.frigatenvr.ui.IOSLabel
 import com.minhquanghp86.frigatenvr.ui.IOSBlue
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.BookmarkBorder
@@ -530,7 +531,7 @@ fun EventDetailScreen(
                             } else {
                                 "Sự kiện tương tự (${list.size})"
                             },
-                            color = Color(0xFF8E8E93),
+                            color = IOSSecondaryLabel,
                             fontSize = 12.sp,
                         )
                         LazyRow(
@@ -545,7 +546,7 @@ fun EventDetailScreen(
                                 ) {
                                     Card(
                                         colors = CardDefaults.cardColors(
-                                            containerColor = Color(0xFF1C1C1E),
+                                            containerColor = IOSCard,
                                         ),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier
@@ -561,13 +562,13 @@ fun EventDetailScreen(
                                     Text(
                                         item.label.ifBlank { "sự kiện" },
                                         fontSize = 11.sp,
-                                        color = Color(0xFFEBEBF5),
+                                        color = IOSLabel,
                                         maxLines = 1,
                                     )
                                     Text(
                                         fmtDateTime(item.startTime),
                                         fontSize = 10.sp,
-                                        color = Color(0xFF8E8E93),
+                                        color = IOSSecondaryLabel,
                                         maxLines = 1,
                                     )
                                 }
@@ -600,12 +601,12 @@ fun EventDetailScreen(
                         if (faceEnabled == false) {
                             Text(
                                 "Frigate đang tắt nhận diện khuôn mặt (face_recognition.enabled = false).",
-                                color = Color(0xFF8E8E93),
+                                color = IOSSecondaryLabel,
                                 fontSize = 11.sp,
                             )
                         }
                         faceMessage?.let {
-                            Text(it, color = Color(0xFF8E8E93), fontSize = 11.sp)
+                            Text(it, color = IOSSecondaryLabel, fontSize = 11.sp)
                         }
                     }
                 }
@@ -625,7 +626,7 @@ fun EventDetailScreen(
                             Text("Sửa thông tin sự kiện")
                         }
                         editMessage?.let {
-                            Text(it, color = Color(0xFF8E8E93), fontSize = 11.sp)
+                            Text(it, color = IOSSecondaryLabel, fontSize = 11.sp)
                         }
                     }
                 }
@@ -648,7 +649,7 @@ fun EventDetailScreen(
                             "Nhận diện khuôn mặt đang TẮT trong Frigate. Bật face_recognition.enabled " +
                                 "trong cấu hình Frigate rồi khởi động lại, sau đó thử lại thao tác này.",
                             fontSize = 12.sp,
-                            color = Color(0xFF8E8E93),
+                            color = IOSSecondaryLabel,
                         )
                     } else {
                         Text(
@@ -656,7 +657,7 @@ fun EventDetailScreen(
                                 "“Thêm ảnh này” sẽ cắt quanh box nhận diện rồi upload — dùng khi " +
                                 "Frigate không tự tìm thấy mặt.",
                             fontSize = 11.sp,
-                            color = Color(0xFF8E8E93),
+                            color = IOSSecondaryLabel,
                         )
                         Spacer(Modifier.height(8.dp))
                         faceNames.forEach { name ->
@@ -666,7 +667,7 @@ fun EventDetailScreen(
                             ) {
                                 Text(
                                     (if (faceName == name) "✓ " else "") + name,
-                                    color = if (faceName == name) Color(0xFF0A84FF) else Color(0xFFEBEBF5),
+                                    color = if (faceName == name) Color(0xFF0A84FF) else IOSLabel,
                                 )
                             }
                         }
@@ -789,7 +790,7 @@ fun EventDetailScreen(
                         },
                     ) { Text("Đánh dấu false positive") }
                     editMessage?.let {
-                        Text(it, color = Color(0xFF8E8E93), fontSize = 11.sp)
+                        Text(it, color = IOSSecondaryLabel, fontSize = 11.sp)
                     }
                 }
             },

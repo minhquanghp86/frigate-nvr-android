@@ -49,6 +49,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.minhquanghp86.frigatenvr.ui.IOSCard
 import com.minhquanghp86.frigatenvr.ui.FrigateImage
 import com.minhquanghp86.frigatenvr.ui.IOSGreen
 import com.minhquanghp86.frigatenvr.ui.IOSLabel
@@ -203,7 +204,7 @@ fun FacePersonScreen(
                             .fillMaxWidth()
                             .aspectRatio(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF1C1C1E)),
+                            .background(IOSCard),
                     ) {
                         FrigateImage(
                             url = repo.url("/clips/faces/$name/$file"),

@@ -134,7 +134,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
         bottomBar = {
             if (!onDetail) {
                 NavigationBar(
-                    containerColor = Color(0xF20B0B0C),
+                    containerColor = IOSCard,
                     tonalElevation = 0.dp,
                 ) {
                     tabs.forEach { tab ->

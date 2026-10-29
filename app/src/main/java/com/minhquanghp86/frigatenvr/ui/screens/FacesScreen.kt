@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.minhquanghp86.frigatenvr.ui.IOSCard
 import com.minhquanghp86.frigatenvr.ui.FrigateImage
 import com.minhquanghp86.frigatenvr.ui.IOSBlue
 import com.minhquanghp86.frigatenvr.ui.IOSGreen
@@ -177,7 +178,7 @@ fun FacesScreen(
                         modifier = Modifier.clickable { onOpenPerson(name) },
                     ) {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1C1E)),
+                            colors = CardDefaults.cardColors(containerColor = IOSCard),
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
