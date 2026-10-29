@@ -639,8 +639,16 @@ class FrigateRepository(
         _integrations.value = clean
     }
 
-    private fun plainClient(): okhttp3.OkHttpClient =
-        FrigateNet.client(NetConfig("https://localhost", null, true), { null }, {})
+    // Client riêng cho Darboard/HA: không interceptor, timeout rõ ràng để lỗi dễ đọc.
+    private val castClient: okhttp3.OkHttpClient by lazy {
+        okhttp3.OkHttpClient.Builder()
+            .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+            .callTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .build()
+    }
+
+    private fun plainClient(): okhttp3.OkHttpClient = castClient
 
     private fun plainCall(request: okhttp3.Request): String =
         plainClient().newCall(request).execute().use { resp ->
@@ -689,13 +697,17 @@ class FrigateRepository(
 
     /** Kiểm tra nhanh cấu hình Darboard: URL + số panel online. */
     suspend fun testDarboard(): CastCheck = runCatching {
-        val base = _integrations.value.darboardUrl
+        var base = _integrations.value.darboardUrl
         if (base.isBlank()) return@runCatching CastCheck(
             "Darboard",
             false,
             "Chưa cấu hình URL Darboard (Cài đặt → Phát lên màn hình khác).",
         )
-        val body = plainCall(okhttp3.Request.Builder().url("$base/screens/list").build())
+        if (!base.startsWith("http://") && !base.startsWith("https://")) {
+            base = "http://$base"
+        }
+        val endpoint = "$base/screens/list"
+        val body = plainCall(okhttp3.Request.Builder().url(endpoint).build())
         val arr = (kotlinx.serialization.json.Json.parseToJsonElement(body)
                 as? kotlinx.serialization.json.JsonObject)
             ?.get("screens") as? kotlinx.serialization.json.JsonArray
@@ -705,10 +717,24 @@ class FrigateRepository(
         CastCheck(
             "Darboard",
             true,
-            "$base/screens/list → HTTP 200 · ${arr?.size ?: 0} panel" +
+            "$endpoint → HTTP 200 · ${arr?.size ?: 0} panel" +
                 if (names.isNotEmpty()) " (${names.joinToString(", ")})" else "",
         )
-    }.getOrElse { CastCheck("Darboard", false, it.message ?: "Lỗi không xác định") }
+    }.getOrElse { e ->
+        val base = _integrations.value.darboardUrl
+        val hint = when (e) {
+            is java.net.ConnectException -> "không mở được cổng (add-on chưa mở port trên LAN?)"
+            is java.net.SocketTimeoutException -> "hết thời gian chờ (firewall/VPN chặn 18080?)"
+            is java.net.UnknownHostException -> "không phân giải được tên máy chủ"
+            else -> null
+        }
+        CastCheck(
+            "Darboard",
+            false,
+            "$base/screens/list · ${e.javaClass.simpleName}: ${e.message ?: "không có mô tả"}" +
+                (hint?.let { " — $it" } ?: ""),
+        )
+    }
 
     /** Kiểm tra cấu hình HA: token + số media_player. */
     suspend fun testHomeAssistant(): CastCheck = runCatching {
@@ -731,7 +757,15 @@ class FrigateRepository(
                     " — chưa có media_player nào trong HA"
                 },
         )
-    }.getOrElse { CastCheck("Home Assistant", false, it.message ?: "Lỗi không xác định") }
+    }.getOrElse { e ->
+        val cfg = _integrations.value
+        CastCheck(
+            "Home Assistant",
+            false,
+            "${cfg.haUrl}/api/states · ${e.javaClass.simpleName}: " +
+                (e.message ?: "không có mô tả"),
+        )
+    }
 
     /** URL trang camera trên Darboard (server tự proxy go2rtc). */
     fun darboardCamUrl(camera: String): String? {

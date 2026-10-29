@@ -600,6 +600,19 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   `GET /api/states` (HA), hiện kết quả từng dòng kèm URL + HTTP + số thiết bị, hoặc lỗi cụ thể.
 - Hộp thoại Cast luôn hiện gợi ý khi chưa cấu hình Darboard/HA (trước đây ẩn hẳn mục nên dễ tưởng “không có thiết bị”).
 
+## 4t. Cập nhật 29/10/2026 — Darboard trên điện thoại không gọi được 18080
+
+- Đo từ host 192.168.10.126: `http://192.168.10.2:18080/screens/list` → **HTTP 200**, trả panel
+  (`esp32-80f1b2d35fb5`, ip 192.168.10.200…). HA `:8123` từ host trả 401 (chưa auth) như app vẫn OK
+  nghĩa là app gọi HA đúng.
+- Vì vậy lỗi “Lỗi không xác định” là phía **đường mạng của điện thoại** tới 18080. Đã đổi sang client
+  cast riêng (timeout 6/10/15s) và in rõ `ExceptionClass: message` + URL, kèm gợi ý
+  (ConnectException = cổng đóng/firewall, SocketTimeout = VPN chặn, UnknownHost = DNS).
+- Cách vòng qua: dùng **URL ingress** của add-on làm “Darboard server”
+  (`http://192.168.10.2:8123/api/hassio_ingress/<token>`) — app gọi HA (đã OK) rồi HA proxy vào add-on.
+- HA cast: 4 media_player đã thấy (TX5-ATV6, Guition…, LG webOS), dùng
+  `media_player.play_media` + HLS go2rtc.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
