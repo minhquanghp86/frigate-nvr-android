@@ -54,16 +54,17 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         if (intent == null) return
-        val camera = intent.getStringExtra(EXTRA_CAMERA)
-        if (camera != null) {
-            DeepLinks.openCamera(camera)
-            intent.removeExtra(EXTRA_CAMERA)
+        // Ưu tiên mở đúng sự kiện; nếu không có id thì mở live camera.
+        val eventId = intent.getStringExtra(EXTRA_EVENT_ID)
+        if (eventId != null) {
+            DeepLinks.openEvent(eventId)
             intent.removeExtra(EXTRA_EVENT_ID)
+            intent.removeExtra(EXTRA_CAMERA)
             return
         }
-        val eventId = intent.getStringExtra(EXTRA_EVENT_ID) ?: return
-        DeepLinks.openEvent(eventId)
-        intent.removeExtra(EXTRA_EVENT_ID)
+        val camera = intent.getStringExtra(EXTRA_CAMERA) ?: return
+        DeepLinks.openCamera(camera)
+        intent.removeExtra(EXTRA_CAMERA)
     }
 
     companion object {
