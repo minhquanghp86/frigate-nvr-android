@@ -139,24 +139,39 @@ fun TimelineScreen(
         autoPlayed = false
     }
 
+    // Ngày hôm nay chỉ cho phép tới thời điểm hiện tại (chưa có dữ liệu tương lai).
+    fun nowMinutes(): Float {
+        val now = java.time.LocalTime.now()
+        // Lùi 1 phút để chắc chắn nằm trong đoạn bản ghi đã có (giờ hiện tại chưa đóng file).
+        return ((now.hour * 60 + now.minute) - 1).coerceAtLeast(0).toFloat()
+    }
+
+    fun maxMinutesFor(day: String?): Float =
+        if (day != null && day == java.time.LocalDate.now().toString()) nowMinutes() else 1439f
+
     fun playAt(value: Float) {
         val day = selectedDay ?: return
-        val total = value.toInt().coerceIn(0, 1439)
+        val clamped = value.coerceIn(0f, maxMinutesFor(day))
+        minutes = clamped
+        val total = clamped.toInt().coerceIn(0, 1439)
         val hour = total / 60
         startPosMs = ((total % 60) * 60L) * 1000L
         vm.play(day, hour.toString())
     }
 
-    // Phát ngay khi vào tab: 00:00 của camera đang chọn (nếu giờ 0 không có bản ghi
-    // thì phát khung sớm nhất có dữ liệu để không hiện lỗi).
+    // Phát ngay khi vào tab: hôm nay phát từ THỜI ĐIỂM HIỆN TẠI; ngày cũ phát 00:00
+    // (nếu giờ 0 không có bản ghi thì phát khung sớm nhất có dữ liệu).
     LaunchedEffect(selectedDay, camera, hours) {
         if (autoPlayed) return@LaunchedEffect
         val day = selectedDay ?: return@LaunchedEffect
         if (camera == null) return@LaunchedEffect
         val dayHours = hours.firstOrNull { it.day == day }?.hours ?: return@LaunchedEffect
-        val firstHour = dayHours.mapNotNull { it.hour.toIntOrNull() }.minOrNull() ?: 0
-        val minute = if (firstHour <= 0) 0f else firstHour * 60f
-        minutes = minute
+        val minute = if (day == java.time.LocalDate.now().toString()) {
+            nowMinutes()
+        } else {
+            val firstHour = dayHours.mapNotNull { it.hour.toIntOrNull() }.minOrNull() ?: 0
+            if (firstHour <= 0) 0f else firstHour * 60f
+        }
         autoPlayed = true
         playAt(minute)
     }
@@ -418,7 +433,7 @@ fun TimelineScreen(
                                             val dx = change.position.x - change.previousPosition.x
                                             if (dx != 0f) {
                                                 minutes = (minutes + dx / width * 1440f)
-                                                    .coerceIn(0f, 1439f)
+                                                    .coerceIn(0f, maxMinutesFor(day))
                                                 previewMinutes = minutes
                                                 changed = true
                                                 change.consume()
@@ -448,7 +463,7 @@ fun TimelineScreen(
                                         }
                                         if (!moved) {
                                             minutes = ((down.position.x / width) * 1440f)
-                                                .coerceIn(0f, 1439f)
+                                                .coerceIn(0f, maxMinutesFor(day))
                                             playAt(minutes)
                                         }
                                     }

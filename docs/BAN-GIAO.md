@@ -488,6 +488,14 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Tab Camera: **header cố định** (BrandBar + tiêu đề “Camera” + chip thông báo/nút tải lại) nằm ngoài
   `LazyVerticalGrid`; chỉ phần thẻ số liệu, thẻ khuôn mặt và lưới camera cuộn.
 
+## 4h. Cập nhật 29/10/2026 — Xem lại: phát tại thời điểm hiện tại, chặn tua quá giờ
+
+- Mở tab Xem lại (ngày hôm nay) → tự phát ở **thời điểm hiện tại − 1 phút** thay vì 00:00
+  (ngày cũ vẫn phát 00:00 / khung sớm nhất có dữ liệu).
+- Giới hạn `maxMinutes` theo ngày: hôm nay = hiện tại − 1 phút; ngày khác = 23:59.
+  Kéo playhead hoặc chạm dải quá mốc này sẽ **tự kẹp về mốc hiện tại**, không còn rơi vào
+  vùng chưa ghi hình và hiện “Không phát được video”.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
