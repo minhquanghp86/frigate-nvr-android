@@ -395,11 +395,13 @@ fun EventDetailScreen(
     var editAttributes by remember { mutableStateOf("") }
     var editBusy by remember { mutableStateOf(false) }
     var editMessage by remember { mutableStateOf<String?>(null) }
+    var faceEnabled by remember { mutableStateOf<Boolean?>(null) }
     val similarScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(eventId) {
         event = null
         error = null
+        faceEnabled = runCatching { repo.configCached().faceRecognitionEnabled }.getOrNull()
         event = try {
             repo.call { event(eventId) }
         } catch (e: CancellationException) {
@@ -573,8 +575,260 @@ fun EventDetailScreen(
                         }
                     }
                 }
+
+                item {
+                    Column {
+                        OutlinedButton(
+                            onClick = {
+                                faceMessage = null
+                                showFaceDialog = true
+                                similarScope.launch {
+                                    faceNames = runCatching { repo.faces().keys.toList() }
+                                        .getOrDefault(emptyList())
+                                }
+                            },
+                            enabled = !faceBusy && !faceUploading,
+                        ) {
+                            Text(
+                                when {
+                                    faceUploading -> "Đang tải ảnh…"
+                                    faceBusy -> "Đang train…"
+                                    else -> "Thêm vào thư viện khuôn mặt"
+                                },
+                            )
+                        }
+                        if (faceEnabled == false) {
+                            Text(
+                                "Frigate đang tắt nhận diện khuôn mặt (face_recognition.enabled = false).",
+                                color = Color(0xFF8E8E93),
+                                fontSize = 11.sp,
+                            )
+                        }
+                        faceMessage?.let {
+                            Text(it, color = Color(0xFF8E8E93), fontSize = 11.sp)
+                        }
+                    }
+                }
+
+                item {
+                    Column {
+                        OutlinedButton(
+                            onClick = {
+                                editSubLabel = current.subLabelDisplay ?: ""
+                                editPlate = (current.data?.recognizedLicensePlate).orEmpty()
+                                editAttributes = current.attributes.joinToString(", ")
+                                editMessage = null
+                                showEdit = true
+                            },
+                            enabled = !editBusy,
+                        ) {
+                            Text("Sửa thông tin sự kiện")
+                        }
+                        editMessage?.let {
+                            Text(it, color = Color(0xFF8E8E93), fontSize = 11.sp)
+                        }
+                    }
+                }
             }
         }
+    }
+
+    val dialogEvent = event
+
+    // ---------- Hộp thoại: thư viện khuôn mặt
+    if (showFaceDialog && dialogEvent != null) {
+        val faceOn = faceEnabled != false
+        AlertDialog(
+            onDismissRequest = { showFaceDialog = false },
+            title = { Text("Thư viện khuôn mặt") },
+            text = {
+                Column {
+                    if (!faceOn) {
+                        Text(
+                            "Nhận diện khuôn mặt đang TẮT trong Frigate. Bật face_recognition.enabled " +
+                                "trong cấu hình Frigate rồi khởi động lại, sau đó thử lại thao tác này.",
+                            fontSize = 12.sp,
+                            color = Color(0xFF8E8E93),
+                        )
+                    } else {
+                        Text(
+                            "Chọn người đã có hoặc nhập tên mới. “Train” để Frigate tự cắt mặt; " +
+                                "“Thêm ảnh này” sẽ cắt quanh box nhận diện rồi upload — dùng khi " +
+                                "Frigate không tự tìm thấy mặt.",
+                            fontSize = 11.sp,
+                            color = Color(0xFF8E8E93),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        faceNames.forEach { name ->
+                            TextButton(
+                                onClick = { faceName = name },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    (if (faceName == name) "✓ " else "") + name,
+                                    color = if (faceName == name) Color(0xFF0A84FF) else Color(0xFFEBEBF5),
+                                )
+                            }
+                        }
+                        OutlinedTextField(
+                            value = faceName,
+                            onValueChange = { faceName = it },
+                            label = { Text("Tên khuôn mặt", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (faceOn) {
+                    TextButton(
+                        onClick = {
+                            val name = faceName.trim()
+                            if (name.isBlank()) return@TextButton
+                            showFaceDialog = false
+                            faceBusy = true
+                            faceMessage = null
+                            similarScope.launch {
+                                try {
+                                    repo.trainFaceFromEvent(name, dialogEvent.id)
+                                    faceMessage = "Đã train từ sự kiện vào $name"
+                                    faceNames = runCatching { repo.faces().keys.toList() }
+                                        .getOrDefault(faceNames)
+                                } catch (e: Exception) {
+                                    faceMessage = e.message ?: "Không train được khuôn mặt"
+                                } finally {
+                                    faceBusy = false
+                                }
+                            }
+                        },
+                    ) { Text("Train") }
+                } else {
+                    TextButton(onClick = { showFaceDialog = false }) { Text("Đóng") }
+                }
+            },
+            dismissButton = {
+                if (faceOn) {
+                    Row {
+                        TextButton(
+                            onClick = {
+                                val name = faceName.trim()
+                                if (name.isBlank()) return@TextButton
+                                showFaceDialog = false
+                                faceUploading = true
+                                faceMessage = "Đang tải ảnh sự kiện lên thư viện…"
+                                similarScope.launch {
+                                    try {
+                                        val bytes = loadFaceImageBytes(repo, dialogEvent)
+                                            ?: throw IllegalStateException("Không tải được ảnh sự kiện")
+                                        repo.registerFace(
+                                            name,
+                                            bytes,
+                                            "event-${dialogEvent.id}.jpg",
+                                            "image/jpeg",
+                                        )
+                                        faceMessage = "Đã thêm ảnh vào thư viện khuôn mặt: $name"
+                                    } catch (e: Exception) {
+                                        faceMessage = e.message ?: "Không thêm được ảnh"
+                                    } finally {
+                                        faceUploading = false
+                                    }
+                                }
+                            },
+                        ) { Text("Thêm ảnh này") }
+                        TextButton(onClick = { showFaceDialog = false }) { Text("Huỷ") }
+                    }
+                }
+            },
+        )
+    }
+
+    // ---------- Hộp thoại: sửa thông tin sự kiện
+    if (showEdit && dialogEvent != null) {
+        AlertDialog(
+            onDismissRequest = { showEdit = false },
+            title = { Text("Sửa thông tin sự kiện") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = editSubLabel,
+                        onValueChange = { editSubLabel = it },
+                        label = { Text("Nhãn phụ (tên người)", fontSize = 12.sp) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = editPlate,
+                        onValueChange = { editPlate = it },
+                        label = { Text("Biển số xe", fontSize = 12.sp) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = editAttributes,
+                        onValueChange = { editAttributes = it },
+                        label = { Text("Thuộc tính (cách nhau dấu phẩy)", fontSize = 12.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextButton(
+                        onClick = {
+                            editBusy = true
+                            similarScope.launch {
+                                try {
+                                    repo.markFalsePositive(dialogEvent.id)
+                                    editMessage = "Đã gửi false positive lên Frigate+"
+                                } catch (e: Exception) {
+                                    editMessage = e.message ?: "Không gửi được"
+                                } finally {
+                                    editBusy = false
+                                }
+                            }
+                        },
+                    ) { Text("Đánh dấu false positive") }
+                    editMessage?.let {
+                        Text(it, color = Color(0xFF8E8E93), fontSize = 11.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showEdit = false
+                        editBusy = true
+                        similarScope.launch {
+                            try {
+                                val label = editSubLabel.trim()
+                                if (label.isNotBlank() && label != dialogEvent.subLabelDisplay) {
+                                    repo.setEventSubLabel(dialogEvent.id, label)
+                                }
+                                val plate = editPlate.trim()
+                                if (plate.isNotBlank()) {
+                                    repo.setEventPlate(dialogEvent.id, plate)
+                                }
+                                val attrs = editAttributes.split(",")
+                                    .map { it.trim() }
+                                    .filter { it.isNotBlank() }
+                                if (attrs.isNotEmpty()) {
+                                    repo.setEventAttributes(dialogEvent.id, attrs)
+                                }
+                                event = repo.call { event(dialogEvent.id) }
+                                editMessage = "Đã lưu thông tin sự kiện"
+                            } catch (e: Exception) {
+                                editMessage = e.message ?: "Không lưu được"
+                            } finally {
+                                editBusy = false
+                            }
+                        }
+                    },
+                ) { Text("Lưu") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEdit = false }) { Text("Huỷ") }
+            },
+        )
     }
 }
 

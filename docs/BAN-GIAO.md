@@ -459,6 +459,19 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
      Cách này dùng khi Frigate không tự tìm thấy mặt trong ảnh toàn cảnh.
 - Lỗi từ Frigate (vd. "No face detected") hiển thị nguyên văn ngay dưới nút.
 
+## 4e. Cập nhật 29/10/2026 — thêm lại nút khuôn mặt + nhận biết face_recognition tắt
+
+- Sửa hồi quy: các item/hộp thoại **“Thêm vào thư viện khuôn mặt”** và **“Sửa thông tin sự kiện”**
+  từng bị mất khỏi `EventsScreen.kt` (chỉ còn state) — đã thêm lại đúng vị trí dưới nút sự kiện tương tự.
+- Hộp thoại khuôn mặt có 2 cách: **Train** (`/api/faces/train/{name}/classify` với event_id) và
+  **Thêm ảnh này** (tải snapshot gốc, cắt box +20% viền, nén JPEG, `POST /api/faces/{name}/register`).
+- `FrigateConfig` đọc thêm `face_recognition.enabled`:
+  - Trang sự kiện: nếu tắt, nút vẫn hiện kèm ghi chú đỏ; hộp thoại chỉ giải thích, không cho thao tác.
+  - Thư viện khuôn mặt: banner “đang TẮT trong Frigate”, ẩn nút thêm người.
+- Hành vi khi Frigate không bật face recognition: `/api/faces` trả `{}` (không lỗi), mọi thao tác
+  create/register/train/rename/delete trả **400 `Face recognition is not enabled.`**; person events
+  không có `sub_label` nên thẻ Khuôn mặt/Sự kiện khuôn mặt trống.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
