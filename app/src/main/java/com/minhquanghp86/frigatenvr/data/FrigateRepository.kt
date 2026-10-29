@@ -22,6 +22,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 
@@ -381,7 +382,14 @@ class FrigateRepository(
     private fun errorDetail(e: HttpException): String {
         val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull() ?: return ""
         val compact = body.replace(Regex("\\s+"), " ").trim()
-        return if (compact.isBlank()) "" else " — ${compact.take(240)}"
+        if (compact.isBlank()) return ""
+        val message = runCatching {
+            val obj = kotlinx.serialization.json.Json.parseToJsonElement(compact)
+                as? kotlinx.serialization.json.JsonObject
+            (obj?.get("message") ?: obj?.get("detail"))
+                ?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+        }.getOrNull()
+        return " — " + (message?.takeIf { it.isNotBlank() } ?: compact.take(240))
     }
 
     /** Chạy một lệnh API với phiên hiện tại; lỗi 401 -> yêu cầu đăng nhập lại. */
@@ -400,6 +408,7 @@ class FrigateRepository(
                     "Tài khoản không có quyền trên camera này (403).$detail",
                 )
                 404 -> throw FrigateApiException("Không tìm thấy dữ liệu (404).$detail")
+                400 -> throw FrigateApiException("Yêu cầu không hợp lệ (400).$detail")
                 422 -> throw FrigateApiException("Server từ chối tham số (422).$detail")
                 else -> throw FrigateApiException("Server trả lỗi HTTP ${e.code()}.$detail")
             }
@@ -490,13 +499,13 @@ class FrigateRepository(
         }
 
     /** Danh sách biển số đã nhận diện (LPR), đã tách các biển ghép. */
-    suspend fun licensePlates(): List<String> = runCatching {
+    suspend fun licensePlates(): List<String> {
         val element = call { recognizedLicensePlates("1") }
-        (element as? kotlinx.serialization.json.JsonArray)
+        return (element as? kotlinx.serialization.json.JsonArray)
             ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
             ?.filter { it.isNotBlank() }
             ?: emptyList()
-    }.getOrDefault(emptyList())
+    }
 
     /** Số sự kiện hôm nay theo từng camera (dùng /api/events/summary). */
     suspend fun eventsToday(): Map<String, Int> = runCatching {
@@ -518,16 +527,57 @@ class FrigateRepository(
     suspend fun users(): List<FrigateUser> = runCatching { call { users() } }
         .getOrDefault(emptyList())
 
+    suspend fun createUser(username: String, password: String, role: String) {
+        call { createUser(NewUserBody(username, password, role)) }
+    }
+
+    suspend fun deleteUser(username: String) {
+        call { deleteUser(username) }
+    }
+
+    suspend fun setUserRole(username: String, role: String) {
+        call { setUserRole(username, RoleBody(role)) }
+    }
+
+    suspend fun setUserPassword(username: String, password: String) {
+        call { setUserPassword(username, PasswordBody(password)) }
+    }
+
+    // ------------------------------------------------------------ khuôn mặt
+
+    suspend fun createFace(name: String) {
+        call { createFace(name) }
+    }
+
+    suspend fun registerFace(name: String, bytes: ByteArray, fileName: String, mime: String) {
+        val body = bytes.toRequestBody(mime.toMediaTypeOrNull())
+        val part = okhttp3.MultipartBody.Part.createFormData("file", fileName, body)
+        call { registerFace(name, part) }
+    }
+
+    suspend fun deleteFaceImages(name: String, ids: List<String>) {
+        call { deleteFaceImages(name, FaceDeleteBody(ids)) }
+    }
+
+    suspend fun reclassifyFace(name: String, imageId: String, newName: String) {
+        call { reclassifyFace(name, FaceReclassifyBody(imageId, newName)) }
+    }
+
+    /** Train khuôn mặt từ một sự kiện (Frigate tự cắt khuôn mặt trong ảnh sự kiện). */
+    suspend fun trainFaceFromEvent(name: String, eventId: String) {
+        call { trainFace(name, FaceTrainBody(event_id = eventId)) }
+    }
+
     /** Khuôn mặt đã đăng ký: tên -> danh sách file ảnh. */
-    suspend fun faces(): Map<String, List<String>> = runCatching {
+    suspend fun faces(): Map<String, List<String>> {
         val element = call { facesApi() }
         val obj = element as? kotlinx.serialization.json.JsonObject ?: return emptyMap()
-        obj.mapValues { (_, value) ->
+        return obj.mapValues { (_, value) ->
             (value as? kotlinx.serialization.json.JsonArray)
                 ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
                 ?: emptyList()
         }
-    }.getOrDefault(emptyMap())
+    }
 
     // ------------------------------------------------------------------ export
 

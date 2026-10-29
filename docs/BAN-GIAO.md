@@ -346,6 +346,27 @@ Bố cục mới theo nhóm chức năng:
 - Sửa: thay bằng logo vẽ trực tiếp (Box 26dp, gradient xanh `IOSBlue → #5E5CE6`, icon Videocam trắng).
   Không còn phụ thuộc resource mipmap.
 
+## 3ze. Cập nhật 29/10/2026 — quản lý người dùng & khuôn mặt ngay trong app
+
+### Người dùng (cần admin)
+- `GET /api/users` để liệt kê; **thêm** `POST /api/users` (username/password ≥ 12 ký tự/role),
+  **đổi vai trò** `PUT /api/users/{u}/role`, **đặt mật khẩu** `PUT /api/users/{u}/password`,
+  **xoá** `DELETE /api/users/{u}` (không xoá được `admin` mặc định).
+- UI: nút + trên header, chạm một dòng để mở hộp thoại hành động; lỗi server hiển thị nguyên văn
+  (đã bổ sung đọc `message`/`detail` trong JSON lỗi, thêm nhánh 400).
+
+### Khuôn mặt (Face Recognition)
+- **Tạo người**: `POST /api/faces/{name}/create`.
+- **Đăng ký ảnh**: `POST /api/faces/{name}/register` (multipart field `file`, chọn ảnh từ thư viện).
+- **Xoá người**: `POST /api/faces/{name}/delete` với toàn bộ `ids` trong thư mục.
+- **Train từ sự kiện**: trong trang sự kiện → "Gán khuôn mặt cho sự kiện" →
+  `POST /api/faces/train/{name}/classify` body `{event_id}` (Frigate tự cắt khuôn mặt từ ảnh sự kiện).
+- `/api/faces` và `/api/recognized_license_plates` giờ **ném lỗi ra UI** thay vì trả rỗng im lặng,
+  nên nếu Frigate báo "Face recognition is not enabled" bạn sẽ thấy đúng thông báo.
+- LPR: Frigate 0.18 **không có API thư viện biển số** để thêm/sửa; biển số sinh ra từ sự kiện
+  (`event.data.recognized_license_plate`), chỉ có `POST /api/lpr/reprocess` để xử lý lại. App giữ
+  màn danh sách + bấm để tìm sự kiện; muốn sửa dữ liệu biển phải qua Frigate/DB.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

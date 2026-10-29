@@ -1,6 +1,7 @@
 package com.minhquanghp86.frigatenvr.data
 
 import okhttp3.Interceptor
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.ResponseBody
@@ -10,6 +11,8 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.Multipart
+import retrofit2.http.Part
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -107,6 +110,52 @@ interface FrigateApi {
 
     @GET("api/users")
     suspend fun users(): List<FrigateUser>
+
+    @POST("api/users")
+    suspend fun createUser(@Body body: NewUserBody): ResponseBody
+
+    @DELETE("api/users/{username}")
+    suspend fun deleteUser(@Path("username") username: String): ResponseBody
+
+    @PUT("api/users/{username}/role")
+    suspend fun setUserRole(
+        @Path("username") username: String,
+        @Body body: RoleBody,
+    ): ResponseBody
+
+    @PUT("api/users/{username}/password")
+    suspend fun setUserPassword(
+        @Path("username") username: String,
+        @Body body: PasswordBody,
+    ): ResponseBody
+
+    @POST("api/faces/{name}/create")
+    suspend fun createFace(@Path("name") name: String): ResponseBody
+
+    @Multipart
+    @POST("api/faces/{name}/register")
+    suspend fun registerFace(
+        @Path("name") name: String,
+        @Part file: MultipartBody.Part,
+    ): ResponseBody
+
+    @POST("api/faces/train/{name}/classify")
+    suspend fun trainFace(
+        @Path("name") name: String,
+        @Body body: FaceTrainBody,
+    ): ResponseBody
+
+    @POST("api/faces/{name}/delete")
+    suspend fun deleteFaceImages(
+        @Path("name") name: String,
+        @Body body: FaceDeleteBody,
+    ): ResponseBody
+
+    @POST("api/faces/{name}/reclassify")
+    suspend fun reclassifyFace(
+        @Path("name") name: String,
+        @Body body: FaceReclassifyBody,
+    ): ResponseBody
 
     @GET("api/faces")
     suspend fun facesApi(): kotlinx.serialization.json.JsonElement

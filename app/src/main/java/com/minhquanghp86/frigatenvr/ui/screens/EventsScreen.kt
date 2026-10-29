@@ -380,6 +380,11 @@ fun EventDetailScreen(
     var showClip by remember(eventId) { mutableStateOf(true) }
     var similar by remember(eventId) { mutableStateOf<List<FrigateEvent>?>(null) }
     var loadingSimilar by remember(eventId) { mutableStateOf(false) }
+    var showFaceDialog by remember { mutableStateOf(false) }
+    var faceNames by remember { mutableStateOf<List<String>>(emptyList()) }
+    var faceName by remember { mutableStateOf("") }
+    var faceBusy by remember { mutableStateOf(false) }
+    var faceMessage by remember { mutableStateOf<String?>(null) }
     val similarScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(eventId) {
