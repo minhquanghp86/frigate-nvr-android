@@ -34,7 +34,6 @@ import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.PrivacyTip
-import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
@@ -96,6 +95,7 @@ fun SettingsScreen(
     onOpenUsers: () -> Unit = {},
     onOpenCameraConfig: () -> Unit = {},
     onOpenAlerts: () -> Unit = {},
+    onOpenPrivacy: () -> Unit = {},
 ) {
     val vm: SettingsViewModel = viewModel()
     val repo = vm.repo()
@@ -424,34 +424,7 @@ fun SettingsScreen(
                         "Chính sách quyền riêng tư",
                         icon = Icons.Outlined.PrivacyTip,
                         chevron = true,
-                        onClick = {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse(
-                                            "https://minhquanghp86.github.io/frigate-nvr-android/privacy.html",
-                                        ),
-                                    ),
-                                )
-                            }
-                        },
-                    )
-                    IosDivider(56)
-                    IosRow(
-                        "Mã nguồn / Báo lỗi",
-                        icon = Icons.Outlined.Code,
-                        chevron = true,
-                        onClick = {
-                            runCatching {
-                                context.startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("https://github.com/minhquanghp86/frigate-nvr-android"),
-                                    ),
-                                )
-                            }
-                        },
+                        onClick = onOpenPrivacy,
                     )
                     IosDivider(56)
                     IosRow(

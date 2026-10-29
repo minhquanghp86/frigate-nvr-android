@@ -443,6 +443,13 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - **Tài sản store**: `docs/store/icon-512.png`, `docs/store/feature-graphic-1024x500.png`,
   `docs/store/listing.md` (mô tả VI/EN, App content, Data safety, ghi chú i18n).
 
+## 4c. Cập nhật 29/10/2026 — chính sách riêng tư trong app
+
+- Thêm `PrivacyScreen` (VI + EN) đọc offline ngay trong app: **Cài đặt → Ứng dụng → Chính sách quyền riêng tư**;
+  trong màn có nút “Bản web” (GitHub Pages) để đối chiếu.
+- Bỏ hàng **“Mã nguồn / Báo lỗi”** (không bắt buộc với Google Play).
+- Lưu ý: Play **vẫn yêu cầu URL privacy policy** trong store listing → vẫn cần bật GitHub Pages.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
