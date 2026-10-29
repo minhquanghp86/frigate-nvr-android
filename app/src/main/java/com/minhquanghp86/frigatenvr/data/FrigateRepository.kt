@@ -460,6 +460,25 @@ class FrigateRepository(
     }
 
     fun eventThumbnail(id: String) = url("/api/events/$id/thumbnail.jpg")
+
+    /** Ảnh chụp từ bản ghi tại thời điểm bất kỳ (dùng để xem trước khi tua timeline). */
+    fun recordingSnapshot(camera: String, epoch: Double, height: Int = 180) =
+        url("/api/$camera/recordings/$epoch/snapshot.jpg?height=$height")
+
+    suspend fun reviewsList(
+        limit: Int = 80,
+        reviewed: Boolean? = null,
+        severity: String? = null,
+    ): List<ReviewItem> {
+        val params = mutableMapOf("limit" to limit.toString())
+        reviewed?.let { params["reviewed"] = if (it) "1" else "0" }
+        severity?.let { params["severity"] = it }
+        return call { reviews(params) }
+    }
+
+    suspend fun markReviewsViewed(ids: List<String>, reviewed: Boolean = true) {
+        call { markViewed(IdsBody(ids, reviewed)) }
+    }
     fun eventSnapshot(id: String) = url("/api/events/$id/snapshot.jpg?bbox=1")
     fun eventClip(id: String) = url("/api/events/$id/clip.mp4")
     fun cameraLatest(camera: String) = url("/api/$camera/latest.jpg")

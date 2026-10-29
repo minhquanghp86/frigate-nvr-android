@@ -38,7 +38,7 @@ object MediaSaver {
         fun showProgress(percent: Int?, text: String) {
             if (!canNotify) return
             val builder = NotificationCompat.Builder(context, Notify.CHANNEL_DOWNLOADS)
-                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setSmallIcon(com.minhquanghp86.frigatenvr.R.drawable.ic_stat_fricam)
                 .setContentTitle("Đang tải $fileName")
                 .setContentText(text)
                 .setOngoing(true)
@@ -57,7 +57,7 @@ object MediaSaver {
         fun showDone(path: String) {
             if (!canNotify) return
             val done = NotificationCompat.Builder(context, Notify.CHANNEL_DOWNLOADS)
-                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setSmallIcon(com.minhquanghp86.frigatenvr.R.drawable.ic_stat_fricam)
                 .setContentTitle("Đã lưu $fileName")
                 .setContentText(path)
                 .setAutoCancel(true)
@@ -70,7 +70,7 @@ object MediaSaver {
         fun showFailed(message: String) {
             if (!canNotify) return
             val failed = NotificationCompat.Builder(context, Notify.CHANNEL_DOWNLOADS)
-                .setSmallIcon(android.R.drawable.stat_notify_error)
+                .setSmallIcon(com.minhquanghp86.frigatenvr.R.drawable.ic_stat_fricam)
                 .setContentTitle("Không tải được $fileName")
                 .setContentText(message)
                 .setAutoCancel(true)

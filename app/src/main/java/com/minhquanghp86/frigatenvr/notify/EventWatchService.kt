@@ -89,7 +89,7 @@ object Notify {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         return NotificationCompat.Builder(context, CHANNEL_SERVICE)
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setSmallIcon(com.minhquanghp86.frigatenvr.R.drawable.ic_stat_fricam)
             .setContentTitle("Đang theo dõi sự kiện")
             .setContentText("Frigate NVR · thông báo khi có đối tượng mới")
             .setOngoing(true)
@@ -168,7 +168,7 @@ class EventWatchService : Service() {
         stopSelf()
     }
 
-    private fun postEvent(e: FrigateEvent) {
+    private suspend fun postEvent(e: FrigateEvent) {
         val nm = NotificationManagerCompat.from(this)
         if (!nm.areNotificationsEnabled()) return
         val text = buildString {
@@ -179,16 +179,62 @@ class EventWatchService : Service() {
             append(" · ")
             append(fmtDateTime(e.startTime))
         }
-        val notification = NotificationCompat.Builder(this, Notify.CHANNEL_EVENTS)
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentTitle(if (e.hasClip) "Sự kiện mới" else "Phát hiện mới")
+        val snapshot = runCatching { loadSnapshot(e.id) }.getOrNull()
+
+        val builder = NotificationCompat.Builder(this, Notify.CHANNEL_EVENTS)
+            .setSmallIcon(com.minhquanghp86.frigatenvr.R.drawable.ic_stat_fricam)
+            .setContentTitle(
+                when {
+                    e.label == "person" && e.subLabelDisplay != null ->
+                        "Phát hiện người: ${e.subLabelDisplay}"
+                    e.label == "person" -> "Phát hiện người"
+                    e.hasClip -> "Sự kiện mới"
+                    else -> "Phát hiện mới"
+                },
+            )
             .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(true)
             .setContentIntent(Notify.openCameraEventsIntent(this, e.camera, e.id))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .build()
-        runCatching { nm.notify(e.id.hashCode(), notification) }
+
+        if (snapshot != null) {
+            // Ảnh phát hiện: hiện lớn trong thông báo + làm large icon (avatar tròn).
+            builder
+                .setLargeIcon(snapshot)
+                .setStyle(
+                    NotificationCompat.BigPictureStyle()
+                        .bigPicture(snapshot)
+                        .bigLargeIcon(null as android.graphics.Bitmap?),
+                )
+        } else {
+            builder.setStyle(NotificationCompat.BigTextStyle().bigText(text))
+        }
+
+        runCatching { nm.notify(e.id.hashCode(), builder.build()) }
+    }
+
+    /**
+     * Tải ảnh sự kiện (có vẽ box nhận diện) từ Frigate và thu nhỏ để đưa vào thông báo.
+     * Dùng đúng OkHttp client có Bearer token của app (FrigateImage cũng dùng client này).
+     */
+    private fun loadSnapshot(eventId: String): android.graphics.Bitmap? {
+        val repo = (application as FrigateApp).container.repository
+        val request = okhttp3.Request.Builder().url(repo.eventSnapshot(eventId)).build()
+        repo.okhttp().newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val bytes = response.body?.bytes() ?: return null
+            val bounds = android.graphics.BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+            var sample = 1
+            while (bounds.outWidth / sample > 1080) sample *= 2
+            val options = android.graphics.BitmapFactory.Options().apply {
+                inSampleSize = sample
+            }
+            return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
+        }
     }
 
     companion object {
