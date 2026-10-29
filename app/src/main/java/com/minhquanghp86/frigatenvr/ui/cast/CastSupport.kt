@@ -40,6 +40,7 @@ import com.google.android.gms.cast.framework.CastContext
 import com.google.android.gms.cast.framework.CastSession
 import com.google.android.gms.cast.framework.SessionManagerListener
 import com.minhquanghp86.frigatenvr.ui.IOSBlue
+import com.minhquanghp86.frigatenvr.ui.IOSGreen
 import com.minhquanghp86.frigatenvr.ui.IOSLabel
 import com.minhquanghp86.frigatenvr.ui.IOSRed
 import com.minhquanghp86.frigatenvr.ui.IOSSecondaryLabel
@@ -142,11 +143,17 @@ data class CastHandle(
 @Composable
 fun CastDeviceDialog(
     onDismiss: () -> Unit,
+    streamUrl: String? = null,
     onStop: (() -> Unit)? = null,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val selector = remember {
-        MediaRouteSelector.Builder()
+    val castContext = remember {
+        runCatching { com.google.android.gms.cast.framework.CastContext.getSharedInstance(context) }
+            .getOrNull()
+    }
+    // mergedSelector của CastContext gồm cả CAST + remote playback — chuẩn theo tài liệu Cast SDK.
+    val selector = remember(castContext) {
+        castContext?.mergedSelector ?: MediaRouteSelector.Builder()
             .addControlCategory(
                 CastMediaControlIntent.categoryForCast(
                     CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID,
@@ -156,6 +163,28 @@ fun CastDeviceDialog(
     }
     val router = remember { MediaRouter.getInstance(context) }
     var routes by remember { mutableStateOf<List<MediaRouter.RouteInfo>>(emptyList()) }
+    var onWifi by remember { mutableStateOf<Boolean?>(null) }
+
+    // Một số mạng/OEM chặn mDNS nếu app không giữ multicast lock trong lúc dò.
+    DisposableEffect(Unit) {
+        val wifi = context.applicationContext
+            .getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+        val lock = runCatching {
+            wifi?.createMulticastLock("fricam-cast")?.apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        }.getOrNull()
+        onDispose { runCatching { if (lock?.isHeld == true) lock.release() } }
+    }
+
+    // Chẩn đoán: cast cần điện thoại ở cùng WiFi với TV (không phải 4G/VPN).
+    LaunchedEffect(Unit) {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE)
+            as? android.net.ConnectivityManager
+        val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+        onWifi = caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+    }
 
     DisposableEffect(router, selector) {
         val callback = object : MediaRouter.Callback() {
@@ -186,6 +215,29 @@ fun CastDeviceDialog(
                     fontSize = 11.sp,
                     color = IOSSecondaryLabel,
                 )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    when (onWifi) {
+                        true -> "Điện thoại đang dùng WiFi — nên thấy được TV/Chromecast."
+                        false -> "Điện thoại KHÔNG ở WiFi (đang 4G/VPN). " +
+                            "Cast không dò được thiết bị — hãy bật WiFi cùng mạng với TV."
+                        null -> "Đang kiểm tra kết nối mạng…"
+                    },
+                    fontSize = 11.sp,
+                    color = if (onWifi == false) IOSRed else IOSGreen,
+                )
+                if (streamUrl != null) {
+                    Spacer(Modifier.height(6.dp))
+                    TextButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE)
+                                as? android.content.ClipboardManager
+                            clipboard?.setPrimaryClip(
+                                android.content.ClipData.newPlainText("HLS", streamUrl),
+                            )
+                        },
+                    ) { Text("Sao chép URL luồng HLS", fontSize = 12.sp) }
+                }
                 Spacer(Modifier.height(8.dp))
                 if (routes.isEmpty()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -205,7 +257,7 @@ fun CastDeviceDialog(
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Chưa thấy thiết bị nào. Kiểm tra TV/Chromecast đã bật và cùng mạng WiFi.",
+                            "Chưa thấy thiết bị nào. Bật TV/Chromecast, đảm bảo điện thoại cùng WiFi và router cho phép mDNS (không bật AP isolation).",
                             fontSize = 12.sp,
                             color = IOSSecondaryLabel,
                         )

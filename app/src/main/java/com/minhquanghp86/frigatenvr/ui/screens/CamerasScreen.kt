@@ -1138,6 +1138,7 @@ fun CameraLiveScreen(
     if (showCastDialog) {
         com.minhquanghp86.frigatenvr.ui.cast.CastDeviceDialog(
             onDismiss = { showCastDialog = false },
+            streamUrl = runCatching { repo.go2rtcHls(streamName) }.getOrNull(),
             onStop = if (cast.connected) cast.stop else null,
         )
     }
