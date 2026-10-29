@@ -71,6 +71,15 @@ class FrigateRepository(
     private val _notifyCameras = MutableStateFlow<Set<String>>(emptySet())
     val notifyCameras: StateFlow<Set<String>> = _notifyCameras.asStateFlow()
 
+    data class Integrations(
+        val darboardUrl: String = "",
+        val haUrl: String = "",
+        val haToken: String = "",
+    )
+
+    private val _integrations = MutableStateFlow(Integrations())
+    val integrations: StateFlow<Integrations> = _integrations.asStateFlow()
+
     private val _notifyLabels = MutableStateFlow<Set<String>>(emptySet())
     val notifyLabels: StateFlow<Set<String>> = _notifyLabels.asStateFlow()
 
@@ -160,6 +169,11 @@ class FrigateRepository(
             ?.filter { it.isNotBlank() }
             ?.toSet()
             ?: emptySet()
+        _integrations.value = Integrations(
+            darboardUrl = prefs[KEY_DARBOARD].orEmpty(),
+            haUrl = prefs[KEY_HA_URL].orEmpty(),
+            haToken = prefs[KEY_HA_TOKEN].orEmpty(),
+        )
         _notifyLabels.value = prefs[KEY_NOTIFY_LABELS]
             ?.split(",")
             ?.filter { it.isNotBlank() }
@@ -609,6 +623,125 @@ class FrigateRepository(
         call { setUserPassword(username, PasswordBody(password)) }
     }
 
+    // ------------------------------------------------------- cast ngoài LAN
+
+    suspend fun setIntegrations(darboardUrl: String, haUrl: String, haToken: String) {
+        val clean = Integrations(
+            darboardUrl = darboardUrl.trim().trimEnd('/'),
+            haUrl = haUrl.trim().trimEnd('/'),
+            haToken = haToken.trim(),
+        )
+        store.edit {
+            it[KEY_DARBOARD] = clean.darboardUrl
+            it[KEY_HA_URL] = clean.haUrl
+            it[KEY_HA_TOKEN] = clean.haToken
+        }
+        _integrations.value = clean
+    }
+
+    private fun plainClient(): okhttp3.OkHttpClient =
+        FrigateNet.client(NetConfig("https://localhost", null, true), { null }, {})
+
+    private fun plainCall(request: okhttp3.Request): String =
+        plainClient().newCall(request).execute().use { resp ->
+            val body = resp.body?.string().orEmpty()
+            if (!resp.isSuccessful) {
+                throw FrigateApiException("HTTP ${resp.code}: ${body.take(200)}")
+            }
+            body
+        }
+
+    /** Danh sách panel Darboard đang kết nối (id -> tên). */
+    suspend fun darboardScreens(): List<Pair<String, String>> = withContext(Dispatchers.IO) {
+        val base = _integrations.value.darboardUrl
+        if (base.isBlank()) throw FrigateApiException("Chưa cấu hình Darboard server.")
+        val body = plainCall(okhttp3.Request.Builder().url("$base/screens/list").build())
+        val arr = kotlinx.serialization.json.Json.parseToJsonElement(body)
+            .let { (it as? kotlinx.serialization.json.JsonObject)?.get("screens") }
+            as? kotlinx.serialization.json.JsonArray ?: return@withContext emptyList()
+        arr.mapNotNull { it as? kotlinx.serialization.json.JsonObject }.mapNotNull { obj ->
+            val id = (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
+            val name = (obj["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: id
+            val online = (obj["online"] as? kotlinx.serialization.json.JsonPrimitive)
+                ?.content?.toBooleanStrictOrNull() ?: true
+            if (online) id to name else null
+        }
+    }
+
+    /** Mở URL trên một panel Darboard (`POST /screens/act {act:"url"}`). */
+    suspend fun darboardOpen(deviceId: String, url: String) = withContext(Dispatchers.IO) {
+        val base = _integrations.value.darboardUrl
+        if (base.isBlank()) throw FrigateApiException("Chưa cấu hình Darboard server.")
+        val payload = kotlinx.serialization.json.buildJsonObject {
+            put("id", kotlinx.serialization.json.JsonPrimitive(deviceId))
+            put("act", kotlinx.serialization.json.JsonPrimitive("url"))
+            put("url", kotlinx.serialization.json.JsonPrimitive(url))
+        }.toString()
+        plainCall(
+            okhttp3.Request.Builder()
+                .url("$base/screens/act")
+                .post(payload.toRequestBody("application/json".toMediaType()))
+                .build(),
+        )
+    }
+
+    /** URL trang camera trên Darboard (server tự proxy go2rtc). */
+    fun darboardCamUrl(camera: String): String? {
+        val base = _integrations.value.darboardUrl.ifBlank { return null }
+        return "$base/cam.html?src=" + java.net.URLEncoder.encode(camera, "UTF-8")
+    }
+
+    /** media_player của Home Assistant (entity_id -> tên). */
+    suspend fun haMediaPlayers(): List<Pair<String, String>> = withContext(Dispatchers.IO) {
+        val cfg = _integrations.value
+        if (cfg.haUrl.isBlank() || cfg.haToken.isBlank()) {
+            throw FrigateApiException("Chưa cấu hình Home Assistant URL + token.")
+        }
+        val body = plainCall(
+            okhttp3.Request.Builder()
+                .url("${cfg.haUrl}/api/states")
+                .header("Authorization", "Bearer ${cfg.haToken}")
+                .build(),
+        )
+        val arr = kotlinx.serialization.json.Json.parseToJsonElement(body)
+            as? kotlinx.serialization.json.JsonArray ?: return@withContext emptyList()
+        arr.mapNotNull { it as? kotlinx.serialization.json.JsonObject }
+            .filter {
+                (it["entity_id"] as? kotlinx.serialization.json.JsonPrimitive)
+                    ?.content?.startsWith("media_player.") == true
+            }
+            .mapNotNull { obj ->
+                val id = (obj["entity_id"] as? kotlinx.serialization.json.JsonPrimitive)
+                    ?.content ?: return@mapNotNull null
+                val attrs = obj["attributes"] as? kotlinx.serialization.json.JsonObject
+                val name = (attrs?.get("friendly_name")
+                        as? kotlinx.serialization.json.JsonPrimitive)?.content ?: id
+                val state = (obj["state"] as? kotlinx.serialization.json.JsonPrimitive)
+                    ?.content.orEmpty()
+                if (state == "unavailable") null else id to name
+            }
+    }
+
+    /** Gọi HA phát URL HLS trên một media_player (Chromecast/Android TV). */
+    suspend fun haPlayMedia(entityId: String, url: String) = withContext(Dispatchers.IO) {
+        val cfg = _integrations.value
+        if (cfg.haUrl.isBlank() || cfg.haToken.isBlank()) {
+            throw FrigateApiException("Chưa cấu hình Home Assistant URL + token.")
+        }
+        val payload = kotlinx.serialization.json.buildJsonObject {
+            put("entity_id", kotlinx.serialization.json.JsonPrimitive(entityId))
+            put("media_content_id", kotlinx.serialization.json.JsonPrimitive(url))
+            put("media_content_type", kotlinx.serialization.json.JsonPrimitive("video"))
+        }.toString()
+        plainCall(
+            okhttp3.Request.Builder()
+                .url("${cfg.haUrl}/api/services/media_player/play_media")
+                .header("Authorization", "Bearer ${cfg.haToken}")
+                .post(payload.toRequestBody("application/json".toMediaType()))
+                .build(),
+        )
+    }
+
     // ------------------------------------------------------------ khuôn mặt
 
     /**
@@ -763,5 +896,8 @@ class FrigateRepository(
         private val KEY_NOTIFY = booleanPreferencesKey("notify_enabled")
         private val KEY_NOTIFY_CAMS = stringPreferencesKey("notify_cameras")
         private val KEY_NOTIFY_LABELS = stringPreferencesKey("notify_labels")
+        private val KEY_DARBOARD = stringPreferencesKey("darboard_url")
+        private val KEY_HA_URL = stringPreferencesKey("ha_url")
+        private val KEY_HA_TOKEN = stringPreferencesKey("ha_token")
     }
 }
