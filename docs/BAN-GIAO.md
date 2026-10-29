@@ -496,6 +496,17 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   Kéo playhead hoặc chạm dải quá mốc này sẽ **tự kẹp về mốc hiện tại**, không còn rơi vào
   vùng chưa ghi hình và hiện “Không phát được video”.
 
+## 4i. Cập nhật 29/10/2026 — làm rõ tiến trình tải ở Xem lại
+
+- Nút **Tải** chạy 2 bước và giờ ghi rõ:
+  1. `Bước 1/2 · Frigate đang tạo file (<bước>) xx%` — server tạo export bằng
+     `POST /api/export/{cam}/start/{s}/end/{e}`, poll `/api/jobs/export/{id}`
+     (`current_step` = queued/preparing/encoding|copying/encoding_retry/finalizing, `progress_percent`).
+  2. `Bước 2/2 · Đang tải về máy xx%` — tải `/exports/<file>` qua MediaSaver, có notification tiến trình.
+- Vì sao khác bản cũ: trước đây tải trực tiếp `clip.mp4` (cắt khi phát, không biết tiến trình, dễ lỗi với
+  khoảng dài). Export job tạo file MP4 hoàn chỉnh trên Frigate rồi mới tải — chậm hơn nhưng có tiến trình
+  và ổn định; nếu job lỗi/không dùng được thì tự fallback về `clip.mp4`.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
