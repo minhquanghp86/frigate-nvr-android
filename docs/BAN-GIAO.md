@@ -319,6 +319,11 @@ nhưng vẫn vẽ nhãn giờ ở y=4 -> `maxHeight = 0 - 4 = -4`. Đã sửa:
 - Mỗi thẻ: ảnh latest + LIVE/REC + chip fps + tên + sự kiện gần nhất + số sự kiện hôm nay
   (+ icon audio nếu có) — đủ thông tin nên không cần danh sách riêng.
 
+## 3zb. Cập nhật 29/10/2026 — header thương hiệu trên tab Camera
+
+- Thêm hàng brand trên cùng tab Camera: icon app (bo góc 7dp) + **FriCam** (đậm) + "Frigate NVR" (mờ)
+  và phiên bản `v<versionName>` bên phải; nằm trên tiêu đề lớn "Camera".
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

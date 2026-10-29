@@ -238,6 +238,10 @@ fun CamerasScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
+                    BrandBar()
+                }
+
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     HomeHeader(
                         cameraCount = cameras.size,
                         recordingCount = recordingCount,
@@ -276,6 +280,45 @@ fun CamerasScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun BrandBar() {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Image(
+            painter = androidx.compose.ui.res.painterResource(
+                id = com.minhquanghp86.frigatenvr.R.mipmap.ic_launcher,
+            ),
+            contentDescription = null,
+            modifier = Modifier
+                .size(26.dp)
+                .clip(RoundedCornerShape(7.dp)),
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            "FriCam",
+            color = IOSLabel,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            "Frigate NVR",
+            color = IOSTertiaryLabel,
+            fontSize = 11.sp,
+        )
+        Spacer(Modifier.weight(1f))
+        Text(
+            "v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}",
+            color = IOSTertiaryLabel,
+            fontSize = 10.sp,
+        )
     }
 }
 
