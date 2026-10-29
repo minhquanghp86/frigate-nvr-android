@@ -542,7 +542,7 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 
 ## 4n. Cập nhật 29/10/2026 — login mặc định + sửa CPU/RAM & biểu đồ Hệ thống
 
-- Trang đăng nhập: địa chỉ mặc định **https://192.168.10.2:8071**.
+- Trang đăng nhập: địa chỉ mặc định **https://192.168.10.2:8971** (chốt lại: 8971, không phải 8071).
 - CPU/RAM trong hero trước đây đọc `service.cpu_usage|mem_usage` — **không tồn tại ở Frigate 0.18**.
   Nay đọc `cpu_usages["frigate.full_system"] = {cpu, mem}` (chuỗi %), có fallback field cũ.
 - `JsonObject.d()` đọc được cả số và **chuỗi số** (0.18 trả `detectors.cpu = "15.1"`).
