@@ -15,6 +15,12 @@ data class LoginRequest(val user: String, val password: String)
 data class LoginBody(val message: String? = null, val access_token: String? = null)
 
 @Serializable
+data class FrigateUser(
+    val username: String = "",
+    val role: String = "viewer",
+)
+
+@Serializable
 data class CameraSetBody(val value: String)
 
 @Serializable
@@ -101,6 +107,7 @@ data class FrigateCameraConfig(
     val detectOn: Boolean get() = detect.flag("enabled", default = true)
     val snapshotsOn: Boolean get() = snapshots.flag("enabled")
     val recording: Boolean get() = record.flag("enabled")
+    val audioOn: Boolean get() = audio.flag("enabled")
     val zoneNames: List<String> get() = zones?.keys?.toList().orEmpty()
     val hasAudio: Boolean get() = audio.flag("enabled")
 

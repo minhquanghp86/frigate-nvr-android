@@ -3,11 +3,18 @@ package com.minhquanghp86.frigatenvr.ui.screens
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,12 +26,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Face
+import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -36,8 +50,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -62,14 +79,7 @@ import com.minhquanghp86.frigatenvr.ui.LargeTitleHeader
 import com.minhquanghp86.frigatenvr.ui.SectionTitle
 import com.minhquanghp86.frigatenvr.ui.SettingsViewModel
 import com.minhquanghp86.frigatenvr.ui.UiState
-import com.minhquanghp86.frigatenvr.ui.fmtDuration
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.doubleOrNull
-
-private fun JsonObject.numOf(key: String): Double? =
-    (this[key] as? JsonPrimitive)?.doubleOrNull
 
 @Composable
 fun SettingsScreen(
@@ -80,16 +90,18 @@ fun SettingsScreen(
     onOpenOverview: () -> Unit = {},
     onOpenPlates: () -> Unit = {},
     onOpenFaces: () -> Unit = {},
+    onOpenUsers: () -> Unit = {},
+    onOpenCameraConfig: () -> Unit = {},
 ) {
     val vm: SettingsViewModel = viewModel()
     val repo = vm.repo()
     val version by vm.version.collectAsState()
-    val stats by vm.stats.collectAsState()
     val busy by vm.busy.collectAsState()
     val message by vm.message.collectAsState()
     val notifyEnabled by repo.notifyEnabled.collectAsState()
     val notifyCameras by repo.notifyCameras.collectAsState()
     val notifyLabels by repo.notifyLabels.collectAsState()
+
     var showCameraPicker by remember { mutableStateOf(false) }
     var showLabelPicker by remember { mutableStateOf(false) }
     var allCameras by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -97,6 +109,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    var connectionOpen by rememberSaveable { mutableStateOf(false) }
     var baseUrl by remember(session.baseUrl) { mutableStateOf(session.baseUrl) }
     var username by remember(session.username) { mutableStateOf(session.username) }
     var passInput by remember { mutableStateOf("") }
@@ -146,46 +159,221 @@ fun SettingsScreen(
     Column(modifier.fillMaxSize()) {
         LargeTitleHeader(
             title = "Cài đặt",
-            subtitle = "${session.baseUrl} · ${session.role} · v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}",
+            subtitle = "${session.username} · ${session.role} · v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}",
         )
 
         LazyColumn(contentPadding = PaddingValues(bottom = 28.dp)) {
+            // ---------- Tài khoản
+            item {
+                SectionTitle("Tài khoản")
+                IosGroup {
+                    IosRow(
+                        "Người dùng",
+                        icon = Icons.Outlined.Person,
+                        value = session.username.ifBlank { "—" },
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Vai trò",
+                        icon = Icons.Outlined.Info,
+                        value = if (session.role == "admin") "Quản trị viên" else "Người xem",
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Danh sách người dùng",
+                        icon = Icons.Outlined.Group,
+                        chevron = true,
+                        onClick = onOpenUsers,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Đăng xuất",
+                        icon = Icons.Outlined.Logout,
+                        iconTint = MaterialTheme.colorScheme.error,
+                        destructive = true,
+                        onClick = { confirmLogout = true },
+                    )
+                }
+            }
+
+            // ---------- Kết nối (thu gọn)
             item {
                 SectionTitle("Kết nối")
                 IosGroup {
-                    IosTextField(baseUrl, { baseUrl = it }, "Địa chỉ server", "http://ip:8971")
-                    IosDivider(16)
-                    IosTextField(username, { username = it }, "Tài khoản")
-                    IosDivider(16)
-                    IosTextField(
-                        passInput,
-                        { passInput = it },
-                        if (session.rememberPassword && session.password.isNotBlank()) {
-                            "Mật khẩu (đã lưu — để trống nếu không đổi)"
-                        } else {
-                            "Mật khẩu"
-                        },
-                        password = true,
+                    val arrowRotation by animateFloatAsState(
+                        targetValue = if (connectionOpen) 180f else 0f,
+                        label = "arrow",
                     )
-                    IosDivider(16)
-                    IosTextField(go2rtcUrl, { go2rtcUrl = it }, "go2rtc URL (tuỳ chọn)", "http://ip:1984")
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { connectionOpen = !connectionOpen }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Máy chủ",
+                            color = IOSLabel,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text(
+                            session.baseUrl,
+                            color = IOSSecondaryLabel,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(end = 6.dp),
+                        )
+                        Icon(
+                            Icons.Outlined.KeyboardArrowDown,
+                            contentDescription = if (connectionOpen) "Thu gọn" else "Mở rộng",
+                            tint = IOSSecondaryLabel,
+                            modifier = Modifier.rotate(arrowRotation),
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = connectionOpen,
+                        enter = expandVertically(),
+                        exit = shrinkVertically(),
+                    ) {
+                        Column {
+                            IosDivider(16)
+                            IosTextField(baseUrl, { baseUrl = it }, "Địa chỉ server", "http://ip:8971")
+                            IosDivider(16)
+                            IosTextField(username, { username = it }, "Tài khoản")
+                            IosDivider(16)
+                            IosTextField(
+                                passInput,
+                                { passInput = it },
+                                if (session.rememberPassword && session.password.isNotBlank()) {
+                                    "Mật khẩu (đã lưu — để trống nếu không đổi)"
+                                } else {
+                                    "Mật khẩu"
+                                },
+                                password = true,
+                            )
+                            IosDivider(16)
+                            IosTextField(
+                                go2rtcUrl,
+                                { go2rtcUrl = it },
+                                "go2rtc URL (tuỳ chọn)",
+                                "http://ip:1984",
+                            )
+                            IosDivider(16)
+                            IosSwitchRow(
+                                "Ghi nhớ mật khẩu",
+                                checked = keepPass,
+                                onChange = { keepPass = it },
+                            )
+                            IosDivider(16)
+                            IosSwitchRow(
+                                "Tin chứng chỉ tự ký",
+                                subtitle = "Bật khi Frigate dùng HTTPS nội bộ",
+                                checked = trustCert,
+                                onChange = { trustCert = it },
+                            )
+                            Spacer(Modifier.height(10.dp))
+                            Button(
+                                onClick = {
+                                    vm.save(
+                                        baseUrl = baseUrl,
+                                        username = username,
+                                        password = passInput,
+                                        remember = keepPass,
+                                        trust = trustCert,
+                                        go2rtcUrl = go2rtcUrl,
+                                    )
+                                    passInput = ""
+                                },
+                                enabled = !busy,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                                    .height(48.dp),
+                            ) {
+                                if (busy) {
+                                    CircularProgressIndicator(
+                                        Modifier.height(18.dp),
+                                        strokeWidth = 2.dp,
+                                    )
+                                }
+                                Text("Lưu & kết nối", style = MaterialTheme.typography.labelLarge)
+                            }
+                            message?.let {
+                                Text(
+                                    it,
+                                    color = IOSGreen,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                                )
+                            }
+                            Spacer(Modifier.height(6.dp))
+                        }
+                    }
                 }
             }
 
+            // ---------- Cấu hình Frigate
             item {
-                SectionTitle("Bảo mật")
+                SectionTitle("Cấu hình Frigate")
                 IosGroup {
-                    IosSwitchRow("Ghi nhớ mật khẩu", checked = keepPass, onChange = { keepPass = it })
-                    IosDivider(16)
-                    IosSwitchRow(
-                        "Tin chứng chỉ tự ký",
-                        subtitle = "Bật khi Frigate dùng HTTPS nội bộ",
-                        checked = trustCert,
-                        onChange = { trustCert = it },
+                    IosRow(
+                        "Tổng quan hệ thống",
+                        icon = Icons.Outlined.Insights,
+                        chevron = true,
+                        onClick = onOpenOverview,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Cấu hình Camera",
+                        icon = Icons.Outlined.Videocam,
+                        value = "phát hiện · ghi hình · âm thanh",
+                        chevron = true,
+                        onClick = onOpenCameraConfig,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Thư viện khuôn mặt",
+                        icon = Icons.Outlined.Face,
+                        chevron = true,
+                        onClick = onOpenFaces,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Biển số đã nhận diện",
+                        icon = Icons.Outlined.DirectionsCar,
+                        chevron = true,
+                        onClick = onOpenPlates,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Nhật ký",
+                        icon = Icons.Outlined.Article,
+                        chevron = true,
+                        onClick = onOpenLogs,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Dung lượng ghi hình",
+                        icon = Icons.Outlined.Storage,
+                        iconTint = IOSOrange,
+                        chevron = true,
+                        onClick = onOpenStorage,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Phiên bản Frigate",
+                        icon = Icons.Outlined.Info,
+                        value = when (val v = version) {
+                            is UiState.Ok -> v.data.version ?: "—"
+                            is UiState.Error -> "lỗi"
+                            else -> "…"
+                        },
                     )
                 }
             }
 
+            // ---------- Thông báo
             item {
                 SectionTitle("Thông báo")
                 IosGroup {
@@ -212,121 +400,28 @@ fun SettingsScreen(
                 }
             }
 
+            // ---------- Ứng dụng
             item {
-                SectionTitle("Dữ liệu")
+                SectionTitle("Ứng dụng")
                 IosGroup {
                     IosRow(
-                        "Biển số đã nhận diện",
-                        icon = Icons.Outlined.DirectionsCar,
-                        chevron = true,
-                        onClick = onOpenPlates,
-                    )
-                    IosDivider(16)
-                    IosRow(
-                        "Khuôn mặt đã đăng ký",
-                        icon = Icons.Outlined.Face,
-                        chevron = true,
-                        onClick = onOpenFaces,
-                    )
-                    IosDivider(16)
-                    IosRow(
-                        "Nhật ký hệ thống",
-                        icon = Icons.Outlined.Article,
-                        chevron = true,
-                        onClick = onOpenLogs,
+                        "Phiên bản FriCam",
+                        icon = Icons.Outlined.Info,
+                        value = "v${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_NAME}" +
+                            " (${com.minhquanghp86.frigatenvr.BuildConfig.VERSION_CODE})",
                     )
                     IosDivider(56)
                     IosRow(
-                        "Dung lượng ghi hình",
-                        icon = Icons.Outlined.Storage,
-                        iconTint = IOSOrange,
+                        "Mở giao diện web Frigate",
+                        icon = Icons.Outlined.OpenInNew,
                         chevron = true,
-                        onClick = onOpenStorage,
-                    )
-                }
-            }
-
-            item {
-                Spacer(Modifier.height(14.dp))
-                Button(
-                    onClick = {
-                        vm.save(
-                            baseUrl = baseUrl,
-                            username = username,
-                            password = passInput,
-                            remember = keepPass,
-                            trust = trustCert,
-                            go2rtcUrl = go2rtcUrl,
-                        )
-                        passInput = ""
-                    },
-                    enabled = !busy,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(50.dp),
-                ) {
-                    if (busy) {
-                        CircularProgressIndicator(Modifier.height(18.dp), strokeWidth = 2.dp)
-                    }
-                    Text("Lưu cài đặt", style = MaterialTheme.typography.labelLarge)
-                }
-                message?.let {
-                    Text(
-                        it,
-                        color = IOSGreen,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                    )
-                }
-            }
-
-            item {
-                SectionTitle("Hệ thống")
-                IosGroup {
-                    IosRow(
-                        "Tổng quan (sức khỏe, cảnh báo, export)",
-                        chevron = true,
-                        onClick = onOpenOverview,
-                    )
-                    IosDivider(16)
-                    IosRow(
-                        "Frigate",
-                        icon = Icons.Outlined.Info,
-                        value = when (val v = version) {
-                            is UiState.Ok -> v.data.version ?: "—"
-                            is UiState.Error -> "lỗi"
-                            else -> "…"
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse(session.baseUrl)),
+                                )
+                            }
                         },
-                    )
-                    stats?.let { s ->
-                        val service = s["service"] as? JsonObject
-                        if (service != null) {
-                            IosDivider(56)
-                            IosRow("Bộ nhớ", value = service.numOf("mem_usage")?.let { "%.0f%%".format(it) })
-                            IosDivider(16)
-                            IosRow("CPU", value = service.numOf("cpu_usage")?.let { "%.0f%%".format(it) })
-                            IosDivider(16)
-                            IosRow("Thời gian chạy", value = service.numOf("uptime")?.let { fmtDuration(it) })
-                        }
-                        IosDivider(16)
-                        IosRow(
-                            "Tốc độ phát hiện",
-                            value = s.numOf("detection_fps")?.let { "%.1f fps".format(it) },
-                        )
-                    }
-                }
-            }
-
-            item {
-                SectionTitle("Tài khoản")
-                IosGroup {
-                    IosRow(
-                        "Đăng xuất",
-                        icon = Icons.Outlined.Logout,
-                        iconTint = MaterialTheme.colorScheme.error,
-                        destructive = true,
-                        onClick = { confirmLogout = true },
                     )
                 }
             }
@@ -338,16 +433,14 @@ fun SettingsScreen(
             onDismissRequest = { showCameraPicker = false },
             title = { Text("Camera nhận thông báo") },
             text = {
-                androidx.compose.foundation.layout.Column {
+                Column {
                     Text(
                         "Bỏ chọn hết = nhận thông báo cho tất cả camera.",
                         fontSize = 12.sp,
                         color = IOSSecondaryLabel,
                     )
                     allCameras.forEach { cam ->
-                        androidx.compose.foundation.layout.Row(
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             androidx.compose.material3.Checkbox(
                                 checked = cam in notifyCameras,
                                 onCheckedChange = { on ->
@@ -374,16 +467,14 @@ fun SettingsScreen(
             onDismissRequest = { showLabelPicker = false },
             title = { Text("Nhãn nhận thông báo") },
             text = {
-                androidx.compose.foundation.layout.Column {
+                Column {
                     Text(
                         "Bỏ chọn hết = nhận mọi nhãn.",
                         fontSize = 12.sp,
                         color = IOSSecondaryLabel,
                     )
                     allLabels.forEach { label ->
-                        androidx.compose.foundation.layout.Row(
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             androidx.compose.material3.Checkbox(
                                 checked = label in notifyLabels,
                                 onCheckedChange = { on ->
@@ -413,7 +504,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     confirmLogout = false
-                    vm.logout()
+                    scope.launch { vm.logout() }
                 }) { Text("Đăng xuất") }
             },
             dismissButton = {

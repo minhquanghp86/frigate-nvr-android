@@ -105,6 +105,9 @@ interface FrigateApi {
         @Query("split_joined") splitJoined: String? = null,
     ): kotlinx.serialization.json.JsonElement
 
+    @GET("api/users")
+    suspend fun users(): List<FrigateUser>
+
     @GET("api/faces")
     suspend fun facesApi(): kotlinx.serialization.json.JsonElement
 

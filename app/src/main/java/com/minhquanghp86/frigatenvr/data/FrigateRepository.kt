@@ -515,6 +515,9 @@ class FrigateRepository(
         counts
     }.getOrDefault(emptyMap())
 
+    suspend fun users(): List<FrigateUser> = runCatching { call { users() } }
+        .getOrDefault(emptyList())
+
     /** Khuôn mặt đã đăng ký: tên -> danh sách file ảnh. */
     suspend fun faces(): Map<String, List<String>> = runCatching {
         val element = call { facesApi() }
