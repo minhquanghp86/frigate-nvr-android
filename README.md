@@ -24,8 +24,12 @@
   - **MJPEG** (Frigate, chọn fps/độ phân giải, đo fps thực)
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
-- **Cast lên TV/Chromecast** (Google Cast SDK, Default Media Receiver) — phát HLS của go2rtc;
-  yêu cầu TV cùng LAN và truy cập được go2rtc port 1984.
+- **Cast lên TV/Chromecast** 3 cách:
+  - **Google Cast (LAN)**: Cast SDK + Default Media Receiver, phát HLS go2rtc (cần điện thoại cùng WiFi).
+  - **Qua Home Assistant**: nhập HA URL + long-lived token; app gọi `media_player.play_media` với URL HLS
+    → cast được cả khi điện thoại ở ngoài LAN (miễn tới được HA).
+  - **Panel Darboard**: nhập Darboard server URL; app gọi `POST /screens/act {act:"url"}` để mở
+    `cam.html?src=<camera>` trên panel (server tự proxy go2rtc).
 
 ### Sự kiện
 - Lưới thumbnail; lọc **camera / nhãn / vùng / thời gian (1h, 24h, 7 ngày) / chỉ có clip**.

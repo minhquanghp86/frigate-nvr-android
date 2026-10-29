@@ -105,6 +105,7 @@ fun SettingsScreen(
     val notifyEnabled by repo.notifyEnabled.collectAsState()
     val notifyCameras by repo.notifyCameras.collectAsState()
     val notifyLabels by repo.notifyLabels.collectAsState()
+    val integrations by repo.integrations.collectAsState()
 
     var showCameraPicker by remember { mutableStateOf(false) }
     var showLabelPicker by remember { mutableStateOf(false) }
@@ -121,6 +122,10 @@ fun SettingsScreen(
     var keepPass by remember { mutableStateOf(session.rememberPassword) }
     var trustCert by remember { mutableStateOf(session.trustSelfSigned) }
     var confirmLogout by remember { mutableStateOf(false) }
+    var darboardUrl by remember(integrations.darboardUrl) { mutableStateOf(integrations.darboardUrl) }
+    var haUrl by remember(integrations.haUrl) { mutableStateOf(integrations.haUrl) }
+    var haToken by remember(integrations.haToken) { mutableStateOf(integrations.haToken) }
+    var integrationMessage by remember { mutableStateOf<String?>(null) }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         allCameras = runCatching { repo.configCached().enabledCameras }.getOrDefault(emptyList())
@@ -380,6 +385,54 @@ fun SettingsScreen(
                             else -> "…"
                         },
                     )
+                }
+            }
+
+            // ---------- Phát lên màn hình khác
+            item {
+                SectionTitle("Phát lên màn hình khác")
+                IosGroup {
+                    IosTextField(
+                        darboardUrl,
+                        { darboardUrl = it },
+                        "Darboard server",
+                        "http://192.168.10.126:18080",
+                    )
+                    IosDivider(16)
+                    IosTextField(
+                        haUrl,
+                        { haUrl = it },
+                        "Home Assistant URL",
+                        "http://homeassistant.local:8123",
+                    )
+                    IosDivider(16)
+                    IosTextField(
+                        haToken,
+                        { haToken = it },
+                        "HA long-lived token",
+                        "Dán token (Profile → Security)",
+                        password = true,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                repo.setIntegrations(darboardUrl, haUrl, haToken)
+                                integrationMessage = "Đã lưu cấu hình phát lên màn hình"
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                    ) { Text("Lưu cấu hình cast") }
+                    integrationMessage?.let {
+                        Text(
+                            it,
+                            color = IOSGreen,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                        )
+                    }
                 }
             }
 

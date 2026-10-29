@@ -671,6 +671,7 @@ fun CameraLiveScreen(
     var streamName by remember(camera) { mutableStateOf(camera) }
     var showCastDialog by remember { mutableStateOf(false) }
     // Frigate API không có endpoint cast -> cast HLS của go2rtc tới Chromecast/Android TV.
+    val integrations by repo.integrations.collectAsState()
     val cast = com.minhquanghp86.frigatenvr.ui.cast.rememberCastSession(
         context = context,
         streamUrl = { runCatching { repo.go2rtcHls(streamName) }.getOrNull() },
@@ -1140,6 +1141,18 @@ fun CameraLiveScreen(
             onDismiss = { showCastDialog = false },
             streamUrl = runCatching { repo.go2rtcHls(streamName) }.getOrNull(),
             onStop = if (cast.connected) cast.stop else null,
+            darboardConfigured = integrations.darboardUrl.isNotBlank(),
+            onLoadPanels = { repo.darboardScreens() },
+            onCastPanel = { panelId ->
+                val url = repo.darboardCamUrl(camera)
+                    ?: throw IllegalStateException("Chưa cấu hình Darboard server")
+                repo.darboardOpen(panelId, url)
+            },
+            haConfigured = integrations.haUrl.isNotBlank() && integrations.haToken.isNotBlank(),
+            onLoadHaPlayers = { repo.haMediaPlayers() },
+            onCastHa = { entityId ->
+                repo.haPlayMedia(entityId, repo.go2rtcHls(streamName))
+            },
         )
     }
 

@@ -580,6 +580,20 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   từ điện thoại — nếu điện thoại dùng 4G/VPN/Tailscale thì không thấy thiết bị dù HA thấy.
   Hướng bổ sung (chưa làm): cast qua HA REST (`media_player.play_media`) với URL HLS go2rtc.
 
+## 4r. Cập nhật 29/10/2026 — cast qua HA + cast lên panel Darboard
+
+- **Home Assistant** (không phụ thuộc WiFi của điện thoại): Cài đặt → “Phát lên màn hình khác”
+  nhập **HA URL + long-lived token**. Hộp thoại Cast có mục **“Qua Home Assistant”**:
+  `GET /api/states` lọc `media_player.*` → chọn → `POST /api/services/media_player/play_media`
+  với `media_content_id = <go2rtc HLS>`, `media_content_type = video`. HA (trong LAN) điều khiển TV,
+  nên điện thoại ở 4G/VPN vẫn cast được nếu tới được HA.
+- **Panel Darboard** (dự án remote webview): server có API sẵn
+  `GET /screens/list` (id/tên/online) và `POST /screens/act {id, act:"url", url}`.
+  App mở `http://<darboard>:18080/cam.html?src=<camera>` trên panel — trang này do server proxy go2rtc,
+  nên không cần quyền truy cập go2rtc trực tiếp từ panel.
+- Cấu hình lưu DataStore (`darboard_url`, `ha_url`, `ha_token`), có nút “Lưu cấu hình cast”.
+- Không có endpoint cast trong Frigate API: cả 2 hướng đều là điều phối từ server (HA/Darboard) tới thiết bị.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
