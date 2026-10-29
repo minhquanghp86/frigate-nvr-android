@@ -390,6 +390,23 @@ fun CastDeviceDialog(
                     }
                 }
 
+                if (!darboardConfigured) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Chưa cấu hình Darboard server → Cài đặt → Phát lên màn hình khác.",
+                        color = IOSSecondaryLabel,
+                        fontSize = 11.sp,
+                    )
+                }
+                if (!haConfigured) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Chưa cấu hình Home Assistant URL/token → Cài đặt → Phát lên màn hình khác.",
+                        color = IOSSecondaryLabel,
+                        fontSize = 11.sp,
+                    )
+                }
+
                 status?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, color = IOSSecondaryLabel, fontSize = 11.sp)
