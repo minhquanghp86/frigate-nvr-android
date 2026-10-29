@@ -327,7 +327,6 @@ fun SettingsScreen(
                     IosRow(
                         "Cấu hình Camera",
                         icon = Icons.Outlined.Videocam,
-                        value = "phát hiện · ghi hình · âm thanh",
                         chevron = true,
                         onClick = onOpenCameraConfig,
                     )

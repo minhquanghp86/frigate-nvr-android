@@ -388,6 +388,12 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Thêm `ui/appVersionLabel`: bỏ tiền tố v/V rồi ghép đúng một chữ **V** (vd. `V0.13.0`);
   dùng ở header Cài đặt, hàng "Phiên bản FriCam" và header brand tab Camera; bỏ hậu tố `(build code)`.
 
+## 3zh. Cập nhật 29/10/2026 — sửa tiêu đề hàng cài đặt bị xuống dòng
+
+- Bỏ giá trị dài "phát hiện · ghi hình · âm thanh" ở hàng **Cấu hình Camera**.
+- `IosRow`: tiêu đề `maxLines = 1` + ellipsis, subtitle tối đa 2 dòng, giá trị bên phải giới hạn
+  `widthIn(max = 200.dp)` + ellipsis — không còn cảnh tiêu đề bị bóp thành 4 dòng.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
