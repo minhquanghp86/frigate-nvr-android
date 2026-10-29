@@ -45,7 +45,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(repo: FrigateRepository) {
-    var baseUrl by remember { mutableStateOf("https://192.168.10.2:8071") }
+    var baseUrl by remember { mutableStateOf("https://192.168.10.2:8971") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var keepPass by remember { mutableStateOf(true) }

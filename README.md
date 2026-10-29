@@ -1,91 +1,232 @@
-# FriCam — trình xem Frigate NVR (Android)
+# FriCam — Ứng dụng Android cho Frigate NVR
 
-**FriCam** là app Android kết nối thẳng tới **API của Frigate NVR** (chạy như add-on trên Home Assistant): đăng nhập bằng tài khoản Frigate, xem camera trực tiếp, xem danh sách sự kiện, mục cần xem (review) và phát lại bản ghi theo ngày/giờ.
+**FriCam** là ứng dụng Android **không chính thức** kết nối trực tiếp tới **HTTP API của Frigate NVR**
+(thường chạy như add-on trên Home Assistant) để xem camera, theo dõi sự kiện, xem lại bản ghi và quản trị hệ thống.
 
-- Ngôn ngữ: **Kotlin + Jetpack Compose (Material 3)**
-- Giao diện nền tối, thanh điều hướng 5 mục
-- Tự build APK bằng **GitHub Actions** trên mỗi lần push/tag
+- Ngôn ngữ: **Kotlin** · Giao diện **Jetpack Compose (Material 3)** theo phong cách iOS
+- **Giao diện sáng/tối** (chuyển nhanh trên tab Camera, có lưu lựa chọn)
+- `minSdk 26` · `compileSdk/targetSdk 36` (Android 16 — đáp ứng yêu cầu Google Play từ 31/08/2026)
+- Tự build **APK + AAB** bằng GitHub Actions; mỗi tag `v*` tạo GitHub Release
 
-## Tính năng hiện tại
+> Ứng dụng không kèm máy chủ. Bạn cần một máy chủ Frigate của riêng mình.
+> Có thể dùng thử ngay bằng nút **“Dùng bản demo”** (`https://demo.frigate.video`, không cần tài khoản).
 
-| Mục | Nội dung |
-|---|---|
-| **Đăng nhập** | `POST /api/login` → JWT (cookie `frigate_token`) → mọi request gắn `Authorization: Bearer`. Tự đăng nhập lại khi token hết hạn, hỗ trợ Frigate tắt xác thực (chế độ ẩn danh), tùy chọn "tin chứng chỉ tự ký" cho TLS nội bộ. |
-| **Camera** | Lưới camera (`latest.jpg`, 5s). Xem live chọn từ dropdown 4 luồng: **WebRTC** (qua proxy Frigate, có xác thực, trễ thấp nhất), **MP4** và **HLS** (go2rtc, luồng gốc fps đầy đủ), **MJPEG** (Frigate, chọn fps + độ phân giải, đo fps thực). |
-| **Sự kiện** | Lưới thumbnail từ `/api/events`, bộ lọc camera/nhãn/chỉ có clip, phân trang vô hạn; chi tiết: snapshot có khung nhận diện, **clip mp4**, điểm nhận diện, vùng, thời gian. |
-| **Cần xem** | `/api/review` (chưa xem/đã xem), cảnh báo vs phát hiện, mô tả; bấm để **phát clip** và **đánh dấu đã xem** (`POST /api/reviews/viewed`). |
-| **Xem lại** | Chọn camera → ngày có ghi hình (`/api/recordings/summary`) → khung giờ (`/api/{camera}/recordings/summary`) → **phát HLS** qua nginx-vod: `/vod/{yyyy-mm}/{dd}/{hh}/{camera}/{tz}/master.m3u8`. |
-| **Thông báo** | Foreground service theo dõi `/api/events`, bắn thông báo khi có đối tượng mới; bật/tắt trong Cài đặt (kênh "Thông báo sự kiện", có hành động Dừng). |
-| **Sự kiện (hành động)** | Giữ vĩnh viễn (`POST /api/events/{id}/retain`), bỏ giữ, xoá sự kiện (`DELETE /api/events/{id}`), tải clip về Downloads. |
-| **Hệ thống** | Nhật ký (`/api/logs/{service}`) và dung lượng ghi hình theo camera (`/api/recordings/storage`, yêu cầu admin). |
-| **Cài đặt** | Sửa URL server/tài khoản/mật khẩu/tín certificate, xem phiên bản Frigate (`/api/version`) và sức khỏe (`/api/stats`: CPU, bộ nhớ, fps từng camera), đăng xuất (có xác nhận). |
+---
 
-## Cài đặt
+## 1. Tính năng
 
-1. Tải APK mới nhất: **Actions → run gần nhất → Artifact** (hoặc **Releases** nếu build từ tag `v*`).
+### Camera
+- Lưới camera với ảnh mới nhất, nhãn **LIVE/REC**, fps, số sự kiện hôm nay, sự kiện gần nhất.
+- Header cố định: logo, trạng thái `N camera · M đang ghi`, chip **Thông báo**, nút **sáng/tối**, tải lại.
+- Live 4 chế độ:
+  - **WebRTC/WHEP** qua proxy có xác thực của Frigate (độ trễ thấp nhất, fps gốc)
+  - **MP4** và **HLS** qua go2rtc
+  - **MJPEG** (Frigate, chọn fps/độ phân giải, đo fps thực)
+- Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
+- Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
+
+### Sự kiện
+- Lưới thumbnail; lọc **camera / nhãn / vùng / thời gian (1h, 24h, 7 ngày) / chỉ có clip**.
+- Tìm kiếm text (`/api/events/search`) và **sự kiện tương tự** (thumbnail search).
+- Chi tiết: snapshot có box nhận diện, clip, điểm, vùng, thuộc tính; giữ/xoá, tải clip/ảnh.
+- **Sửa thông tin sự kiện**: nhãn phụ, biển số, thuộc tính, đánh dấu false positive.
+- **Thêm vào thư viện khuôn mặt**: train bằng `event_id`, hoặc **cắt quanh box nhận diện +20% viền**
+  rồi upload (`/api/faces/{name}/register`) — dùng khi Frigate không tự tìm thấy mặt trong ảnh toàn cảnh.
+
+### Xem lại
+- Timeline 24h kiểu Frigate: vạch giờ, dải ghi hình, tick sự kiện theo nhãn, playhead kéo độc lập.
+- Mở tab → phát **tại thời điểm hiện tại** (ngày cũ: 00:00 hoặc khung sớm nhất có dữ liệu).
+- Không tua vượt thời điểm hiện tại (tránh vùng chưa ghi hình / lỗi “Không phát được video”).
+- Kéo playhead → hiện **ảnh xem trước** chụp từ bản ghi đúng thời điểm.
+- Hai kiểu tải:
+  - **Tải**: export job trên Frigate (tiến trình 2 bước) → file MP4 hoàn chỉnh.
+  - **Tải nhanh**: cắt trực tiếp `clip.mp4`.
+  - Cả hai lưu vào `Downloads/FriCam`, có notification tiến trình trên thanh trạng thái.
+
+### Khuôn mặt
+- Thư viện: tạo người, đăng ký ảnh từ thư viện, xoá, **đổi tên**.
+- Chi tiết từng người: xem **toàn bộ ảnh đã train**, xoá từng ảnh.
+- **Sự kiện khuôn mặt** + thẻ theo dõi trên trang chủ (đã biết / chưa rõ theo `sub_label`),
+  chạm để mở sự kiện hoặc gán tên (train).
+- Phát hiện `face_recognition.enabled = false` → cảnh báo và chặn thao tác liên quan.
+
+### Cảnh báo (Review)
+- Lọc **Chưa xem / Alert / Detection / Đã xem / Tất cả**, phát clip, đánh dấu đã xem
+  (`POST /api/reviews/viewed`).
+
+### Hệ thống
+- **Hero**: phiên bản Frigate, uptime, CPU/RAM (`cpu_usages["frigate.full_system"]`), tốc độ phát hiện.
+- **Bộ phát hiện**: 3 biểu đồ (suy luận ms, CPU, RAM), cửa sổ 60 điểm, poll 3 giây.
+- **Dung lượng**: bản ghi, ảnh & clip, `/tmp/cache`, `/dev/shm` — thanh tiến trình dày, màu theo ngưỡng.
+- **Lưu trữ Camera**: dung lượng + % + băng thông MiB/giờ.
+- **Cảnh báo**: xem, **Đã hiểu**, **Ẩn vĩnh viễn** (`acknowledge` / `mute`).
+- **Clip đã xuất**: tải hoặc **xoá** (`POST /api/exports/delete`).
+
+### Quản trị khác
+- **Cấu hình Camera**: 10 switch (enabled, detect, motion, recordings, snapshots, audio, notifications,
+  review_alerts, review_detections, object_descriptions) + **profile cấu hình** (`/api/profiles`).
+- **Người dùng**: thêm (mật khẩu ≥ 12 ký tự, chọn role), đổi vai trò, đặt mật khẩu, xoá (trừ `admin`).
+- **Biển số (LPR)**: danh sách biển đã nhận diện, chạm để tìm sự kiện.
+- **Nhật ký** 3 nguồn (frigate/go2rtc/app) có Copy/Share; **Dung lượng** chi tiết.
+
+### Thông báo
+- Foreground service theo dõi sự kiện mới; lọc theo **camera** và **nhãn**.
+- Bật/tắt nhanh bằng chip trên tab Camera hoặc trong Cài đặt.
+- **Ảnh phát hiện trong thông báo** (BigPicture + large icon, thu nhỏ ≤1080px),
+  tiêu đề “Phát hiện người” / “Phát hiện người: \<tên\>”.
+- Icon thông báo dùng **logo FriCam** (vector monochrome).
+- Chạm thông báo → mở **live camera kèm panel sự kiện** của camera đó.
+
+---
+
+## 2. Cài đặt
+
+1. Tải APK mới nhất ở [**Releases**](https://github.com/minhquanghp86/frigate-nvr-android/releases).
 2. Cài lên điện thoại (cho phép cài từ nguồn không xác định).
-   - APK release ký bằng keystore cố định (`keystore/frigate-release.jks`) nên các bản sau **cập nhật đè được**.
-   - Riêng bản `v0.1.5` cần **gỡ app cũ một lần** (bản cũ ký debug key của runner), từ đó về sau không phải gỡ nữa.
-3. Mở app → nhập địa chỉ server và tài khoản Frigate.
+   - APK release ký bằng keystore cố định trong repo → các bản sau **cập nhật đè được**.
+   - Người dùng bản rất cũ (≤ v0.1.4) cần gỡ một lần.
+3. Mở app → nhập địa chỉ máy chủ (mặc định `https://192.168.10.2:8971`) và tài khoản Frigate,
+   hoặc bấm **“Dùng bản demo”**.
 
-### Cấu hình Frigate để app kết nối được
+### Kết nối Frigate
 
-- Dùng port **8971** (đã bật xác thực, có TLS): ví dụ `https://192.168.1.100:8971`
-- Tạo tài khoản ở **Frigate → Settings → Users** (mật khẩu tối thiểu 12 ký tự).
-- Nếu Frigate dùng chứng chỉ tự ký (mặc định) → bật mục **"Tin chứng chỉ tự ký"** trong app.
-- Port `5000` là cổng nội bộ không xác thực, thường **không** xuất ra LAN.
-- Muốn dùng qua reverse-proxy/Nabu Casa thì nhập URL của proxy đó, app không ép phải kết nối trực tiếp.
+| Trường hợp | Ghi chú |
+|---|---|
+| Port **8971** (khuyến nghị) | Cổng có xác thực + TLS; bật **“Tin chứng chỉ tự ký”** nếu dùng cert tự ký |
+| Port **5000** | Cổng nội bộ không xác thực, thường không mở ra LAN |
+| Reverse proxy / Nabu Casa | Nhập URL proxy, app không bắt buộc kết nối trực tiếp |
+| Auth disabled | App tự dùng phiên ẩn danh |
 
-## Build lokal
+Tài khoản: **Frigate → Settings → Users** (mật khẩu tối thiểu 12 ký tự).
+
+---
+
+## 3. Build & phát hành
 
 ```bash
-./gradlew assembleDebug      # app/build/outputs/apk/debug/app-debug.apk
-./gradlew assembleRelease    # app/build/outputs/apk/release/app-release.apk (ký debug key)
+./gradlew assembleDebug        # APK debug (applicationId .debug)
+./gradlew assembleRelease      # APK release
+./gradlew bundleRelease        # AAB để nộp Google Play
+./gradlew testReleaseUnitTest  # unit test hợp đồng JSON với Frigate
 ```
 
-Yêu cầu: JDK 17, Android SDK 34 (`local.properties` trỏ `sdk.dir`).
+Yêu cầu: **JDK 17**, **Android SDK 36** + **Build-Tools 36.0.0** (`local.properties` → `sdk.dir`).
 
-## CI (GitHub Actions)
+### CI — GitHub Actions
 
-Workflow: `.github/workflows/build-apk.yml` — chạy trên `ubuntu-latest` của GitHub (repo public nên không tốn phút Actions).
+`.github/workflows/build-apk.yml` chạy trên `ubuntu-latest`:
 
-- Chạy khi push vào `main`, mở PR, hoặc đánh tag `v*` (và chạy tay được qua `workflow_dispatch`).
-- Setup Java 17 + Android SDK + cache Gradle → `./gradlew assembleRelease`.
-- Luôn upload APK vào **Artifacts**; với tag `v*` thì tự tạo **GitHub Release** kèm APK.
-- `versionName`: `0.1.0-dev.<run number>` với push thường, đúng tên tag với tag `v*`.
-- `versionCode` lấy từ `GITHUB_RUN_NUMBER` → luôn tăng.
-- Repo **không** chứa IP/credential nội bộ; mọi thông tin kết nối do người dùng nhập trong app.
+- Trigger: push `main`, pull request, tag `v*`, hoặc chạy tay.
+- Cài `platforms;android-36` / `build-tools;36.0.0` nếu runner thiếu.
+- Build **APK + AAB** và chạy unit test.
+- Upload artifact `…-apk` và `…-aab`; tag `v*` tạo **GitHub Release** kèm cả hai tệp.
+- `versionName` = tên tag bỏ tiền tố `v`; `versionCode` = `GITHUB_RUN_NUMBER` (luôn tăng).
 
-## Cấu trúc mã
+### Phát hành Google Play (trạng thái)
+
+| Hạng mục | Trạng thái |
+|---|---|
+| targetSdk 36 / AAB / Play App Signing sẵn sàng | ✅ |
+| 16 KB page size (WebRTC `p_align=0x4000`) | ✅ đã kiểm chứng |
+| Privacy policy trong app **và** `docs/privacy.md` | ✅ (cần bật GitHub Pages để có URL HTTPS) |
+| Demo mode cho reviewer | ✅ nút “Dùng bản demo” |
+| Phí đăng ký Play Console | 25 USD **một lần**, dùng cho nhiều app |
+| Tài khoản **cá nhân** tạo sau 13/11/2023 | cần **closed test 12 tester / 14 ngày liên tục** + xác minh thiết bị |
+| Tài khoản **tổ chức** | không bắt buộc bước 12 tester, cần hồ sơ doanh nghiệp |
+
+---
+
+## 4. Quyền riêng tư
+
+- Không thu thập, không gửi dữ liệu về máy chủ nhà phát triển; **không quảng cáo**, không SDK analytics.
+- Dữ liệu lưu cục bộ: URL máy chủ, tài khoản, (tuỳ chọn) mật khẩu, token, tuỳ chọn UI, crash log.
+- Ảnh/clip tải về lưu ở `Downloads/FriCam` (MediaStore).
+- Chi tiết: [`docs/privacy.md`](docs/privacy.md) và màn **Cài đặt → Ứng dụng → Chính sách quyền riêng tư**.
+
+---
+
+## 5. Cấu trúc mã
 
 ```
 app/src/main/java/com/minhquanghp86/frigatenvr/
-├── FrigateApp.kt            # Application + container (repository dùng chung)
-├── MainActivity.kt
+├── FrigateApp.kt              # Application + container
+├── MainActivity.kt            # edge-to-edge, deep link, PiP
 ├── data/
-│   ├── Models.kt            # Event, ReviewItem, Config, DayRecordings...
-│   ├── Session.kt           # ServerSession + trạng thái phiên
-│   ├── Network.kt           # OkHttp (JWT, TLS tự ký), Retrofit FrigateApi
-│   ├── FrigateRepository.kt # đăng nhập, tự login lại, DataStore, URL media
-│   └── MjpegSource.kt       # giải mã luồng MJPEG -> Flow<Bitmap>
+│   ├── Models.kt              # Event, ReviewItem, Config (đọc lỏng 0.18), Faces, Exports…
+│   ├── Session.kt             # ServerSession, trạng thái phiên
+│   ├── Network.kt             # OkHttp (JWT, TLS tự ký), Retrofit FrigateApi
+│   ├── FrigateRepository.kt   # login/refresh, DataStore, URL media, export, faces, users
+│   ├── MediaSaver.kt          # tải về Downloads + notification tiến trình
+│   └── MjpegSource.kt         # giải mã MJPEG → Flow<Bitmap>
+├── notify/
+│   ├── EventWatchService.kt   # foreground service + thông báo có ảnh
+│   ├── DeepLinks.kt           # điều hướng từ thông báo
+│   └── CrashLog.kt            # ghi crash kèm phiên bản/thiết bị
 └── ui/
-    ├── AppRoot.kt           # NavHost + thanh tab
-    ├── Common.kt            # ảnh có JWT, VideoPlayer (mp4/HLS), helper
-    ├── ViewModels.kt        # Camera / Sự kiện / Review / Timeline / Cài đặt
-    └── screens/             # Login, Cameras, Events, Review, Timeline, Settings
+    ├── Theme.kt               # palette sáng/tối (IOS*) + ThemeState
+    ├── Ios.kt                 # IosGroup, IosRow, IosSwitchRow, LargeTitleHeader…
+    ├── Common.kt              # FrigateImage (có JWT), VideoPlayer
+    ├── AppRoot.kt             # NavHost + tab bar
+    ├── ViewModels.kt          # Camera / Events / Timeline / Settings
+    └── screens/               # 18 màn: Login, Cameras, Events, Timeline, Faces, Users, System…
 ```
 
-## Giao diện
+---
 
-Phong cách iOS: nền đen, nhóm cài đặt inset-grouped, tiêu đề lớn, pill filter, segmented control, thanh tab trong mờ — kết hợp tính năng native (WebRTC, ExoPlayer, foreground service).
+## 6. Khả năng tương thích API
 
-## Lộ trình
+Đã kiểm chứng với **Frigate 0.18.2** và xử lý các khác biệt schema:
 
-- **GĐ3 (chưa làm):** thông báo (Web Push/VAPID của Frigate), điều khiển camera/PTZ (`/api/camera/{name}/set/{feature}`), tìm kiếm nâng cao (`/api/events/search`, motion search), export (`/api/exports`), nhiều server, live WebRTC/go2rtc thay MJPEG.
+- `live.streams` là object (không phải mảng)
+- `/api/version` trả **plain text**, không phải JSON
+- `reviewed` là **int 0/1**; body `/reviews/viewed` bắt buộc `{ids, reviewed}`
+- `start_time` dạng **ISO-8601** hoặc epoch tuỳ endpoint
+- `detectors.cpu/mem`, `cpu_usages.*` là **chuỗi số**; CPU/RAM hệ thống nằm ở
+  `cpu_usages["frigate.full_system"]`
+- Tên feature camera: `recordings` (không phải `record`), `snapshots`, `motion`, `audio`, …
+- `/api/faces` trả `{}` khi chưa có ai; các thao tác face trả **400** nếu `face_recognition` tắt
 
-## Tham khảo
+Chi tiết endpoint đã dùng: [`docs/API-FRIGATE.md`](docs/API-FRIGATE.md) ·
+Bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BAN-GIAO.md) ·
+Phân tích API & lộ trình Play: [`docs/PHAN-TICH-2026-10-29.md`](docs/PHAN-TICH-2026-10-29.md)
+
+---
+
+## 7. Xử lý sự cố
+
+| Hiện tượng | Cách xử lý |
+|---|---|
+| Không đăng nhập được | Kiểm tra port 8971, bật “Tin chứng chỉ tự ký”, tài khoản ≥ 12 ký tự |
+| Live tải chậm / đen | Ưu tiên WebRTC; kiểm tra go2rtc URL trong Cài đặt nếu dùng MP4/HLS |
+| “Không phát được video” ở Xem lại | Chọn khung giờ có dải ghi hình; app chặn tua vượt thời điểm hiện tại |
+| Không có thông báo | Bật chip **Thông báo**, cấp quyền POST_NOTIFICATIONS, kiểm tra bộ lọc camera/nhãn |
+| Khuôn mặt trống | Bật `face_recognition.enabled` trong Frigate rồi khởi động lại |
+| Cấu hình Camera báo lỗi | Cần tài khoản **admin** (API trả 400/403) |
+| Muốn xem log | Cài đặt → Cấu hình Frigate → **Nhật ký** → nguồn `app` (có Copy/Share) |
+
+---
+
+## 8. Lộ trình
+
+- [x] WebRTC-first live, timeline 24h + ảnh xem trước, export job
+- [x] Khuôn mặt (thư viện, train, sự kiện), LPR, cảnh báo/review
+- [x] Quản trị: camera features, profile, người dùng, notices, exports
+- [x] Giao diện sáng/tối, thông báo có ảnh, Play-ready (SDK 36, AAB)
+- [ ] i18n tiếng Anh toàn bộ UI (tách chuỗi sang `strings.xml`)
+- [ ] Widget / Quick Settings tile, chia sẻ GIF sự kiện
+- [ ] Timeline từ `/api/timeline`, tìm chuyển động (`/search/motion`)
+- [ ] Phát hành Google Play (closed test 12 tester → production)
+
+---
+
+## 9. Tham khảo
 
 - [Frigate HTTP API](https://docs.frigate.video/integrations/api/frigate-http-api/)
-- [Authentication](https://docs.frigate.video/configuration/authentication/)
-- Bản OpenAPI gốc: `docs/static/frigate-api.yaml` trong repo [blakeblackshear/frigate](https://github.com/blakeblackshear/frigate)
-- Chi tiết endpoint đã dùng: [docs/API-FRIGATE.md](docs/API-FRIGATE.md)
+- [Frigate Authentication](https://docs.frigate.video/configuration/authentication/)
+- [Face recognition](https://docs.frigate.video/configuration/face_recognition/)
+- OpenAPI gốc: [docs/static/frigate-api.yaml](https://github.com/blakeblackshear/frigate/blob/dev/docs/static/frigate-api.yaml)
+
+## 10. Giấy phép & miễn trừ
+
+Mã nguồn phát hành công khai cho mục đích cá nhân/học tập. FriCam **không chính thức**, không liên kết
+với dự án Frigate; tên “Frigate” thuộc về tác giả của nó. Ứng dụng không kèm máy chủ hay dữ liệu camera.
