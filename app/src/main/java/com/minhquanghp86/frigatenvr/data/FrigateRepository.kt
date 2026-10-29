@@ -72,9 +72,11 @@ class FrigateRepository(
     val notifyCameras: StateFlow<Set<String>> = _notifyCameras.asStateFlow()
 
     data class Integrations(
-        val darboardUrl: String = "",
         val haUrl: String = "",
         val haToken: String = "",
+        /** Dashboard casting: path dashboard + view chứa camera (như Advanced Camera). */
+        val dashboardPath: String = "",
+        val viewPath: String = "",
     )
 
     private val _integrations = MutableStateFlow(Integrations())
@@ -170,9 +172,10 @@ class FrigateRepository(
             ?.toSet()
             ?: emptySet()
         _integrations.value = Integrations(
-            darboardUrl = prefs[KEY_DARBOARD].orEmpty(),
             haUrl = prefs[KEY_HA_URL].orEmpty(),
             haToken = prefs[KEY_HA_TOKEN].orEmpty(),
+            dashboardPath = prefs[KEY_HA_DASH].orEmpty(),
+            viewPath = prefs[KEY_HA_VIEW].orEmpty(),
         )
         _notifyLabels.value = prefs[KEY_NOTIFY_LABELS]
             ?.split(",")
@@ -625,21 +628,28 @@ class FrigateRepository(
 
     // ------------------------------------------------------- cast ngoài LAN
 
-    suspend fun setIntegrations(darboardUrl: String, haUrl: String, haToken: String) {
+    suspend fun setIntegrations(
+        haUrl: String,
+        haToken: String,
+        dashboardPath: String,
+        viewPath: String,
+    ) {
         val clean = Integrations(
-            darboardUrl = darboardUrl.trim().trimEnd('/'),
             haUrl = haUrl.trim().trimEnd('/'),
             haToken = haToken.trim(),
+            dashboardPath = dashboardPath.trim().trim('/'),
+            viewPath = viewPath.trim().trim('/'),
         )
         store.edit {
-            it[KEY_DARBOARD] = clean.darboardUrl
             it[KEY_HA_URL] = clean.haUrl
             it[KEY_HA_TOKEN] = clean.haToken
+            it[KEY_HA_DASH] = clean.dashboardPath
+            it[KEY_HA_VIEW] = clean.viewPath
         }
         _integrations.value = clean
     }
 
-    // Client riêng cho Darboard/HA: không interceptor, timeout rõ ràng để lỗi dễ đọc.
+    // Client riêng cho HA: không interceptor, timeout rõ ràng để lỗi dễ đọc.
     private val castClient: okhttp3.OkHttpClient by lazy {
         okhttp3.OkHttpClient.Builder()
             .connectTimeout(6, java.util.concurrent.TimeUnit.SECONDS)
@@ -659,121 +669,23 @@ class FrigateRepository(
             body
         }
 
-    /** Danh sách panel Darboard đang kết nối (id -> tên). */
-    suspend fun darboardScreens(): List<Pair<String, String>> = withContext(Dispatchers.IO) {
-        val base = _integrations.value.darboardUrl
-        if (base.isBlank()) throw FrigateApiException("Chưa cấu hình Darboard server.")
-        val body = plainCall(okhttp3.Request.Builder().url("$base/screens/list").build())
-        val arr = kotlinx.serialization.json.Json.parseToJsonElement(body)
-            .let { (it as? kotlinx.serialization.json.JsonObject)?.get("screens") }
-            as? kotlinx.serialization.json.JsonArray ?: return@withContext emptyList()
-        arr.mapNotNull { it as? kotlinx.serialization.json.JsonObject }.mapNotNull { obj ->
-            val id = (obj["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: return@mapNotNull null
-            val name = (obj["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content ?: id
-            val online = (obj["online"] as? kotlinx.serialization.json.JsonPrimitive)
-                ?.content?.toBooleanStrictOrNull() ?: true
-            if (online) id to name else null
-        }
-    }
+    data class CastCheck(val label: String, val ok: Boolean, val detail: String)
 
-    /** Mở URL trên một panel Darboard (`POST /screens/act {act:"url"}`). */
-    suspend fun darboardOpen(deviceId: String, url: String) = withContext(Dispatchers.IO) {
-        val base = _integrations.value.darboardUrl
-        if (base.isBlank()) throw FrigateApiException("Chưa cấu hình Darboard server.")
-        val payload = kotlinx.serialization.json.buildJsonObject {
-            put("id", kotlinx.serialization.json.JsonPrimitive(deviceId))
-            put("act", kotlinx.serialization.json.JsonPrimitive("url"))
-            put("url", kotlinx.serialization.json.JsonPrimitive(url))
-        }.toString()
+    private suspend fun haService(domain: String, service: String, body: String) {
+        val cfg = _integrations.value
+        if (cfg.haUrl.isBlank() || cfg.haToken.isBlank()) {
+            throw FrigateApiException("Chưa cấu hình Home Assistant URL + token.")
+        }
         plainCall(
             okhttp3.Request.Builder()
-                .url("$base/screens/act")
-                .post(payload.toRequestBody("application/json".toMediaType()))
+                .url("${cfg.haUrl}/api/services/$domain/$service")
+                .header("Authorization", "Bearer ${cfg.haToken}")
+                .post(body.toRequestBody("application/json".toMediaType()))
                 .build(),
         )
     }
 
-    data class CastCheck(val label: String, val ok: Boolean, val detail: String)
-
-    /** Kiểm tra nhanh cấu hình Darboard: URL + số panel online. */
-    suspend fun testDarboard(): CastCheck = runCatching {
-        var base = _integrations.value.darboardUrl
-        if (base.isBlank()) return@runCatching CastCheck(
-            "Darboard",
-            false,
-            "Chưa cấu hình URL Darboard (Cài đặt → Phát lên màn hình khác).",
-        )
-        if (!base.startsWith("http://") && !base.startsWith("https://")) {
-            base = "http://$base"
-        }
-        val endpoint = "$base/screens/list"
-        val body = plainCall(okhttp3.Request.Builder().url(endpoint).build())
-        val arr = (kotlinx.serialization.json.Json.parseToJsonElement(body)
-                as? kotlinx.serialization.json.JsonObject)
-            ?.get("screens") as? kotlinx.serialization.json.JsonArray
-        val names = arr?.mapNotNull { (it as? kotlinx.serialization.json.JsonObject)
-            ?.get("name")?.let { n -> (n as? kotlinx.serialization.json.JsonPrimitive)?.content } }
-            .orEmpty()
-        CastCheck(
-            "Darboard",
-            true,
-            "$endpoint → HTTP 200 · ${arr?.size ?: 0} panel" +
-                if (names.isNotEmpty()) " (${names.joinToString(", ")})" else "",
-        )
-    }.getOrElse { e ->
-        val base = _integrations.value.darboardUrl
-        val hint = when (e) {
-            is java.net.ConnectException -> "không mở được cổng (add-on chưa mở port trên LAN?)"
-            is java.net.SocketTimeoutException -> "hết thời gian chờ (firewall/VPN chặn 18080?)"
-            is java.net.UnknownHostException -> "không phân giải được tên máy chủ"
-            else -> null
-        }
-        CastCheck(
-            "Darboard",
-            false,
-            "$base/screens/list · ${e.javaClass.simpleName}: ${e.message ?: "không có mô tả"}" +
-                (hint?.let { " — $it" } ?: ""),
-        )
-    }
-
-    /** Kiểm tra cấu hình HA: token + số media_player. */
-    suspend fun testHomeAssistant(): CastCheck = runCatching {
-        val cfg = _integrations.value
-        if (cfg.haUrl.isBlank() || cfg.haToken.isBlank()) {
-            return@runCatching CastCheck(
-                "Home Assistant",
-                false,
-                "Chưa nhập HA URL hoặc token (Cài đặt → Phát lên màn hình khác).",
-            )
-        }
-        val players = haMediaPlayers()
-        CastCheck(
-            "Home Assistant",
-            true,
-            "${cfg.haUrl}/api/states → ${players.size} media_player" +
-                if (players.isNotEmpty()) {
-                    " (${players.take(5).joinToString(", ") { it.second }})"
-                } else {
-                    " — chưa có media_player nào trong HA"
-                },
-        )
-    }.getOrElse { e ->
-        val cfg = _integrations.value
-        CastCheck(
-            "Home Assistant",
-            false,
-            "${cfg.haUrl}/api/states · ${e.javaClass.simpleName}: " +
-                (e.message ?: "không có mô tả"),
-        )
-    }
-
-    /** URL trang camera trên Darboard (server tự proxy go2rtc). */
-    fun darboardCamUrl(camera: String): String? {
-        val base = _integrations.value.darboardUrl.ifBlank { return null }
-        return "$base/cam.html?src=" + java.net.URLEncoder.encode(camera, "UTF-8")
-    }
-
-    /** media_player của Home Assistant (entity_id -> tên). */
+    /** Danh sách media_player của HA (kèm entity_id để chọn đúng giao thức). */
     suspend fun haMediaPlayers(): List<Pair<String, String>> = withContext(Dispatchers.IO) {
         val cfg = _integrations.value
         if (cfg.haUrl.isBlank() || cfg.haToken.isBlank()) {
@@ -804,23 +716,149 @@ class FrigateRepository(
             }
     }
 
-    /** Gọi HA phát URL HLS trên một media_player (Chromecast/Android TV). */
-    suspend fun haPlayMedia(entityId: String, url: String) = withContext(Dispatchers.IO) {
+    /**
+     * Cast HLS/MP4 tới một thiết bị qua Home Assistant, thử lần lượt:
+     * 1) media_player.play_media (HLS) 2) play_media (MP4) 3) webOS media.viewer 4) Android TV adb VIEW.
+     * Trả về mô tả cách đã thành công.
+     */
+    suspend fun haCast(entityId: String, hlsUrl: String, mp4Url: String): String =
+        withContext(Dispatchers.IO) {
+            val problems = mutableListOf<String>()
+            val idJson = kotlinx.serialization.json.JsonPrimitive(entityId)
+
+            suspend fun tryPlay(url: String, type: String, label: String): String? = try {
+                haService(
+                    "media_player",
+                    "play_media",
+                    kotlinx.serialization.json.buildJsonObject {
+                        put("entity_id", idJson)
+                        put("media_content_id", kotlinx.serialization.json.JsonPrimitive(url))
+                        put("media_content_type", kotlinx.serialization.json.JsonPrimitive(type))
+                    }.toString(),
+                )
+                label
+            } catch (e: Exception) {
+                problems += "$label: ${e.message}"
+                null
+            }
+
+            // 0) Dashboard casting (như Advanced Camera): cast một view Lovelace chứa camera.
+            val cfg = _integrations.value
+            if (cfg.dashboardPath.isNotBlank()) {
+                try {
+                    haService(
+                        "cast",
+                        "show_lovelace_view",
+                        kotlinx.serialization.json.buildJsonObject {
+                            put("entity_id", idJson)
+                            put(
+                                "dashboard_path",
+                                kotlinx.serialization.json.JsonPrimitive(cfg.dashboardPath),
+                            )
+                            if (cfg.viewPath.isNotBlank()) {
+                                put(
+                                    "view_path",
+                                    kotlinx.serialization.json.JsonPrimitive(cfg.viewPath),
+                                )
+                            }
+                        }.toString(),
+                    )
+                    return@withContext "Dashboard cast (${cfg.dashboardPath}/${cfg.viewPath})"
+                } catch (e: Exception) {
+                    problems += "Dashboard cast: ${e.message}"
+                }
+            }
+
+            tryPlay(hlsUrl, "video", "play_media HLS")?.let { return@withContext it }
+            tryPlay(mp4Url, "video/mp4", "play_media MP4")?.let { return@withContext it }
+
+            val isWebOs = entityId.contains("webos")
+            val isAndroidTv = entityId.contains("androidtv") || entityId.contains("android_tv") ||
+                entityId.contains("atv") || entityId.contains("box")
+
+            if (isWebOs) {
+                try {
+                    haService(
+                        "webostv",
+                        "command",
+                        """
+                        {"entity_id":"$entityId","command":"ssap://media.viewer/open","payload":{"target":"$hlsUrl","title":"FriCam"}}
+                        """.trimIndent(),
+                    )
+                    return@withContext "webOS media.viewer (HLS)"
+                } catch (e: Exception) {
+                    problems += "webOS media.viewer: ${e.message}"
+                }
+                try {
+                    haService(
+                        "webostv",
+                        "command",
+                        """
+                        {"entity_id":"$entityId","command":"ssap://system.launcher/launch",
+                         "payload":{"id":"com.webos.app.browser","params":{"target":"$hlsUrl"}}}
+                        """.trimIndent(),
+                    )
+                    return@withContext "webOS mở trình duyệt (HLS)"
+                } catch (e: Exception) {
+                    problems += "webOS browser: ${e.message}"
+                }
+            }
+
+            if (isAndroidTv) {
+                try {
+                    haService(
+                        "androidtv",
+                        "adb_command",
+                        kotlinx.serialization.json.buildJsonObject {
+                            put("entity_id", idJson)
+                            put(
+                                "command",
+                                kotlinx.serialization.json.JsonPrimitive(
+                                    "am start -a android.intent.action.VIEW " +
+                                        "-d \"$mp4Url\" -t \"video/*\"",
+                                ),
+                            )
+                        }.toString(),
+                    )
+                    return@withContext "Android TV adb VIEW (MP4)"
+                } catch (e: Exception) {
+                    problems += "Android TV adb: ${e.message}"
+                }
+            }
+
+            throw FrigateApiException(
+                "Không cast được tới $entityId — " + problems.joinToString("; "),
+            )
+        }
+
+    /** Kiểm tra cấu hình HA: token + số media_player. */
+    suspend fun testHomeAssistant(): CastCheck = runCatching {
         val cfg = _integrations.value
         if (cfg.haUrl.isBlank() || cfg.haToken.isBlank()) {
-            throw FrigateApiException("Chưa cấu hình Home Assistant URL + token.")
+            return@runCatching CastCheck(
+                "Home Assistant",
+                false,
+                "Chưa nhập HA URL hoặc token (Cài đặt → Phát lên màn hình khác).",
+            )
         }
-        val payload = kotlinx.serialization.json.buildJsonObject {
-            put("entity_id", kotlinx.serialization.json.JsonPrimitive(entityId))
-            put("media_content_id", kotlinx.serialization.json.JsonPrimitive(url))
-            put("media_content_type", kotlinx.serialization.json.JsonPrimitive("video"))
-        }.toString()
-        plainCall(
-            okhttp3.Request.Builder()
-                .url("${cfg.haUrl}/api/services/media_player/play_media")
-                .header("Authorization", "Bearer ${cfg.haToken}")
-                .post(payload.toRequestBody("application/json".toMediaType()))
-                .build(),
+        val players = haMediaPlayers()
+        CastCheck(
+            "Home Assistant",
+            true,
+            "${cfg.haUrl}/api/states → ${players.size} media_player" +
+                if (players.isNotEmpty()) {
+                    " (${players.take(5).joinToString(", ") { it.second }})"
+                } else {
+                    " — chưa có media_player nào trong HA"
+                },
+        )
+    }.getOrElse { e ->
+        val cfg = _integrations.value
+        CastCheck(
+            "Home Assistant",
+            false,
+            "${cfg.haUrl}/api/states · ${e.javaClass.simpleName}: " +
+                (e.message ?: "không có mô tả"),
         )
     }
 
@@ -978,7 +1016,8 @@ class FrigateRepository(
         private val KEY_NOTIFY = booleanPreferencesKey("notify_enabled")
         private val KEY_NOTIFY_CAMS = stringPreferencesKey("notify_cameras")
         private val KEY_NOTIFY_LABELS = stringPreferencesKey("notify_labels")
-        private val KEY_DARBOARD = stringPreferencesKey("darboard_url")
+        private val KEY_HA_DASH = stringPreferencesKey("ha_dashboard")
+        private val KEY_HA_VIEW = stringPreferencesKey("ha_view")
         private val KEY_HA_URL = stringPreferencesKey("ha_url")
         private val KEY_HA_TOKEN = stringPreferencesKey("ha_token")
     }

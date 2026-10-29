@@ -146,28 +146,15 @@ fun CastDeviceDialog(
     onDismiss: () -> Unit,
     streamUrl: String? = null,
     onStop: (() -> Unit)? = null,
-    darboardConfigured: Boolean = false,
-    onLoadPanels: (suspend () -> List<Pair<String, String>>)? = null,
-    onCastPanel: (suspend (String) -> Unit)? = null,
     haConfigured: Boolean = false,
     onLoadHaPlayers: (suspend () -> List<Pair<String, String>>)? = null,
-    onCastHa: (suspend (String) -> Unit)? = null,
+    onCastHa: (suspend (String) -> String)? = null,
 ) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var status by remember { mutableStateOf<String?>(null) }
-    var panels by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
     var players by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
-    var panelError by remember { mutableStateOf<String?>(null) }
     var haError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(darboardConfigured, onLoadPanels) {
-        if (!darboardConfigured || onLoadPanels == null) return@LaunchedEffect
-        try {
-            panels = onLoadPanels()
-        } catch (e: Exception) {
-            panelError = e.message ?: "Không tải được danh sách panel"
-        }
-    }
     LaunchedEffect(haConfigured, onLoadHaPlayers) {
         if (!haConfigured || onLoadHaPlayers == null) return@LaunchedEffect
         try {
@@ -293,55 +280,6 @@ fun CastDeviceDialog(
                         )
                     }
                 }
-                if (darboardConfigured) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("Màn hình Darboard", color = IOSLabel, fontSize = 12.sp)
-                    when {
-                        panelError != null -> Text(
-                            panelError!!,
-                            color = IOSRed,
-                            fontSize = 11.sp,
-                        )
-                        panels == null -> Text(
-                            "Đang tải panel…",
-                            fontSize = 11.sp,
-                            color = IOSSecondaryLabel,
-                        )
-                        panels!!.isEmpty() -> Text(
-                            "Không có panel nào đang kết nối (kiểm tra Darboard URL).",
-                            fontSize = 11.sp,
-                            color = IOSSecondaryLabel,
-                        )
-                        else -> panels!!.forEach { (id, name) ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        scope.launch {
-                                            try {
-                                                onCastPanel?.invoke(id)
-                                                status = "Đã mở camera trên panel $name"
-                                            } catch (e: Exception) {
-                                                status = e.message ?: "Không gửi được lệnh"
-                                            }
-                                        }
-                                    }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Outlined.Tv,
-                                    contentDescription = null,
-                                    tint = IOSBlue,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Text(name, color = IOSLabel, fontSize = 14.sp)
-                            }
-                        }
-                    }
-                }
-
                 if (haConfigured) {
                     Spacer(Modifier.height(10.dp))
                     Text("Qua Home Assistant", color = IOSLabel, fontSize = 12.sp)
@@ -364,8 +302,8 @@ fun CastDeviceDialog(
                                     .clickable {
                                         scope.launch {
                                             try {
-                                                onCastHa?.invoke(entityId)
-                                                status = "Đã gửi lệnh phát tới $name"
+                                                val method = onCastHa?.invoke(entityId)
+                                                status = "Đã cast tới $name · $method"
                                             } catch (e: Exception) {
                                                 status = e.message ?: "HA từ chối lệnh"
                                             }
@@ -390,14 +328,6 @@ fun CastDeviceDialog(
                     }
                 }
 
-                if (!darboardConfigured) {
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Chưa cấu hình Darboard server → Cài đặt → Phát lên màn hình khác.",
-                        color = IOSSecondaryLabel,
-                        fontSize = 11.sp,
-                    )
-                }
                 if (!haConfigured) {
                     Spacer(Modifier.height(4.dp))
                     Text(

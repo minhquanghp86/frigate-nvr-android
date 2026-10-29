@@ -613,6 +613,21 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - HA cast: 4 media_player đã thấy (TX5-ATV6, Guition…, LG webOS), dùng
   `media_player.play_media` + HLS go2rtc.
 
+## 4u. Cập nhật 29/10/2026 — cast giống Advanced Camera (qua HA), bỏ Darboard
+
+- **Bỏ hoàn toàn Darboard** (settings, dialog, repo).
+- Cài đặt → “Phát lên màn hình khác”: **HA URL**, **HA token**, **Dashboard cast** + **View cast** (tuỳ chọn).
+- `haCast(entityId, hls, mp4)` thử lần lượt, trả về cách thành công:
+  1. **`cast.show_lovelace_view`** (dashboard_path/view_path) — đúng cách Advanced Camera
+     “Dashboard casting”, độ trễ thấp vì TV mở view Lovelace chứa card camera.
+  2. `media_player.play_media` với HLS (`media_content_type: video`).
+  3. `media_player.play_media` với MP4 (`video/mp4`).
+  4. Nếu entity là **webOS**: `webostv.command` → `ssap://media.viewer/open` (HLS), fallback mở browser.
+  5. Nếu entity là **Android TV**: `androidtv.adb_command` → `am start -a VIEW -d <mp4> -t video/*`.
+- Hộp thoại Cast hiển thị “Đã cast tới <tên> · <cách>”, lỗi cuối cùng gộp mô tả từng bước.
+- Ghi chú: dashboard casting cần **Google Cast device** (Chromecast/Android TV có cast). LG webOS
+  dùng nhánh webostv; nếu TV không nhận `media.viewer.open` thì fallback mở trình duyệt.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
