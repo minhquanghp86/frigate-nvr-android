@@ -235,22 +235,10 @@ fun CamerasScreen(
                 if (total > 0) used / total * 100 else 0.0
             }
 
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 158.dp),
-                modifier = modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 24.dp,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
+            Column(modifier.fillMaxSize()) {
+                // Header cố định: brand + tiêu đề + chip thông báo không cuộn theo lưới camera.
+                Column(Modifier.padding(horizontal = 16.dp)) {
                     BrandBar()
-                }
-
-                item(span = { GridItemSpan(maxLineSpan) }) {
                     HomeHeader(
                         cameraCount = cameras.size,
                         recordingCount = recordingCount,
@@ -265,35 +253,49 @@ fun CamerasScreen(
                     )
                 }
 
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    QuickStats(
-                        eventsToday = totalToday,
-                        recording = "${recordingCount}/${cameras.size}",
-                        storagePercent = storagePct,
-                    )
-                }
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 158.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                        start = 16.dp,
+                        end = 16.dp,
+                        bottom = 24.dp,
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        QuickStats(
+                            eventsToday = totalToday,
+                            recording = "${recordingCount}/${cameras.size}",
+                            storagePercent = storagePct,
+                        )
+                    }
 
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    FaceWatchCard(
-                        events = faceToday,
-                        onOpenAll = onOpenFaceEvents,
-                        onOpenEvent = onOpenEvent,
-                    )
-                }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        FaceWatchCard(
+                            events = faceToday,
+                            onOpenAll = onOpenFaceEvents,
+                            onOpenEvent = onOpenEvent,
+                        )
+                    }
 
-                items(cameras, key = { it }) { name ->
-                    CameraCard(
-                        name = name,
-                        config = config.cameras[name],
-                        fps = cameraFps(stats, name),
-                        eventsToday = todayCounts[name] ?: 0,
-                        latest = latest[name],
-                        tick = tick,
-                        onClick = {
-                            runCatching { repo.warmStream(name) }
-                            onOpenCamera(name)
-                        },
-                    )
+                    items(cameras, key = { it }) { name ->
+                        CameraCard(
+                            name = name,
+                            config = config.cameras[name],
+                            fps = cameraFps(stats, name),
+                            eventsToday = todayCounts[name] ?: 0,
+                            latest = latest[name],
+                            tick = tick,
+                            onClick = {
+                                runCatching { repo.warmStream(name) }
+                                onOpenCamera(name)
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -310,18 +312,19 @@ private fun BrandBar() {
     ) {
         Box(
             Modifier
-                .size(26.dp)
-                .clip(RoundedCornerShape(7.dp))
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .background(
-                    Brush.linearGradient(listOf(IOSBlue, Color(0xFF5E5CE6))),
+                    Brush.linearGradient(listOf(Color(0xFF0A1526), Color(0xFF12375E))),
                 ),
             Alignment.Center,
         ) {
-            Icon(
-                Icons.Outlined.Videocam,
+            Image(
+                painter = androidx.compose.ui.res.painterResource(
+                    com.minhquanghp86.frigatenvr.R.drawable.ic_launcher_foreground,
+                ),
                 contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(16.dp),
+                modifier = Modifier.fillMaxSize(),
             )
         }
         Spacer(Modifier.width(8.dp))
