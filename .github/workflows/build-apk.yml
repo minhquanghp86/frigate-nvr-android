@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK/AAB
 
 on:
   push:
@@ -32,39 +32,53 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Trỏ Android SDK
+      - name: Cài SDK platform 36 (yêu cầu Google Play từ 31/08/2026)
         run: |
           SDKDIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
           echo "sdk.dir=${SDKDIR}" > local.properties
           echo "Dùng SDK: ${SDKDIR}"
-          ls "${SDKDIR}/platforms" 2>/dev/null || true
+          if [ ! -d "${SDKDIR}/platforms/android-36" ]; then
+            SDKMGR="$(find "${SDKDIR}/cmdline-tools" -name sdkmanager -type f | head -n1)"
+            yes | "${SDKMGR}" "platforms;android-36" "build-tools;36.0.0" >/dev/null
+          fi
+          ls "${SDKDIR}/platforms"
 
       - name: Xac dinh version
         id: ver
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            V="${GITHUB_REF_NAME}"
+            # Bỏ tiền tố v để versionName dạng số (Play ưu tiên semver)
+            V="${GITHUB_REF_NAME#v}"
           else
             V="0.1.0-dev.${GITHUB_RUN_NUMBER}"
           fi
           echo "name=${V}" >> "$GITHUB_OUTPUT"
           echo "Version: ${V}"
 
-      - name: Build APK + unit test
-        run: ./gradlew assembleRelease testReleaseUnitTest --no-daemon
+      - name: Build APK + AAB + unit test
+        run: ./gradlew assembleRelease bundleRelease testReleaseUnitTest --no-daemon
         env:
           APP_VERSION_NAME: ${{ steps.ver.outputs.name }}
 
-      - name: Upload artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: frigate-nvr-android-${{ steps.ver.outputs.name }}
+          name: frigate-nvr-android-${{ steps.ver.outputs.name }}-apk
           path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+
+      - name: Upload AAB artifact (dùng để nộp Google Play)
+        uses: actions/upload-artifact@v4
+        with:
+          name: frigate-nvr-android-${{ steps.ver.outputs.name }}-aab
+          path: app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/*.apk
+          files: |
+            app/build/outputs/apk/release/*.apk
+            app/build/outputs/bundle/release/*.aab
           generate_release_notes: true

@@ -394,6 +394,38 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - `IosRow`: tiêu đề `maxLines = 1` + ellipsis, subtitle tối đa 2 dòng, giá trị bên phải giới hạn
   `widthIn(max = 200.dp)` + ellipsis — không còn cảnh tiêu đề bị bóp thành 4 dòng.
 
+## 4a. Cập nhật 29/10/2026 — GĐ A (Play-ready) + GĐ B (P0)
+
+### GĐ A — sẵn sàng Google Play
+- **targetSdk/compileSdk 36** (bắt buộc với app mới/cập nhật từ 31/08/2026), AGP **8.10.1**, Gradle **8.11.1**.
+- Edge-to-edge: `enableEdgeToEdge` với `SystemBarStyle.dark` (icon thanh hệ thống luôn sáng cho nền tối).
+- CI: cài `platforms;android-36` + `build-tools;36.0.0` nếu thiếu, build **APK + AAB** (`bundleRelease`),
+  upload cả hai artifact, tag `v*` đính cả APK và AAB; `APP_VERSION_NAME` bỏ tiền tố `v` (semver số).
+- **Demo mode**: nút “Dùng bản demo” ở màn đăng nhập → `https://demo.frigate.video` (Frigate 0.18.2 công khai,
+  `auth.enabled=false`); `signIn` cho phép tài khoản trống và dùng phiên ẩn danh.
+- **Privacy policy** `docs/privacy.md` (vi + en) + hàng “Chính sách quyền riêng tư” và “Mã nguồn / Báo lỗi”
+  trong Cài đặt → Ứng dụng. Cần bật GitHub Pages (Settings → Pages → main /docs) để có URL HTTPS.
+- 16 KB page size: đã kiểm tra AAR WebRTC 137.7151.05 (`p_align = 0x4000`) → đạt.
+
+### GĐ B — tính năng P0
+- **Cấu hình Camera mở rộng**: enabled, detect, motion, recordings, snapshots, audio, notifications,
+  review_alerts, review_detections, object_descriptions + **profile cấu hình** (`GET /api/profiles`,
+  `PUT /api/camera/*/set/profile`). Sửa lỗi tên feature: `record` → **`recordings`**.
+- **Sửa dữ liệu sự kiện**: nhãn phụ (`/events/{id}/sub_label`), biển số
+  (`/events/{id}/recognized_license_plate`), thuộc tính (`/events/{id}/attributes`),
+  false positive (`/events/{id}/false_positive`).
+- **Đổi tên khuôn mặt**: `POST /api/faces/{old_name}/rename`.
+- **Cảnh báo**: chạm vào cảnh báo trong Hệ thống để **Đã hiểu** (`/notices/{id}/acknowledge`)
+  hoặc **Ẩn vĩnh viễn** (`/notices/{id}/mute`).
+
+### Việc còn lại cho Play
+1. Bật GitHub Pages (Settings → Pages → Deploy from a branch → `main` / `/docs`) để có URL privacy.
+2. Tạo tài khoản Play Console (25 USD, xác minh danh tính) → tạo app → upload AAB.
+3. App content: privacy URL, ads = Không, **Sign-in details** = hướng dẫn “Dùng bản demo”
+   (hoặc URL `https://demo.frigate.video`, không cần tài khoản), target audience 18+, content rating, Data safety.
+4. Closed test 12 tester / 14 ngày liên tục → apply production.
+5. Store assets: icon 512, feature graphic 1024x500, screenshot điện thoại.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

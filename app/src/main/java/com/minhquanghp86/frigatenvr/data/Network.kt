@@ -108,6 +108,42 @@ interface FrigateApi {
         @Query("split_joined") splitJoined: String? = null,
     ): kotlinx.serialization.json.JsonElement
 
+    @POST("api/notices/{id}/acknowledge")
+    suspend fun acknowledgeNotice(@Path("id") id: String): ResponseBody
+
+    @POST("api/notices/{id}/mute")
+    suspend fun muteNotice(@Path("id") id: String): ResponseBody
+
+    @GET("api/profiles")
+    suspend fun profiles(): kotlinx.serialization.json.JsonElement
+
+    @POST("api/events/{id}/sub_label")
+    suspend fun setSubLabel(
+        @Path("id") id: String,
+        @Body body: SubLabelBody,
+    ): ResponseBody
+
+    @POST("api/events/{id}/recognized_license_plate")
+    suspend fun setPlate(
+        @Path("id") id: String,
+        @Body body: PlateBody,
+    ): ResponseBody
+
+    @POST("api/events/{id}/attributes")
+    suspend fun setAttributes(
+        @Path("id") id: String,
+        @Body body: AttributesBody,
+    ): ResponseBody
+
+    @POST("api/events/{id}/false_positive")
+    suspend fun falsePositive(@Path("id") id: String): ResponseBody
+
+    @POST("api/faces/{old_name}/rename")
+    suspend fun renameFace(
+        @Path("old_name") oldName: String,
+        @Body body: RenameFaceBody,
+    ): ResponseBody
+
     @GET("api/users")
     suspend fun users(): List<FrigateUser>
 

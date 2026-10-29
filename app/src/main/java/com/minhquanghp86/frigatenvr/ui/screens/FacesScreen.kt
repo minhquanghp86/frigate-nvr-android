@@ -70,6 +70,8 @@ fun FacesScreen(onBack: () -> Unit) {
     var newName by remember { mutableStateOf("") }
     var selectedName by remember { mutableStateOf<String?>(null) }
     var pendingName by remember { mutableStateOf<String?>(null) }
+    var renameName by remember { mutableStateOf("") }
+    var showRename by remember { mutableStateOf(false) }
 
     fun reload() {
         scope.launch {
@@ -252,6 +254,47 @@ fun FacesScreen(onBack: () -> Unit) {
         )
     }
 
+    if (showRename && selectedName != null) {
+        val from = selectedName!!
+        AlertDialog(
+            onDismissRequest = { showRename = false },
+            title = { Text("Đổi tên") },
+            text = {
+                OutlinedTextField(
+                    value = renameName,
+                    onValueChange = { renameName = it },
+                    label = { Text("Tên mới", fontSize = 13.sp) },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val to = renameName.trim()
+                        if (to.isBlank() || to == from) return@TextButton
+                        showRename = false
+                        selectedName = null
+                        busy = true
+                        scope.launch {
+                            try {
+                                repo.renameFace(from, to)
+                                message = "Đã đổi tên $from → $to"
+                                reload()
+                            } catch (e: Exception) {
+                                error = e.message ?: "Không đổi tên được"
+                            } finally {
+                                busy = false
+                            }
+                        }
+                    },
+                ) { Text("Lưu") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRename = false }) { Text("Huỷ") }
+            },
+        )
+    }
+
     val current = selectedName
     if (current != null) {
         val files = faces?.get(current).orEmpty()
@@ -269,6 +312,12 @@ fun FacesScreen(onBack: () -> Unit) {
                             pickImage.launch("image/*")
                         },
                     ) { Text("Thêm ảnh từ thư viện") }
+                    TextButton(
+                        onClick = {
+                            renameName = current
+                            showRename = true
+                        },
+                    ) { Text("Đổi tên người này") }
                     TextButton(
                         onClick = {
                             selectedName = null

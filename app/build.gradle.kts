@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.minhquanghp86.frigatenvr"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.minhquanghp86.frigatenvr"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
         versionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0-dev"
         vectorDrawables { useSupportLibrary = true }
