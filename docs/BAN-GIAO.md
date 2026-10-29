@@ -481,6 +481,13 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   **Xoá người** (xoá toàn bộ ảnh).
 - Danh sách người vẫn hiển thị ảnh đại diện + số ảnh; hộp thoại cũ đã bỏ để tránh trùng chức năng.
 
+## 4g. Cập nhật 29/10/2026 — logo mới ở header + header cố định
+
+- Brand bar dùng **đúng logo mới**: nền gradient navy `#0A1526 → #12375E` (như `ic_launcher_background`)
+  + ảnh vector `ic_launcher_foreground` (chim trắng-xanh); thay cho ô xanh + icon videocam tạm.
+- Tab Camera: **header cố định** (BrandBar + tiêu đề “Camera” + chip thông báo/nút tải lại) nằm ngoài
+  `LazyVerticalGrid`; chỉ phần thẻ số liệu, thẻ khuôn mặt và lưới camera cuộn.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
