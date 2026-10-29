@@ -113,6 +113,10 @@ class FrigateRepository(
 
     suspend fun versionText(): String = call { version() }.string().trim()
 
+    suspend fun earliestRecordingDay(): String? = runCatching {
+        call { recordingsSummary(java.util.TimeZone.getDefault().id) }.keys.minOrNull()
+    }.getOrNull()
+
     suspend fun statsJson(): kotlinx.serialization.json.JsonObject? =
         runCatching {
             val body = call { stats() }.string()
