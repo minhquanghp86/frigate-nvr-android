@@ -274,6 +274,39 @@ fun TimelineScreen(
         }
     }
 
+    /** Tải nhanh: cắt trực tiếp clip.mp4 của khung giờ (không qua export job). */
+    fun fastDownloadAt(value: Float) {
+        val day = selectedDay ?: return
+        val cam = camera ?: return
+        val hour = value.toInt().coerceIn(0, 1439) / 60
+        scope.launch {
+            saving = true
+            ensureNotifyPermission()
+            val start = ZonedDateTime.of(
+                LocalDate.parse(day),
+                LocalTime.of(hour, 0),
+                ZoneId.systemDefault(),
+            ).toEpochSecond()
+            message = "Tải nhanh: đang lấy dữ liệu từ Frigate…"
+            val saved = MediaSaver.save(
+                context = context,
+                client = repo.okhttp(),
+                url = repo.clipRange(cam, start, start + 3600),
+                fileName = "frigate-$cam-$day-$hour.mp4",
+                mime = "video/mp4",
+                onProgress = { percent ->
+                    message = if (percent == null) {
+                        "Đang tải nhanh…"
+                    } else {
+                        "Đang tải nhanh… $percent%"
+                    }
+                },
+            )
+            message = saved?.let { "Đã lưu: $it" } ?: "Không tải được khung giờ này"
+            saving = false
+        }
+    }
+
     Column(modifier.fillMaxSize()) {
         LargeTitleHeader(
             title = "Xem lại",
@@ -600,6 +633,9 @@ fun TimelineScreen(
                             Spacer(Modifier.width(6.dp))
                         }
                         Text("Tải", fontSize = 13.sp)
+                    }
+                    OutlinedButton(onClick = { fastDownloadAt(minutes) }, enabled = !saving) {
+                        Text("Tải nhanh", fontSize = 13.sp)
                     }
                 }
 

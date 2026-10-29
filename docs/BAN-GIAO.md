@@ -507,6 +507,13 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   khoảng dài). Export job tạo file MP4 hoàn chỉnh trên Frigate rồi mới tải — chậm hơn nhưng có tiến trình
   và ổn định; nếu job lỗi/không dùng được thì tự fallback về `clip.mp4`.
 
+## 4j. Cập nhật 29/10/2026 — thêm nút “Tải nhanh” ở Xem lại
+
+- Cạnh “Tải” (export job có tiến trình 2 bước) có thêm **“Tải nhanh”**:
+  gọi trực tiếp `/{cam}/start/{s}/end/{e}/clip.mp4`, tải ngay không chờ Frigate tạo file;
+  tiến trình hiển thị “Đang tải nhanh… x%”, vẫn có notification trên thanh trạng thái.
+- Phù hợp khi cần lấy nhanh một khung giờ; “Tải” vẫn dành cho file MP4 hoàn chỉnh/ổn định hơn.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
