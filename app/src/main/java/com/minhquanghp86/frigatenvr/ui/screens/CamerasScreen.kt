@@ -291,15 +291,22 @@ private fun BrandBar() {
             .padding(top = 12.dp, bottom = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Image(
-            painter = androidx.compose.ui.res.painterResource(
-                id = com.minhquanghp86.frigatenvr.R.mipmap.ic_launcher,
-            ),
-            contentDescription = null,
-            modifier = Modifier
+        Box(
+            Modifier
                 .size(26.dp)
-                .clip(RoundedCornerShape(7.dp)),
-        )
+                .clip(RoundedCornerShape(7.dp))
+                .background(
+                    Brush.linearGradient(listOf(IOSBlue, Color(0xFF5E5CE6))),
+                ),
+            Alignment.Center,
+        ) {
+            Icon(
+                Icons.Outlined.Videocam,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp),
+            )
+        }
         Spacer(Modifier.width(8.dp))
         Text(
             "FriCam",
