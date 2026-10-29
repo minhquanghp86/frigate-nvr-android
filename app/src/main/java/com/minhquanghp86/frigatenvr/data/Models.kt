@@ -18,6 +18,12 @@ data class LoginBody(val message: String? = null, val access_token: String? = nu
 data class CameraSetBody(val value: String)
 
 @Serializable
+data class ExportBody(
+    val source: String = "recordings",
+    val name: String? = null,
+)
+
+@Serializable
 data class IdsBody(
     val ids: List<String>,
     // Frigate 0.18 yêu cầu field này khi đánh dấu đã xem/bỏ đánh dấu.
@@ -87,6 +93,7 @@ data class FrigateCameraConfig(
     val record: JsonObject? = null,
     val audio: JsonObject? = null,
     val detect: JsonObject? = null,
+    val zones: JsonObject? = null,
     val live: JsonObject? = null,
     val ffmpeg: JsonObject? = null,
     val snapshots: JsonObject? = null,
@@ -94,6 +101,7 @@ data class FrigateCameraConfig(
     val detectOn: Boolean get() = detect.flag("enabled", default = true)
     val snapshotsOn: Boolean get() = snapshots.flag("enabled")
     val recording: Boolean get() = record.flag("enabled")
+    val zoneNames: List<String> get() = zones?.keys?.toList().orEmpty()
     val hasAudio: Boolean get() = audio.flag("enabled")
 
     /** Tên stream go2rtc khai báo trong live.streams (0.18: object, bản cũ: mảng). */

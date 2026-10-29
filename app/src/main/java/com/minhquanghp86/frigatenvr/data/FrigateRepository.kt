@@ -70,6 +70,9 @@ class FrigateRepository(
     private val _notifyCameras = MutableStateFlow<Set<String>>(emptySet())
     val notifyCameras: StateFlow<Set<String>> = _notifyCameras.asStateFlow()
 
+    private val _notifyLabels = MutableStateFlow<Set<String>>(emptySet())
+    val notifyLabels: StateFlow<Set<String>> = _notifyLabels.asStateFlow()
+
     /** Tăng mỗi khi dữ liệu sự kiện thay đổi (xoá...) để các danh sách tự làm mới. */
     private val _dataVersion = MutableStateFlow(0)
     val dataVersion: StateFlow<Int> = _dataVersion.asStateFlow()
@@ -108,9 +111,23 @@ class FrigateRepository(
 
     suspend fun notices(): kotlinx.serialization.json.JsonElement = call { notices() }
 
+    suspend fun versionText(): String = call { version() }.string().trim()
+
+    suspend fun statsJson(): kotlinx.serialization.json.JsonObject? =
+        runCatching {
+            val body = call { stats() }.string()
+            kotlinx.serialization.json.Json.parseToJsonElement(body)
+                as? kotlinx.serialization.json.JsonObject
+        }.getOrNull()
+
     suspend fun setNotifyEnabled(enabled: Boolean) {
         store.edit { it[KEY_NOTIFY] = enabled }
         _notifyEnabled.value = enabled
+    }
+
+    suspend fun setNotifyLabels(labels: Set<String>) {
+        store.edit { it[KEY_NOTIFY_LABELS] = labels.joinToString(",") }
+        _notifyLabels.value = labels
     }
 
     suspend fun setNotifyCameras(cameras: Set<String>) {
@@ -134,6 +151,11 @@ class FrigateRepository(
         val prefs = store.data.first()
         _notifyEnabled.value = prefs[KEY_NOTIFY] ?: false
         _notifyCameras.value = prefs[KEY_NOTIFY_CAMS]
+            ?.split(",")
+            ?.filter { it.isNotBlank() }
+            ?.toSet()
+            ?: emptySet()
+        _notifyLabels.value = prefs[KEY_NOTIFY_LABELS]
             ?.split(",")
             ?.filter { it.isNotBlank() }
             ?.toSet()
@@ -448,6 +470,45 @@ class FrigateRepository(
         return url("/vod/$y-$m/$d/$hour/$camera/$tz/master.m3u8")
     }
 
+    // ------------------------------------------------------------------ export
+
+    data class ExportProgress(val status: String, val step: String, val percent: Double)
+
+    /** Tạo job export; trả về export id. */
+    suspend fun createExport(camera: String, startSec: Long, endSec: Long): String? {
+        val res = call {
+            createExport(camera, startSec.toString(), endSec.toString(), ExportBody())
+        }
+        val obj = res as? kotlinx.serialization.json.JsonObject ?: return null
+        val ok = obj.str("success")?.toBooleanStrictOrNull() ?: true
+        if (!ok) return null
+        return obj.str("export_id")
+    }
+
+    suspend fun exportProgress(exportId: String): ExportProgress? {
+        val obj = call { exportJob(exportId) } as? kotlinx.serialization.json.JsonObject
+            ?: return null
+        return ExportProgress(
+            status = obj.str("status") ?: "unknown",
+            step = obj.str("current_step") ?: "",
+            percent = obj.num("progress_percent") ?: 0.0,
+        )
+    }
+
+    /** URL tải file export đã hoàn tất (nginx phục vụ /exports/<tên file>). */
+    suspend fun exportDownloadUrl(exportId: String): String? {
+        val arr = call { exports() } as? kotlinx.serialization.json.JsonArray ?: return null
+        val row = arr.mapNotNull { it as? kotlinx.serialization.json.JsonObject }
+            .firstOrNull { it.str("id") == exportId } ?: return null
+        val path = row.str("video_path") ?: return null
+        return url("/exports/" + path.substringAfterLast('/'))
+    }
+
+    suspend fun exportsList(): List<kotlinx.serialization.json.JsonObject> {
+        val arr = call { exports() } as? kotlinx.serialization.json.JsonArray ?: return emptyList()
+        return arr.mapNotNull { it as? kotlinx.serialization.json.JsonObject }
+    }
+
     // ------------------------------------------------------------------ go2rtc
 
     /** go2rtc (mặc định http://<host-frigate>:1984) — luồng gốc, fps đầy đủ. */
@@ -507,5 +568,6 @@ class FrigateRepository(
         private val KEY_GO2RTC = stringPreferencesKey("go2rtc_url")
         private val KEY_NOTIFY = booleanPreferencesKey("notify_enabled")
         private val KEY_NOTIFY_CAMS = stringPreferencesKey("notify_cameras")
+        private val KEY_NOTIFY_LABELS = stringPreferencesKey("notify_labels")
     }
 }

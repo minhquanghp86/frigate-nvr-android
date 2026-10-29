@@ -65,12 +65,13 @@ object Notify {
         )
     }
 
-    /** Mở đúng sự kiện đã báo (kèm camera để dự phòng nếu sự kiện đã bị xoá). */
-    fun openEventIntent(context: Context, eventId: String, camera: String): PendingIntent {
+    /** Mở live của camera đã báo, kèm panel sự kiện của camera đó. */
+    fun openCameraEventsIntent(context: Context, camera: String, eventId: String): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            putExtra(MainActivity.EXTRA_EVENT_ID, eventId)
             putExtra(MainActivity.EXTRA_CAMERA, camera)
+            putExtra(MainActivity.EXTRA_OPEN_EVENTS, true)
+            putExtra(MainActivity.EXTRA_EVENT_ID, eventId)
         }
         return PendingIntent.getActivity(
             context,
@@ -151,9 +152,11 @@ class EventWatchService : Service() {
                     )
                 }
                 val cameraFilter = repo.notifyCameras.value
+                val labelFilter = repo.notifyLabels.value
                 for (e in events.sortedBy { it.startTime }) {
                     if (!seen.add(e.id)) continue
                     if (cameraFilter.isNotEmpty() && e.camera !in cameraFilter) continue
+                    if (labelFilter.isNotEmpty() && e.label !in labelFilter) continue
                     if (e.startTime > lastAfter) lastAfter = e.startTime
                     if (e.hasSnapshot || e.hasClip) postEvent(e)
                 }
@@ -182,7 +185,7 @@ class EventWatchService : Service() {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(true)
-            .setContentIntent(Notify.openEventIntent(this, e.id, e.camera))
+            .setContentIntent(Notify.openCameraEventsIntent(this, e.camera, e.id))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .build()
         runCatching { nm.notify(e.id.hashCode(), notification) }

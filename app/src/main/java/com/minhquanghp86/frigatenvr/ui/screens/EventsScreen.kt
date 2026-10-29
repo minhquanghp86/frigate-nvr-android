@@ -104,6 +104,9 @@ fun EventsScreen(
     val camera by vm.camera.collectAsState()
     val label by vm.label.collectAsState()
     val apiLabels by vm.labels.collectAsState()
+    val zones by vm.zones.collectAsState()
+    val zone by vm.zone.collectAsState()
+    val rangeHours by vm.rangeHours.collectAsState()
     val onlyClip by vm.onlyWithClip.collectAsState()
     val labelOptions = remember(apiLabels) {
         listOf<String?>(null) + (apiLabels.ifEmpty { LABEL_OPTIONS.filterNotNull() })
@@ -182,6 +185,35 @@ fun EventsScreen(
                 onClick = { vm.setOnlyWithClip(!onlyClip) },
                 label = { Text(if (onlyClip) "Có clip ✓" else "Có clip", fontSize = 12.sp) },
             )
+            val ranges = listOf<Int?>(null, 1, 24, 168)
+            AssistChip(
+                onClick = {
+                    val idx = ranges.indexOf(rangeHours)
+                    vm.setRange(ranges[(idx + 1) % ranges.size])
+                },
+                label = {
+                    Text(
+                        when (rangeHours) {
+                            null -> "Mọi lúc"
+                            1 -> "1 giờ"
+                            24 -> "24 giờ"
+                            168 -> "7 ngày"
+                            else -> "${rangeHours}h"
+                        },
+                        fontSize = 12.sp,
+                    )
+                },
+            )
+            if (zones.isNotEmpty()) {
+                AssistChip(
+                    onClick = {
+                        val options = listOf<String?>(null) + zones
+                        val idx = options.indexOf(zone)
+                        vm.setZone(options[(idx + 1) % options.size])
+                    },
+                    label = { Text(zone ?: "Mọi vùng", fontSize = 12.sp) },
+                )
+            }
         }
 
         when {
@@ -330,6 +362,8 @@ fun EventDetailScreen(
     modifier: Modifier = Modifier,
     eventId: String,
     onBack: () -> Unit,
+    cameraHint: String? = null,
+    onOpenCamera: (String) -> Unit = {},
     onFullscreen: (String, Long) -> Unit = { _, _ -> },
 ) {
     val repo = rememberRepo()
@@ -364,7 +398,18 @@ fun EventDetailScreen(
         val current = event
         when {
             current == null && error == null -> LoadingBox()
-            current == null -> ErrorBox(error ?: "Không có dữ liệu", onRetry = onBack)
+            current == null -> Column(
+                Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                ErrorBox(error ?: "Không có dữ liệu", onRetry = onBack)
+                if (cameraHint != null) {
+                    OutlinedButton(onClick = { onOpenCamera(cameraHint) }) {
+                        Text("Mở live camera $cameraHint")
+                    }
+                }
+            }
             else -> LazyColumn(
                 contentPadding = PaddingValues(12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),

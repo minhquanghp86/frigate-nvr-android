@@ -84,6 +84,20 @@ interface FrigateApi {
     @DELETE("api/events/{id}/retain")
     suspend fun unretenEvent(@Path("id") id: String): retrofit2.Response<ResponseBody>
 
+    @POST("api/export/{camera}/start/{start}/end/{end}")
+    suspend fun createExport(
+        @Path("camera") camera: String,
+        @Path("start") start: String,
+        @Path("end") end: String,
+        @Body body: ExportBody,
+    ): kotlinx.serialization.json.JsonElement
+
+    @GET("api/jobs/export/{id}")
+    suspend fun exportJob(@Path("id") id: String): kotlinx.serialization.json.JsonElement
+
+    @GET("api/exports")
+    suspend fun exports(): kotlinx.serialization.json.JsonElement
+
     @GET("api/labels")
     suspend fun labels(): List<String>
 

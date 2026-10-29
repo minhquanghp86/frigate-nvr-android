@@ -163,21 +163,66 @@ fun TimelineScreen(
         val hour = value.toInt().coerceIn(0, 1439) / 60
         scope.launch {
             saving = true
-            message = "Đang tải…"
             ensureNotifyPermission()
             val start = ZonedDateTime.of(
                 LocalDate.parse(day),
                 LocalTime.of(hour, 0),
                 ZoneId.systemDefault(),
             ).toEpochSecond()
+            val end = start + 3600
+
+            message = "Đang tạo export…"
+            var downloadUrl: String? = null
+
+            // 1) Export qua job (có tiến trình, file chuẩn của Frigate)
+            val exportId = runCatching { repo.createExport(cam, start, end) }.getOrNull()
+            if (exportId != null) {
+                var finished = false
+                for (i in 0 until 90) {
+                    val progress = runCatching { repo.exportProgress(exportId) }.getOrNull()
+                    if (progress == null) {
+                        // job đã xong và bị xoá khỏi bộ nhớ
+                        finished = true
+                        break
+                    }
+                    message = "Đang xuất: ${progress.step} ${progress.percent.toInt()}%"
+                    if (progress.status == "success") {
+                        finished = true
+                        break
+                    }
+                    if (progress.status == "failed" || progress.status == "cancelled") {
+                        message = "Export lỗi — thử tải trực tiếp"
+                        break
+                    }
+                    kotlinx.coroutines.delay(2_000)
+                }
+                if (finished) {
+                    // chờ dòng export xuất hiện trong DB
+                    for (i in 0 until 6) {
+                        downloadUrl = runCatching { repo.exportDownloadUrl(exportId) }.getOrNull()
+                        if (downloadUrl != null) break
+                        kotlinx.coroutines.delay(1_000)
+                    }
+                }
+            }
+
+            if (downloadUrl == null) {
+                message = "Tải trực tiếp khung giờ…"
+                downloadUrl = repo.clipRange(cam, start, end)
+            }
+
             val saved = MediaSaver.save(
                 context = context,
                 client = repo.okhttp(),
-                url = repo.clipRange(cam, start, start + 3600),
+                url = downloadUrl,
                 fileName = "frigate-$cam-$day-$hour.mp4",
                 mime = "video/mp4",
                 onProgress = { percent ->
-                    message = if (percent == null) "Đang tải…" else "Đang tải… $percent%"
+                    message = if (percent == null) {
+                        "Đang tải…"
+                    } else {
+                        "Đang tải… $percent%"
+                    }
                 },
             )
             message = saved?.let { "Đã lưu: $it" } ?: "Không tải được khung giờ này"

@@ -270,6 +270,7 @@ fun CameraLiveScreen(
     onBack: () -> Unit,
     onOpenEvent: (String) -> Unit = {},
     onOpenTimeline: (String) -> Unit = {},
+    initialPanel: Int = 0,
 ) {
     val repo = rememberRepo()
     val context = LocalContext.current
@@ -288,7 +289,7 @@ fun CameraLiveScreen(
     var showStats by rememberSaveable { mutableStateOf(false) }
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var immersive by rememberSaveable { mutableStateOf(false) }
-    var panel by rememberSaveable { mutableIntStateOf(0) }
+    var panel by rememberSaveable(camera, initialPanel) { mutableIntStateOf(initialPanel) }
     var showSettings by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var streamName by remember(camera) { mutableStateOf(camera) }
