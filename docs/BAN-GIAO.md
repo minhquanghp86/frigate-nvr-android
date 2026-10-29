@@ -628,6 +628,14 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - Ghi chú: dashboard casting cần **Google Cast device** (Chromecast/Android TV có cast). LG webOS
   dùng nhánh webostv; nếu TV không nhận `media.viewer.open` thì fallback mở trình duyệt.
 
+## 4v. Cập nhật 29/10/2026 — xác nhận crash log là entry cũ + logo vẽ bằng Canvas
+
+- Log người dùng gửi có header `app vv0.11.0 (67) · 10:06` — **trước bản v0.11.1**, đúng lỗi
+  `painterResource(R.mipmap.ic_launcher)` (adaptive icon). Bản hiện tại không còn đường code này.
+- Để chắc chắn không tái diễn: thay `painterResource(R.drawable.ic_launcher_foreground)` trong `BrandBar`
+  bằng **`FriCamLogo`** (`ui/BrandLogo.kt`) vẽ chim + nền navy **trực tiếp bằng Canvas/Path**, không nạp resource.
+- Crash log header đã có phiên bản từ v0.11.1, nên entry mới sẽ ghi `V0.19.1` — dễ phân biệt entry cũ.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
