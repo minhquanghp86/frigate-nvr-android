@@ -426,6 +426,23 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 4. Closed test 12 tester / 14 ngày liên tục → apply production.
 5. Store assets: icon 512, feature graphic 1024x500, screenshot điện thoại.
 
+## 4b. Cập nhật 29/10/2026 — GĐ C + sửa icon/ảnh thông báo
+
+- **Icon thông báo**: thay `android.R.drawable.ic_menu_camera` (icon hệ thống cũ) bằng vector
+  `drawable/ic_stat_fricam.xml` (logo chim trắng của app); áp dụng cho cả thông báo sự kiện,
+  foreground service và thông báo tải media.
+- **Ảnh phát hiện trong thông báo**: tải `snapshot.jpg` của sự kiện bằng OkHttp có Bearer,
+  downsample ≤1080px, hiển thị bằng `BigPictureStyle` (ảnh lớn) + `setLargeIcon` (avatar tròn).
+  Tiêu đề đổi thành “Phát hiện người”/“Phát hiện người: <tên>” khi label = person.
+- **Màn Cảnh báo (Review)**: `GET /api/review` với bộ lọc Chưa xem / Alert / Detection / Đã xem / Tất cả;
+  thumbnail lấy từ sự kiện đầu tiên trong `data.detections` (fallback `latest.jpg`); bấm để phát
+  `/api/review/{id}/clip.mp4` trong player toàn màn hình; nút ✓ gọi `POST /api/reviews/viewed`.
+  Vào từ Cài đặt → Cấu hình Frigate → “Cảnh báo (review)”.
+- **Xem trước khi tua timeline**: khi kéo playhead, hiện ảnh `GET /api/{cam}/recordings/{epoch}/snapshot.jpg?height=144`
+  kèm giờ tương ứng; thả tay thì phát đúng thời điểm như trước.
+- **Tài sản store**: `docs/store/icon-512.png`, `docs/store/feature-graphic-1024x500.png`,
+  `docs/store/listing.md` (mô tả VI/EN, App content, Data safety, ghi chú i18n).
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

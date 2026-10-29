@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.PrivacyTip
 import androidx.compose.material.icons.outlined.Code
@@ -94,6 +95,7 @@ fun SettingsScreen(
     onOpenFaces: () -> Unit = {},
     onOpenUsers: () -> Unit = {},
     onOpenCameraConfig: () -> Unit = {},
+    onOpenAlerts: () -> Unit = {},
 ) {
     val vm: SettingsViewModel = viewModel()
     val repo = vm.repo()
@@ -324,6 +326,13 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Insights,
                         chevron = true,
                         onClick = onOpenOverview,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Cảnh báo (review)",
+                        icon = Icons.Outlined.NotificationsActive,
+                        chevron = true,
+                        onClick = onOpenAlerts,
                     )
                     IosDivider(56)
                     IosRow(

@@ -42,6 +42,7 @@ import com.minhquanghp86.frigatenvr.data.FrigateRepository
 import com.minhquanghp86.frigatenvr.data.SessionState
 import com.minhquanghp86.frigatenvr.ui.screens.CameraLiveScreen
 import com.minhquanghp86.frigatenvr.ui.screens.CamerasScreen
+import com.minhquanghp86.frigatenvr.ui.screens.AlertsScreen
 import com.minhquanghp86.frigatenvr.ui.screens.CameraConfigScreen
 import com.minhquanghp86.frigatenvr.ui.screens.FaceEventsScreen
 import com.minhquanghp86.frigatenvr.ui.screens.FacesScreen
@@ -273,6 +274,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     onOpenFaces = { navController.navigate("faces") },
                     onOpenUsers = { navController.navigate("users") },
                     onOpenCameraConfig = { navController.navigate("cameraConfig") },
+                    onOpenAlerts = { navController.navigate("alerts") },
                 )
             }
             composable("faceEvents") {
@@ -305,6 +307,15 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                             launchSingleTop = true
                             restoreState = true
                         }
+                    },
+                )
+            }
+            composable("alerts") {
+                AlertsScreen(
+                    onBack = { navController.popBackStack() },
+                    onPlayClip = { url, _ ->
+                        com.minhquanghp86.frigatenvr.ui.PlayerStore.open(url, 0L)
+                        navController.navigate("player")
                     },
                 )
             }

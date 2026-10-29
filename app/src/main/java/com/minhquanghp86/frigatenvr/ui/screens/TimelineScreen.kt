@@ -1,6 +1,10 @@
 package com.minhquanghp86.frigatenvr.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import com.minhquanghp86.frigatenvr.ui.FrigateImage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -114,6 +118,7 @@ fun TimelineScreen(
     var startPosMs by rememberSaveable { mutableLongStateOf(0L) }
     var autoPlayed by rememberSaveable { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
+    var previewMinutes by remember { mutableStateOf<Float?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(cameras, initialCamera) {
@@ -337,6 +342,41 @@ fun TimelineScreen(
 
                 Spacer(Modifier.height(10.dp))
 
+                // Ảnh xem trước khi kéo playhead (chụp từ bản ghi tại đúng thời điểm).
+                val preview = previewMinutes
+                if (preview != null && camera != null && selectedDay != null) {
+                    val epoch = java.time.LocalDate.parse(selectedDay!!)
+                        .atStartOfDay(java.time.ZoneId.systemDefault())
+                        .plusSeconds((preview * 60).toLong())
+                        .toEpochSecond()
+                    Row(
+                        Modifier
+                            .padding(horizontal = 12.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(IOSCard)
+                            .padding(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        FrigateImage(
+                            url = repo.recordingSnapshot(camera!!, epoch.toDouble(), height = 144),
+                            modifier = Modifier
+                                .width(96.dp)
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(6.dp)),
+                            contentScale = ContentScale.Crop,
+                            cacheKey = "%d".format(preview.toInt()),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "%02d:%02d".format(preview.toInt() / 60, preview.toInt() % 60),
+                            color = IOSLabel,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
+                }
+
                 // Timeline cuộn kiểu Frigate: vạch giờ, vùng có ghi hình, sự kiện tô màu.
                 val day = selectedDay
                 val hoursForDay = day?.let { d -> hours.firstOrNull { it.day == d }?.hours.orEmpty() }
@@ -379,10 +419,12 @@ fun TimelineScreen(
                                             if (dx != 0f) {
                                                 minutes = (minutes + dx / width * 1440f)
                                                     .coerceIn(0f, 1439f)
+                                                previewMinutes = minutes
                                                 changed = true
                                                 change.consume()
                                             }
                                         }
+                                        previewMinutes = null
                                         if (changed) playAt(minutes)
                                     } else {
                                         // Không chạm thanh: nếu là tap thì chọn thời điểm,
