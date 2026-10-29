@@ -636,6 +636,15 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
   bằng **`FriCamLogo`** (`ui/BrandLogo.kt`) vẽ chim + nền navy **trực tiếp bằng Canvas/Path**, không nạp resource.
 - Crash log header đã có phiên bản từ v0.11.1, nên entry mới sẽ ghi `V0.19.1` — dễ phân biệt entry cũ.
 
+## 4w. Cập nhật 29/10/2026 — dọn mục truyền màn hình
+
+- Đổi tên nhóm cài đặt **“Phát lên màn hình khác” → “Truyền màn hình”**; hộp thoại cũng đổi tiêu đề
+  thành “Truyền màn hình”.
+- Bỏ **Dashboard cast** và **View cast** (và toàn bộ field/lưu trữ liên quan). Chỉ còn:
+  HA URL + token; cast thử `media_player.play_media` (HLS/MP4) → `webostv.command` (LG) →
+  `androidtv.adb_command` (Android TV).
+- Ghi chú: logo header đã vẽ bằng Canvas từ v0.19.1; crash log `vv0.11.0` là entry cũ.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

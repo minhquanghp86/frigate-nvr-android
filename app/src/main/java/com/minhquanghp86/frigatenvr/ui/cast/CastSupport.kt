@@ -224,7 +224,7 @@ fun CastDeviceDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Phát lên thiết bị") },
+        title = { Text("Truyền màn hình") },
         text = {
             Column(Modifier.height(260.dp).verticalScroll(rememberScrollState())) {
                 Text(

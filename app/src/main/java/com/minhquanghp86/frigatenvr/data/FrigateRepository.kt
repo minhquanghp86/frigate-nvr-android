@@ -74,9 +74,6 @@ class FrigateRepository(
     data class Integrations(
         val haUrl: String = "",
         val haToken: String = "",
-        /** Dashboard casting: path dashboard + view chứa camera (như Advanced Camera). */
-        val dashboardPath: String = "",
-        val viewPath: String = "",
     )
 
     private val _integrations = MutableStateFlow(Integrations())
@@ -174,8 +171,6 @@ class FrigateRepository(
         _integrations.value = Integrations(
             haUrl = prefs[KEY_HA_URL].orEmpty(),
             haToken = prefs[KEY_HA_TOKEN].orEmpty(),
-            dashboardPath = prefs[KEY_HA_DASH].orEmpty(),
-            viewPath = prefs[KEY_HA_VIEW].orEmpty(),
         )
         _notifyLabels.value = prefs[KEY_NOTIFY_LABELS]
             ?.split(",")
@@ -628,23 +623,14 @@ class FrigateRepository(
 
     // ------------------------------------------------------- cast ngoài LAN
 
-    suspend fun setIntegrations(
-        haUrl: String,
-        haToken: String,
-        dashboardPath: String,
-        viewPath: String,
-    ) {
+    suspend fun setIntegrations(haUrl: String, haToken: String) {
         val clean = Integrations(
             haUrl = haUrl.trim().trimEnd('/'),
             haToken = haToken.trim(),
-            dashboardPath = dashboardPath.trim().trim('/'),
-            viewPath = viewPath.trim().trim('/'),
         )
         store.edit {
             it[KEY_HA_URL] = clean.haUrl
             it[KEY_HA_TOKEN] = clean.haToken
-            it[KEY_HA_DASH] = clean.dashboardPath
-            it[KEY_HA_VIEW] = clean.viewPath
         }
         _integrations.value = clean
     }
@@ -740,33 +726,6 @@ class FrigateRepository(
             } catch (e: Exception) {
                 problems += "$label: ${e.message}"
                 null
-            }
-
-            // 0) Dashboard casting (như Advanced Camera): cast một view Lovelace chứa camera.
-            val cfg = _integrations.value
-            if (cfg.dashboardPath.isNotBlank()) {
-                try {
-                    haService(
-                        "cast",
-                        "show_lovelace_view",
-                        kotlinx.serialization.json.buildJsonObject {
-                            put("entity_id", idJson)
-                            put(
-                                "dashboard_path",
-                                kotlinx.serialization.json.JsonPrimitive(cfg.dashboardPath),
-                            )
-                            if (cfg.viewPath.isNotBlank()) {
-                                put(
-                                    "view_path",
-                                    kotlinx.serialization.json.JsonPrimitive(cfg.viewPath),
-                                )
-                            }
-                        }.toString(),
-                    )
-                    return@withContext "Dashboard cast (${cfg.dashboardPath}/${cfg.viewPath})"
-                } catch (e: Exception) {
-                    problems += "Dashboard cast: ${e.message}"
-                }
             }
 
             tryPlay(hlsUrl, "video", "play_media HLS")?.let { return@withContext it }
@@ -1016,8 +975,6 @@ class FrigateRepository(
         private val KEY_NOTIFY = booleanPreferencesKey("notify_enabled")
         private val KEY_NOTIFY_CAMS = stringPreferencesKey("notify_cameras")
         private val KEY_NOTIFY_LABELS = stringPreferencesKey("notify_labels")
-        private val KEY_HA_DASH = stringPreferencesKey("ha_dashboard")
-        private val KEY_HA_VIEW = stringPreferencesKey("ha_view")
         private val KEY_HA_URL = stringPreferencesKey("ha_url")
         private val KEY_HA_TOKEN = stringPreferencesKey("ha_token")
     }
