@@ -13,6 +13,11 @@
 
 ---
 
+## Trạng thái dự án
+
+**Ổn định — v1.0.0** (29/10/2026). CI build APK + AAB xanh; dùng với Frigate 0.18.2.
+Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BAN-GIAO.md).
+
 ## 1. Tính năng
 
 ### Camera
