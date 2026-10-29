@@ -216,7 +216,6 @@ class FrigateRepository(
     ): String? = withContext(Dispatchers.IO) {
         val base = FrigateNet.normalizeBaseUrl(baseUrlRaw)
         if (base.isBlank()) return@withContext "Chưa nhập địa chỉ server Frigate."
-        if (username.isBlank()) return@withContext "Chưa nhập tài khoản."
 
         _busy.value = true
         try {
@@ -238,7 +237,7 @@ class FrigateRepository(
                     // Frigate tắt xác thực -> dùng ẩn danh (port 5000 hoặc auth.enabled=false)
                     val session = ServerSession(
                         baseUrl = base,
-                        username = username.trim(),
+                        username = username.trim().ifBlank { "Ẩn danh" },
                         password = password,
                         rememberPassword = remember,
                         trustSelfSigned = trustSelfSigned,
@@ -533,6 +532,51 @@ class FrigateRepository(
 
     suspend fun deleteUser(username: String) {
         call { deleteUser(username) }
+    }
+
+    suspend fun acknowledgeNotice(id: String) {
+        call { acknowledgeNotice(id) }
+    }
+
+    suspend fun muteNotice(id: String) {
+        call { muteNotice(id) }
+    }
+
+    data class ProfileState(val profiles: List<String>, val active: String?)
+
+    suspend fun profiles(): ProfileState = runCatching {
+        val obj = call { profiles() } as? kotlinx.serialization.json.JsonObject
+        val list = (obj?.get("profiles") as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content }
+            ?: emptyList()
+        val active = (obj?.get("active_profile")
+                as? kotlinx.serialization.json.JsonPrimitive)?.content
+        ProfileState(list, active?.takeIf { it != "none" })
+    }.getOrDefault(ProfileState(emptyList(), null))
+
+    /** Kích hoạt profile cấu hình (null = tắt profile). */
+    suspend fun setProfile(name: String?) {
+        call { setCameraFeature("*", "profile", CameraSetBody(name ?: "none")) }
+    }
+
+    suspend fun setEventSubLabel(eventId: String, subLabel: String) {
+        call { setSubLabel(eventId, SubLabelBody(subLabel)) }
+    }
+
+    suspend fun setEventPlate(eventId: String, plate: String) {
+        call { setPlate(eventId, PlateBody(plate)) }
+    }
+
+    suspend fun setEventAttributes(eventId: String, attributes: List<String>) {
+        call { setAttributes(eventId, AttributesBody(attributes)) }
+    }
+
+    suspend fun markFalsePositive(eventId: String) {
+        call { falsePositive(eventId) }
+    }
+
+    suspend fun renameFace(oldName: String, newName: String) {
+        call { renameFace(oldName, RenameFaceBody(newName)) }
     }
 
     suspend fun setUserRole(username: String, role: String) {

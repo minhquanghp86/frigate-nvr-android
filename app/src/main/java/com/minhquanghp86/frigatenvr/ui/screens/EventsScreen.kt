@@ -385,6 +385,12 @@ fun EventDetailScreen(
     var faceName by remember { mutableStateOf("") }
     var faceBusy by remember { mutableStateOf(false) }
     var faceMessage by remember { mutableStateOf<String?>(null) }
+    var showEdit by remember { mutableStateOf(false) }
+    var editSubLabel by remember { mutableStateOf("") }
+    var editPlate by remember { mutableStateOf("") }
+    var editAttributes by remember { mutableStateOf("") }
+    var editBusy by remember { mutableStateOf(false) }
+    var editMessage by remember { mutableStateOf<String?>(null) }
     val similarScope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(eventId) {

@@ -24,6 +24,24 @@ data class FrigateUser(
 data class CameraSetBody(val value: String)
 
 @Serializable
+data class SubLabelBody(
+    val subLabel: String,
+    val subLabelScore: Double? = null,
+)
+
+@Serializable
+data class PlateBody(
+    val recognizedLicensePlate: String,
+    val recognizedLicensePlateScore: Double? = null,
+)
+
+@Serializable
+data class AttributesBody(val attributes: List<String>)
+
+@Serializable
+data class RenameFaceBody(val new_name: String)
+
+@Serializable
 data class NewUserBody(
     val username: String,
     val password: String,
@@ -117,6 +135,7 @@ data class EventExtra(
     val score: Double? = null,
     val attributes: List<String> = emptyList(),
     val box: List<Double>? = null,
+    @SerialName("recognized_license_plate") val recognizedLicensePlate: String? = null,
 )
 
 /**
@@ -138,6 +157,7 @@ data class FrigateCameraConfig(
     val record: JsonObject? = null,
     val audio: JsonObject? = null,
     val detect: JsonObject? = null,
+    val motion: JsonObject? = null,
     val zones: JsonObject? = null,
     val live: JsonObject? = null,
     val ffmpeg: JsonObject? = null,
@@ -147,6 +167,7 @@ data class FrigateCameraConfig(
     val snapshotsOn: Boolean get() = snapshots.flag("enabled")
     val recording: Boolean get() = record.flag("enabled")
     val audioOn: Boolean get() = audio.flag("enabled")
+    val motionOn: Boolean get() = motion.flag("enabled", default = true)
     val zoneNames: List<String> get() = zones?.keys?.toList().orEmpty()
     val hasAudio: Boolean get() = audio.flag("enabled")
 

@@ -24,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -84,6 +85,8 @@ fun OverviewScreen(
     var earliestDay by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var message by remember { mutableStateOf<String?>(null) }
+    var selectedNotice by remember { mutableStateOf<JsonObject?>(null) }
+    var noticeMessage by remember { mutableStateOf<String?>(null) }
 
     // Chuỗi mẫu cho biểu đồ bộ phát hiện (poll /api/stats mỗi 5s).
     val inference = remember { mutableListOf<Float>() }
@@ -378,6 +381,12 @@ fun OverviewScreen(
                                 title = obj?.s("text") ?: obj?.s("message") ?: obj?.s("title")
                                 ?: (obj?.s("type") ?: "Cảnh báo"),
                                 subtitle = obj?.s("level"),
+                                chevron = obj != null,
+                                onClick = if (obj != null) {
+                                    { selectedNotice = obj }
+                                } else {
+                                    null
+                                },
                             )
                             if (index != minOf(list.size, 5) - 1) IosDivider(16)
                         }
@@ -463,6 +472,62 @@ fun OverviewScreen(
                 }
             }
         }
+    }
+
+    selectedNotice?.let { notice ->
+        val noticeId = notice.s("id") ?: notice.s("notice_id")
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { selectedNotice = null },
+            title = { Text("Cảnh báo") },
+            text = {
+                Column {
+                    Text(
+                        notice.s("text") ?: notice.s("message") ?: notice.s("title")
+                        ?: (notice.s("type") ?: "Cảnh báo"),
+                        fontSize = 13.sp,
+                    )
+                    noticeMessage?.let {
+                        Spacer(Modifier.height(6.dp))
+                        Text(it, fontSize = 11.sp, color = IOSGreen)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (noticeId == null) return@TextButton
+                        scope.launch {
+                            try {
+                                repo.acknowledgeNotice(noticeId)
+                                notices = runCatching { repo.notices() as? JsonArray }.getOrNull()
+                                selectedNotice = null
+                            } catch (e: Exception) {
+                                noticeMessage = e.message ?: "Không đánh dấu được"
+                            }
+                        }
+                    },
+                ) { Text("Đã hiểu") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(
+                        onClick = {
+                            if (noticeId == null) return@TextButton
+                            scope.launch {
+                                try {
+                                    repo.muteNotice(noticeId)
+                                    notices = runCatching { repo.notices() as? JsonArray }.getOrNull()
+                                    selectedNotice = null
+                                } catch (e: Exception) {
+                                    noticeMessage = e.message ?: "Không ẩn được"
+                                }
+                            }
+                        },
+                    ) { Text("Ẩn vĩnh viễn", color = IOSRed) }
+                    TextButton(onClick = { selectedNotice = null }) { Text("Đóng") }
+                }
+            },
+        )
     }
 }
 

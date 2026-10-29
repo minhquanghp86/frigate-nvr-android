@@ -32,6 +32,8 @@ import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material.icons.outlined.OpenInNew
+import androidx.compose.material.icons.outlined.PrivacyTip
+import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Videocam
@@ -407,6 +409,40 @@ fun SettingsScreen(
                         "Phiên bản FriCam",
                         icon = Icons.Outlined.Info,
                         value = com.minhquanghp86.frigatenvr.ui.appVersionLabel,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Chính sách quyền riêng tư",
+                        icon = Icons.Outlined.PrivacyTip,
+                        chevron = true,
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse(
+                                            "https://minhquanghp86.github.io/frigate-nvr-android/privacy.html",
+                                        ),
+                                    ),
+                                )
+                            }
+                        },
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Mã nguồn / Báo lỗi",
+                        icon = Icons.Outlined.Code,
+                        chevron = true,
+                        onClick = {
+                            runCatching {
+                                context.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://github.com/minhquanghp86/frigate-nvr-android"),
+                                    ),
+                                )
+                            }
+                        },
                     )
                     IosDivider(56)
                     IosRow(

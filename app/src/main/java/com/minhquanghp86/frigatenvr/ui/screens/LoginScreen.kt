@@ -21,6 +21,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -141,10 +142,29 @@ fun LoginScreen(repo: FrigateRepository) {
             Text(if (busy) "Đang đăng nhập..." else "Đăng nhập")
         }
 
+        Spacer(Modifier.height(10.dp))
+        OutlinedButton(
+            onClick = {
+                error = null
+                baseUrl = "https://demo.frigate.video"
+                username = ""
+                password = ""
+                trust = false
+                scope.launch {
+                    error = repo.signIn(baseUrl, "", "", keepPass, false)
+                }
+            },
+            enabled = !busy,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Dùng bản demo (không cần tài khoản)")
+        }
+
         Spacer(Modifier.height(16.dp))
         Text(
             "Port thường dùng: 8971 (có xác thực), 5000 (không xác thực, trong mạng). " +
-                "Frigate tắt xác thực thì app tự dùng chế độ ẩn danh.",
+                "Frigate tắt xác thực thì app tự dùng chế độ ẩn danh. " +
+                "Bản demo dùng máy chủ công khai demo.frigate.video.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

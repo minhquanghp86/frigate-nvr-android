@@ -27,7 +27,12 @@ object PipState {
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // Giao diện app luôn nền tối: ép icon thanh hệ thống màu sáng để không mất icon
+        // khi điện thoại đang ở chế độ sáng (bắt buộc từ targetSdk 35+).
+        enableEdgeToEdge(
+            statusBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         Notify.ensureChannels(this)
