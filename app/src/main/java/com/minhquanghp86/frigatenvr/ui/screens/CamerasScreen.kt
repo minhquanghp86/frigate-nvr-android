@@ -65,6 +65,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -225,11 +226,18 @@ fun CamerasScreen(
                 if (total > 0) used / total * 100 else 0.0
             }
 
-            LazyColumn(
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 158.dp),
                 modifier = modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 24.dp,
+                ),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                item {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     HomeHeader(
                         cameraCount = cameras.size,
                         recordingCount = recordingCount,
@@ -244,18 +252,7 @@ fun CamerasScreen(
                     )
                 }
 
-                item {
-                    FeaturedCameras(
-                        cameras = cameras,
-                        config = config,
-                        stats = stats,
-                        latest = latest,
-                        tick = tick,
-                        onOpenCamera = onOpenCamera,
-                    )
-                }
-
-                item {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     QuickStats(
                         eventsToday = totalToday,
                         recording = "${recordingCount}/${cameras.size}",
@@ -263,27 +260,19 @@ fun CamerasScreen(
                     )
                 }
 
-                item {
-                    SectionTitle("Tất cả camera")
-                    Column(Modifier.padding(horizontal = 16.dp)) {
-                        IosGroup {
-                            cameras.forEachIndexed { index, name ->
-                                CameraRow(
-                                    name = name,
-                                    config = config.cameras[name],
-                                    fps = cameraFps(stats, name),
-                                    eventsToday = todayCounts[name] ?: 0,
-                                    latest = latest[name],
-                                    tick = tick,
-                                    onClick = {
-                                        runCatching { repo.warmStream(name) }
-                                        onOpenCamera(name)
-                                    },
-                                )
-                                if (index != cameras.lastIndex) IosDivider(72)
-                            }
-                        }
-                    }
+                items(cameras, key = { it }) { name ->
+                    CameraCard(
+                        name = name,
+                        config = config.cameras[name],
+                        fps = cameraFps(stats, name),
+                        eventsToday = todayCounts[name] ?: 0,
+                        latest = latest[name],
+                        tick = tick,
+                        onClick = {
+                            runCatching { repo.warmStream(name) }
+                            onOpenCamera(name)
+                        },
+                    )
                 }
             }
         }
@@ -302,7 +291,7 @@ private fun HomeHeader(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 12.dp, top = 18.dp, bottom = 6.dp),
+            .padding(top = 18.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -361,151 +350,6 @@ private fun HomeHeader(
     }
 }
 
-/** Carousel camera nổi bật: ảnh mới nhất + LIVE + fps + sự kiện gần nhất. */
-@Composable
-private fun FeaturedCameras(
-    cameras: List<String>,
-    config: FrigateConfig,
-    stats: kotlinx.serialization.json.JsonObject?,
-    latest: Map<String, FrigateEvent>,
-    tick: Int,
-    onOpenCamera: (String) -> Unit,
-) {
-    val repo = rememberRepo()
-    val screenWidth = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
-    val cardWidth = (screenWidth * 0.84f).coerceAtMost(520.dp)
-
-    LazyRow(
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        items(cameras, key = { it }) { name ->
-            val cam = config.cameras[name]
-            val event = latest[name]
-            Box(
-                Modifier
-                    .width(cardWidth)
-                    .aspectRatio(16f / 9f)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFF0A0A0A))
-                    .clickable { onOpenCamera(name) },
-            ) {
-                FrigateImage(
-                    url = repo.cameraLatest(name),
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop,
-                    cacheKey = tick.toString(),
-                )
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    Color(0x55000000),
-                                    Color(0x00000000),
-                                    Color(0xD9000000),
-                                ),
-                            ),
-                        ),
-                )
-
-                // LIVE + REC
-                Row(
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Row(
-                        Modifier
-                            .background(Color(0x99000000), RoundedCornerShape(99.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Box(
-                            Modifier
-                                .size(6.dp)
-                                .background(Color(0xFFFF453A), RoundedCornerShape(99.dp)),
-                        )
-                        Spacer(Modifier.width(5.dp))
-                        Text("LIVE", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    if (cam?.recording == true) {
-                        Text(
-                            "REC",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier
-                                .background(Color(0x99000000), RoundedCornerShape(99.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                        )
-                    }
-                }
-
-                // fps
-                val fps = cameraFps(stats, name)
-                if (fps != null) {
-                    Text(
-                        "%.1f fps".format(fps),
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(10.dp)
-                            .background(Color(0x99000000), RoundedCornerShape(99.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
-                }
-
-                // Tên + sự kiện gần nhất
-                Column(
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(start = 14.dp, end = 14.dp, bottom = 12.dp),
-                ) {
-                    Text(
-                        name,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        if (event != null) {
-                            "${event.label} · ${relTime(event.startTime)}"
-                        } else {
-                            "Chưa có sự kiện hôm nay"
-                        },
-                        color = Color(0xCCEBEBF5),
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                    )
-                }
-
-                Box(
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp)
-                        .size(30.dp)
-                        .background(Color(0x33FFFFFF), RoundedCornerShape(99.dp)),
-                    Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Outlined.ChevronRight,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-            }
-        }
-    }
-}
-
 @Composable
 private fun QuickStats(
     eventsToday: Int,
@@ -515,7 +359,7 @@ private fun QuickStats(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         StatTile(
@@ -572,7 +416,7 @@ private fun StatTile(
 }
 
 @Composable
-private fun CameraRow(
+private fun CameraCard(
     name: String,
     config: com.minhquanghp86.frigatenvr.data.FrigateCameraConfig?,
     fps: Double?,
@@ -582,18 +426,16 @@ private fun CameraRow(
     onClick: () -> Unit,
 ) {
     val repo = rememberRepo()
-    Row(
+    Column(
         Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .clip(RoundedCornerShape(14.dp))
+            .background(IOSCard)
+            .clickable(onClick = onClick),
     ) {
         Box(
             Modifier
-                .width(96.dp)
+                .fillMaxWidth()
                 .aspectRatio(16f / 9f)
-                .clip(RoundedCornerShape(8.dp))
                 .background(Color.Black),
         ) {
             FrigateImage(
@@ -602,39 +444,72 @@ private fun CameraRow(
                 contentScale = ContentScale.Crop,
                 cacheKey = tick.toString(),
             )
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                name,
-                color = IOSLabel,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color(0x44000000), Color(0x00000000), Color(0x33000000)),
+                        ),
+                    ),
             )
-            Spacer(Modifier.height(2.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (config?.recording == true) {
+            Row(
+                Modifier
+                    .align(Alignment.TopStart)
+                    .padding(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Row(
+                    Modifier
+                        .background(Color(0x99000000), RoundedCornerShape(99.dp))
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Box(
                         Modifier
                             .size(5.dp)
                             .background(Color(0xFFFF453A), RoundedCornerShape(99.dp)),
                     )
-                    Spacer(Modifier.width(3.dp))
-                    Text("REC", fontSize = 10.sp, color = IOSSecondaryLabel)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("LIVE", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
                 }
-                if (fps != null) {
-                    Text("%.1f fps".format(fps), fontSize = 10.sp, color = IOSSecondaryLabel)
-                    Spacer(Modifier.width(8.dp))
+                if (config?.recording == true) {
+                    Text(
+                        "REC",
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .background(Color(0x99000000), RoundedCornerShape(99.dp))
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                    )
                 }
+            }
+            if (fps != null) {
                 Text(
-                    "$eventsToday sự kiện",
-                    fontSize = 10.sp,
-                    color = IOSSecondaryLabel,
+                    "%.1f fps".format(fps),
+                    color = Color.White,
+                    fontSize = 9.sp,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                        .background(Color(0x99000000), RoundedCornerShape(99.dp))
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                )
+            }
+        }
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    name,
+                    color = IOSLabel,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
                 if (config?.hasAudio == true) {
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(4.dp))
                     Icon(
                         Icons.Outlined.MusicNote,
                         contentDescription = "Có audio",
@@ -643,19 +518,20 @@ private fun CameraRow(
                     )
                 }
             }
+            Spacer(Modifier.height(2.dp))
             Text(
                 latest?.let { "${it.label} · ${relTime(it.startTime)}" } ?: "Chưa có sự kiện",
+                color = IOSSecondaryLabel,
                 fontSize = 11.sp,
+                maxLines = 1,
+            )
+            Text(
+                "$eventsToday sự kiện hôm nay",
                 color = IOSTertiaryLabel,
+                fontSize = 10.sp,
                 maxLines = 1,
             )
         }
-        Icon(
-            Icons.Outlined.ChevronRight,
-            contentDescription = null,
-            tint = IOSTertiaryLabel,
-            modifier = Modifier.size(18.dp),
-        )
     }
 }
 
