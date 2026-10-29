@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
@@ -140,9 +141,17 @@ fun IosRow(
                 title,
                 style = MaterialTheme.typography.bodyLarge,
                 color = if (destructive) IOSRed else IOSLabel,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             if (subtitle != null) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = IOSSecondaryLabel)
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = IOSSecondaryLabel,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         if (value != null) {
@@ -152,7 +161,9 @@ fun IosRow(
                 color = IOSSecondaryLabel,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 8.dp),
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .widthIn(max = 200.dp),
             )
         }
         if (trailing != null) trailing()
