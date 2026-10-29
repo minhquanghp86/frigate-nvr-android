@@ -32,6 +32,8 @@ import com.minhquanghp86.frigatenvr.ui.IosDivider
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.foundation.background
@@ -242,6 +244,10 @@ fun CamerasScreen(
                     HomeHeader(
                         cameraCount = cameras.size,
                         recordingCount = recordingCount,
+                        lightTheme = com.minhquanghp86.frigatenvr.ui.ThemeState.isLight,
+                        onToggleTheme = {
+                            com.minhquanghp86.frigatenvr.ui.ThemeState.toggle(context)
+                        },
                         notifyEnabled = notifyEnabled,
                         onToggleNotifications = { toggleNotifications(!notifyEnabled) },
                         refreshing = refreshing,
@@ -353,6 +359,8 @@ private fun BrandBar() {
 private fun HomeHeader(
     cameraCount: Int,
     recordingCount: Int,
+    lightTheme: Boolean,
+    onToggleTheme: () -> Unit,
     notifyEnabled: Boolean,
     onToggleNotifications: () -> Unit,
     refreshing: Boolean,
@@ -385,11 +393,22 @@ private fun HomeHeader(
                 )
             }
         }
+        IconButton(onClick = onToggleTheme) {
+            Icon(
+                if (lightTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                contentDescription = if (lightTheme) {
+                    "Chuyển giao diện tối"
+                } else {
+                    "Chuyển giao diện sáng"
+                },
+                tint = IOSSecondaryLabel,
+            )
+        }
         Row(
             Modifier
                 .clip(RoundedCornerShape(99.dp))
                 .background(
-                    if (notifyEnabled) IOSBlue.copy(alpha = 0.18f) else Color(0x1AFFFFFF),
+                    if (notifyEnabled) IOSBlue.copy(alpha = 0.18f) else IOSCardHigh,
                 )
                 .clickable(onClick = onToggleNotifications)
                 .padding(horizontal = 10.dp, vertical = 6.dp),

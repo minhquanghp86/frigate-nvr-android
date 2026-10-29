@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // Giao diện app luôn nền tối: ép icon thanh hệ thống màu sáng để không mất icon
         // khi điện thoại đang ở chế độ sáng (bắt buộc từ targetSdk 35+).
+        com.minhquanghp86.frigatenvr.ui.ThemeState.load(this)
         enableEdgeToEdge(
             statusBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = androidx.activity.SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),

@@ -531,6 +531,15 @@ khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực
 - `Checkbox` dùng `CheckboxDefaults.colors(checkedColor=IOSBlue, uncheckedColor=IOSSecondaryLabel,
   checkmarkColor=White)`; ô nhập dùng `OutlinedTextFieldDefaults` (chữ trắng, label xám, viền xanh).
 
+## 4m. Cập nhật 29/10/2026 — giao diện sáng/tối
+
+- `ThemeState` (SharedPreferences `fricam_theme`) giữ lựa chọn; `IOS*` đổi thành **getter đọc state**
+  nên cả app recompose khi đổi theme; `FrigateTheme` chọn colorScheme sáng/tối + đổi màu icon thanh
+  hệ thống và nền cửa sổ theo theme.
+- Nút **mặt trời/mặt trăng** trên header tab Camera (cạnh chip Thông báo) để chuyển nhanh.
+- Palette sáng: nền `#F2F2F7`, card trắng, chữ đen, xám `#3C3C43`; đã thay các màu tối hardcode
+  trong Events/Faces/FacePerson/Cameras và bottom navigation bằng biến palette.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).
