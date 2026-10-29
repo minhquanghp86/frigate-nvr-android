@@ -367,6 +367,20 @@ Bố cục mới theo nhóm chức năng:
   (`event.data.recognized_license_plate`), chỉ có `POST /api/lpr/reprocess` để xử lý lại. App giữ
   màn danh sách + bấm để tìm sự kiện; muốn sửa dữ liệu biển phải qua Frigate/DB.
 
+## 3zf. Cập nhật 29/10/2026 — theo dõi sự kiện khuôn mặt
+
+Dữ liệu: Frigate gắn `sub_label` cho sự kiện `person` — tên đã đăng ký, hoặc chuỗi `"unknown"`
+khi không khớp (ngưỡng `unknown_score`). Vì vậy app phân loại trực tiếp từ sub_label.
+
+- **Thẻ "Khuôn mặt" trên trang chủ Camera** (nằm dưới 3 thẻ số liệu):
+  - Hai chip đếm **Đã biết N** (xanh) / **Chưa rõ M** (cam), chạm để lọc dải ảnh, chạm lần nữa để bỏ lọc.
+  - Dải thumbnail ngang (64dp) của khuôn mặt hôm nay; mỗi ảnh có nhãn tên (xanh) hoặc "Chưa rõ" (cam).
+  - "Xem tất cả" → màn Sự kiện khuôn mặt; chạm ảnh → mở sự kiện.
+- **Màn "Sự kiện khuôn mặt"**: lọc Tất cả / Đã biết / Chưa rõ, lưới ảnh 1:1 có nhãn tên,
+  chạm một ảnh → hộp thoại "Mở sự kiện" hoặc **gán tên** (train từ ảnh sự kiện bằng
+  `POST /api/faces/train/{name}/classify` với `event_id`), danh sách tên có sẵn hiển thị để chọn nhanh.
+- Dữ liệu lấy qua `/api/events?label=person&has_snapshot=1` rồi lọc client-side theo sub_label.
+
 ## 4. Việc còn lại
 
 1. **Test thật trên điện thoại**: cài APK, đăng nhập, kiểm tra 3 luồng nặng nhất — MJPEG live, phát clip sự kiện, HLS "Xem lại" (HLS cần server bật record).

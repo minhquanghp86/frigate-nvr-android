@@ -136,6 +136,8 @@ private val HEIGHT_OPTIONS = listOf(240, 360, 480, 720, 1080)
 fun CamerasScreen(
     modifier: Modifier = Modifier,
     onOpenCamera: (String) -> Unit,
+    onOpenEvent: (String) -> Unit = {},
+    onOpenFaceEvents: () -> Unit = {},
 ) {
     val vm: CamerasViewModel = viewModel()
     val state by vm.state.collectAsState()
@@ -145,6 +147,7 @@ fun CamerasScreen(
 
     var stats by remember { mutableStateOf<kotlinx.serialization.json.JsonObject?>(null) }
     var todayCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    var faceToday by remember { mutableStateOf<List<FrigateEvent>>(emptyList()) }
     var tick by remember { mutableIntStateOf(0) }
     var refreshing by remember { mutableStateOf(false) }
     val notifyEnabled by repo.notifyEnabled.collectAsState()
@@ -192,6 +195,12 @@ fun CamerasScreen(
         while (true) {
             stats = runCatching { repo.statsJson() }.getOrNull()
             todayCounts = runCatching { repo.eventsToday() }.getOrDefault(emptyMap())
+            faceToday = runCatching {
+                val startOfDay = java.time.LocalDate.now()
+                    .atStartOfDay(java.time.ZoneId.systemDefault())
+                    .toEpochSecond()
+                repo.faceEvents(after = startOfDay, limit = 60)
+            }.getOrDefault(emptyList())
             tick++
             delay(8_000)
         }
@@ -261,6 +270,14 @@ fun CamerasScreen(
                         eventsToday = totalToday,
                         recording = "${recordingCount}/${cameras.size}",
                         storagePercent = storagePct,
+                    )
+                }
+
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    FaceWatchCard(
+                        events = faceToday,
+                        onOpenAll = onOpenFaceEvents,
+                        onOpenEvent = onOpenEvent,
                     )
                 }
 

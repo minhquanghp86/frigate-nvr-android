@@ -92,6 +92,17 @@ data class FrigateEvent(
 
     val bestScore: Double
         get() = topScore ?: data?.topScore ?: score ?: 0.0
+
+    /** Sự kiện có thông tin khuôn mặt (Frigate gắn sub_label cho person). */
+    val isFaceEvent: Boolean
+        get() = subLabelDisplay != null
+
+    val isUnknownFace: Boolean
+        get() = subLabelDisplay?.equals("unknown", ignoreCase = true) == true
+
+    /** Tên người đã đăng ký (null nếu chưa rõ). */
+    val faceName: String?
+        get() = subLabelDisplay?.takeIf { !isUnknownFace }
 }
 
 private fun JsonElement.asText(): String? = try {

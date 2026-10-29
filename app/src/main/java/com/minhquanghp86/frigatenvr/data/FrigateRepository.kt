@@ -545,6 +545,21 @@ class FrigateRepository(
 
     // ------------------------------------------------------------ khuôn mặt
 
+    /**
+     * Sự kiện có khuôn mặt: person events có sub_label ("unknown" hoặc tên đã đăng ký).
+     * after = epoch giây (null = lấy gần nhất).
+     */
+    suspend fun faceEvents(after: Long? = null, limit: Int = 80): List<FrigateEvent> {
+        val params = mutableMapOf(
+            "label" to "person",
+            "has_snapshot" to "1",
+            "limit" to limit.toString(),
+            "include_thumbnails" to "1",
+        )
+        after?.let { params["after"] = it.toString() }
+        return call { events(params) }.filter { it.isFaceEvent }
+    }
+
     suspend fun createFace(name: String) {
         call { createFace(name) }
     }
