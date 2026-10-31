@@ -694,6 +694,14 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
   3. UI lỗi có nút **“Thử lại”**, hiển thị lý do thân thiện thay vì mã lỗi trần.
 - Lưu ý: APK tăng kích thước do thư viện FFmpeg (AAB vẫn chia theo ABI khi phát hành Play).
 
+## 4z. Cập nhật 31/10/2026 — thu gọn thanh điều khiển player
+
+- Gộp **play · thời gian hiện tại · seekbar · tổng thời lượng · toàn màn hình** vào **một hàng duy nhất**
+  sát mép dưới khung (trước đây 2 hàng, thanh đen cao ~95dp).
+- Bỏ nền đen đặc, thay bằng **gradient mờ** (transparent → #88000000) cao ~48dp → che khung hình ít nhất;
+  icon 20dp trong nút 34dp, nhãn 10sp.
+- Hành vi giữ nguyên: chạm để hiện/ẩn, tự ẩn sau 4s khi đang phát, kéo seekbar để tua.
+
 ## 5. Bàn giao v1.0.0 (29/10/2026)
 
 ### 5.1 Trạng thái
