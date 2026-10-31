@@ -29,8 +29,9 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
   - **WebRTC/WHEP** qua proxy có xác thực của Frigate (độ trễ thấp nhất, fps gốc)
   - **MP4** và **HLS** qua go2rtc
   - **MJPEG** (Frigate, chọn fps/độ phân giải, đo fps thực)
-- Thanh điều khiển 1 hàng sát đáy (play · thời gian · seekbar · toàn màn hình) dạng gradient mờ,
-  che khung hình tối thiểu; tự ẩn sau 4 giây.
+- Thanh điều khiển 1 hàng sát đáy: play · **tua ±5s** · thời gian · seekbar · **tắt tiếng** ·
+  toàn màn hình, dạng gradient mờ, tự ẩn sau 4 giây.
+- Timeline có **khung xem trước cố định** (không đẩy layout) khi kéo playhead.
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
 - **Cast lên TV/Chromecast**:
@@ -50,7 +51,7 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 - Timeline 24h kiểu Frigate: vạch giờ, dải ghi hình, tick sự kiện theo nhãn, playhead kéo độc lập.
 - Mở tab → phát **tại thời điểm hiện tại** (ngày cũ: 00:00 hoặc khung sớm nhất có dữ liệu).
 - Không tua vượt thời điểm hiện tại (tránh vùng chưa ghi hình / lỗi “Không phát được video”).
-- Kéo playhead → hiện **ảnh xem trước** chụp từ bản ghi đúng thời điểm.
+- Kéo playhead → hiện **ảnh xem trước** trong khung cố định phía trên (timeline không bị dịch chuyển).
 - Hai kiểu tải:
   - **Tải**: export job trên Frigate (tiến trình 2 bước) → file MP4 hoàn chỉnh.
   - **Tải nhanh**: cắt trực tiếp `clip.mp4`.

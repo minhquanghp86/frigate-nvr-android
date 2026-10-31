@@ -397,42 +397,49 @@ fun TimelineScreen(
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // Ảnh xem trước khi kéo playhead (chụp từ bản ghi tại đúng thời điểm).
+                // Khung xem trước LUÔN chiếm chỗ cố định để timeline không bị đẩy lên/xuống khi kéo.
                 val preview = previewMinutes
-                if (preview != null && camera != null && selectedDay != null) {
-                    val epoch = java.time.LocalDate.parse(selectedDay!!)
-                        .atStartOfDay(java.time.ZoneId.systemDefault())
-                        .plusSeconds((preview * 60).toLong())
-                        .toEpochSecond()
-                    Row(
-                        Modifier
-                            .padding(horizontal = 12.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(IOSCard)
-                            .padding(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FrigateImage(
-                            url = repo.recordingSnapshot(camera!!, epoch.toDouble(), height = 144),
-                            modifier = Modifier
-                                .width(96.dp)
-                                .aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(6.dp)),
-                            contentScale = ContentScale.Crop,
-                            cacheKey = "%d".format(preview.toInt()),
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            "%02d:%02d".format(preview.toInt() / 60, preview.toInt() % 60),
-                            color = IOSLabel,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (preview != null && camera != null && selectedDay != null) {
+                        val epoch = java.time.LocalDate.parse(selectedDay!!)
+                            .atStartOfDay(java.time.ZoneId.systemDefault())
+                            .plusSeconds((preview * 60).toLong())
+                            .toEpochSecond()
+                        Row(
+                            Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(IOSCard)
+                                .padding(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            FrigateImage(
+                                url = repo.recordingSnapshot(camera!!, epoch.toDouble(), height = 144),
+                                modifier = Modifier
+                                    .width(96.dp)
+                                    .aspectRatio(16f / 9f)
+                                    .clip(RoundedCornerShape(6.dp)),
+                                contentScale = ContentScale.Crop,
+                                cacheKey = "%d".format(preview.toInt()),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "%02d:%02d".format(preview.toInt() / 60, preview.toInt() % 60),
+                                color = IOSLabel,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(8.dp))
                 }
+                Spacer(Modifier.height(2.dp))
 
                 // Timeline cuộn kiểu Frigate: vạch giờ, vùng có ghi hình, sự kiện tô màu.
                 val day = selectedDay
