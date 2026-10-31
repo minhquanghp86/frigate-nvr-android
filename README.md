@@ -22,6 +22,8 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 
 ### Camera
 - Lưới camera với ảnh mới nhất, nhãn **LIVE/REC**, fps, số sự kiện hôm nay, sự kiện gần nhất.
+- Màn live: nút **Live** (về trình phát), **Xem lại** (timeline), icon **Sự kiện** trên toolbar
+  để xem danh sách sự kiện của camera.
 - Header cố định: logo, trạng thái `N camera · M đang ghi`, chip **Thông báo**, nút **sáng/tối**, tải lại.
 - Live 4 chế độ:
   - **WebRTC/WHEP** qua proxy có xác thực của Frigate (độ trễ thấp nhất, fps gốc)
@@ -84,7 +86,7 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 - **Ảnh phát hiện trong thông báo** (BigPicture + large icon, thu nhỏ ≤1080px),
   tiêu đề “Phát hiện người” / “Phát hiện người: \<tên\>”.
 - Icon thông báo dùng **logo FriCam** (vector monochrome).
-- Chạm thông báo → mở **live camera kèm panel sự kiện** của camera đó.
+- Chạm thông báo → mở **đúng trang sự kiện** và phát clip của sự kiện đó.
 
 ---
 
