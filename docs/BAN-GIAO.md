@@ -744,6 +744,16 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
 - Timeline 24h: **khung xem trước luôn chiếm chỗ cố định 64dp** phía trên dải timeline; khi kéo playhead
   mới hiện ảnh + giờ bên trong khung đó → timeline không còn bị đẩy xuống/lên khi thao tác.
 
+## 4ad. Cập nhật 31/10/2026 — chọn nhiều ảnh khi huấn luyện
+
+- Màn **Huấn luyện khuôn mặt** có chế độ **Chọn**: nút “Chọn/Xong” trên header, “Chọn tất cả / Bỏ chọn hết”,
+  chạm ảnh để tick (viền xanh + dấu ✓), hiển thị “Đã chọn N/M”.
+- Thanh thao tác dưới cùng khi có ảnh chọn:
+  - **Gán cho…** → chọn người/tên mới, gán hàng loạt bằng `train/{name}/classify {training_file}`,
+    có tiến trình “Đang gán i/N…” và báo “Đã gán x/N (y lỗi)”.
+  - **Xoá** → xoá hàng loạt khỏi `faces/train` (`/api/faces/train/delete {ids}`) sau khi xác nhận.
+- Chạm ảnh khi **không** ở chế độ chọn vẫn mở hộp thoại từng ảnh (Huấn luyện / Nhận diện lại / Xoá ảnh).
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái

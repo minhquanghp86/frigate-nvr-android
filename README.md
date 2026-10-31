@@ -63,7 +63,7 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 - Thư viện: tạo người, đăng ký ảnh từ thư viện, xoá, **đổi tên**.
 - **Huấn luyện từ ảnh nhận diện gần đây** (Recent Recognitions): lưới ảnh crop kèm tên/điểm;
   mỗi ảnh gán cho người đã có (`classify` + `training_file`), tạo người mới, hoặc **nhận diện lại**
-  (`/api/faces/reprocess`).
+  (`/api/faces/reprocess`). Hỗ trợ **chọn nhiều** để gán/xoá hàng loạt với tiến trình.
 - Chi tiết từng người: xem **toàn bộ ảnh đã train**, xoá từng ảnh.
 - **Sự kiện khuôn mặt** + thẻ theo dõi trên trang chủ (đã biết / chưa rõ theo `sub_label`),
   chạm để mở sự kiện hoặc gán tên (train).
