@@ -6,6 +6,7 @@
 - Ngôn ngữ: **Kotlin** · Giao diện **Jetpack Compose (Material 3)** theo phong cách iOS
 - **Giao diện sáng/tối** (chuyển nhanh trên tab Camera, có lưu lựa chọn)
 - `minSdk 26` · `compileSdk/targetSdk 36` (Android 16 — đáp ứng yêu cầu Google Play từ 31/08/2026)
+- Giải mã **FFmpeg phần mềm** (NextLib) cho camera H.265/HEVC; APK ~51,7 MB, AAB ~33,8 MB
 - Tự build **APK + AAB** bằng GitHub Actions; mỗi tag `v*` tạo GitHub Release
 
 > Ứng dụng không kèm máy chủ. Bạn cần một máy chủ Frigate của riêng mình.
@@ -15,7 +16,8 @@
 
 ## Trạng thái dự án
 
-**Ổn định — v1.0.0** (29/10/2026). CI build APK + AAB xanh; dùng với Frigate 0.18.2.
+**Ổn định — v1.1.3** (31/10/2026). CI build APK + AAB xanh; dùng với Frigate 0.18.2.
+Toolchain: AGP 8.10.1 · Gradle 8.11.1 · Kotlin 2.2.10 · Media3 1.11.1 + NextLib FFmpeg · targetSdk 36.
 Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BAN-GIAO.md).
 
 ## 1. Tính năng

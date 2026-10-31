@@ -710,11 +710,14 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
 - Timeline 24h: **khung xem trước luôn chiếm chỗ cố định 64dp** phía trên dải timeline; khi kéo playhead
   mới hiện ảnh + giờ bên trong khung đó → timeline không còn bị đẩy xuống/lên khi thao tác.
 
-## 5. Bàn giao v1.0.0 (29/10/2026)
+## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
-- Bản ổn định: **v1.0.0** (APK + AAB), CI xanh, build local xanh.
-- 18+ màn hình Compose, ~10.500 dòng Kotlin, unit test hợp đồng JSON.
+- Bản ổn định: **v1.1.3** (APK + AAB), CI xanh, build local xanh.
+- Toolchain: AGP 8.10.1 · Gradle 8.11.1 · Kotlin 2.2.10 · Media3 1.11.1 ·
+  NextLib FFmpeg 1.11.1-0.17.0 · compileSdk/targetSdk 36 (Android 16).
+- Kích thước: APK ~51,7 MB · AAB ~33,8 MB (FFmpeg làm APK tăng; AAB chia ABI khi phát hành).
+- 18+ màn hình Compose, ~11.000 dòng Kotlin, unit test hợp đồng JSON.
 - Dùng ~45/181 endpoint Frigate 0.18.2 (đã đối chiếu OpenAPI).
 
 ### 5.2 Chức năng đã hoàn thiện
@@ -729,6 +732,7 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
 | Quản trị | Cấu hình camera 10 tính năng + profile, người dùng (tạo/role/password/xoá), LPR, nhật ký, dung lượng |
 | Thông báo | Foreground service, lọc camera/nhãn, ảnh phát hiện trong thông báo, icon logo mới, chạm mở live + panel sự kiện |
 | Truyền màn hình | Google Cast LAN + qua HA: `media_player.play_media` (HLS/MP4) → `webostv.command` (LG) → `androidtv.adb_command` (Android TV); cấu hình HA URL + token, nút kiểm tra kết nối |
+| Trình phát | 1 hàng sát đáy (play · tua ±5s · seekbar · mute · toàn màn hình), tự ẩn 4s; FFmpeg software decoder + tự phục hồi lỗi codec/IO; timeline reserve 64dp cho ảnh xem trước (không đẩy layout) |
 | Khác | Sáng/tối (lưu lựa chọn), demo mode (demo.frigate.video), privacy trong app, crash log có version/device |
 
 ### 5.3 Quy trình phát hành
@@ -736,14 +740,21 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
 2. Tải APK ở Releases; AAB dùng để nộp Google Play.
 3. APK ký bằng `keystore/frigate-release.jks` cố định → cập nhật đè được.
 
-### 5.4 Việc còn lại (ngoài phạm vi code)
+### 5.4 Hạn chế đã biết
+- Frigate API không có endpoint cast/DLNA/PTZ → truyền màn hình qua HA; PTZ không hỗ trợ.
+- Cast cần thiết bị đích tải được HLS của go2rtc (cùng LAN, port 1984 mở, không auth).
+- LG webOS phụ thuộc dịch vụ `webostv.command` của HA; nếu model không nhận `media.viewer.open`
+  sẽ fallback mở trình duyệt TV.
+- APK lớn hơn do FFmpeg; nếu cần bản nhẹ có thể build flavor bỏ nextlib (mất khả năng H.265).
+
+### 5.5 Việc còn lại (ngoài phạm vi code)
 1. Bật GitHub Pages (Settings → Pages → main /docs) để có URL privacy cho Play.
 2. Tạo app trên Play Console (25 USD một lần), upload AAB, khai App content
    (Sign-in: “bấm Dùng bản demo”), Ads = Không, Data safety, content rating.
 3. Closed test 12 tester / 14 ngày (tài khoản cá nhân) → apply production.
 4. Tuỳ chọn: i18n EN toàn bộ UI, widget/Quick tile, tìm chuyển động, timeline API.
 
-### 5.5 Ghi chú kỹ thuật quan trọng
+### 5.6 Ghi chú kỹ thuật quan trọng
 - Frigate API **không có** endpoint cast/DLNA; truyền màn hình đi qua HA.
 - Tên feature camera đúng: `recordings` (không phải `record`).
 - CPU/RAM hệ thống: `cpu_usages["frigate.full_system"]` (chuỗi %), không phải `service.cpu_usage`.
