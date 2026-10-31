@@ -175,6 +175,9 @@ interface FrigateApi {
         @Part file: MultipartBody.Part,
     ): ResponseBody
 
+    @POST("api/faces/reprocess")
+    suspend fun reprocessFace(@Body body: FaceTrainBody): ResponseBody
+
     @POST("api/faces/train/{name}/classify")
     suspend fun trainFace(
         @Path("name") name: String,

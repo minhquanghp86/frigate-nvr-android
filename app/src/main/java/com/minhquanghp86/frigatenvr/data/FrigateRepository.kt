@@ -861,6 +861,45 @@ class FrigateRepository(
         call { trainFace(name, FaceTrainBody(event_id = eventId)) }
     }
 
+    /**
+     * Ảnh nhận diện gần đây (Frigate lưu ở `faces/train/`, trả về trong key "train").
+     * Tên file: `<event_id>-<timestamp>-<tên đoán>-<điểm>.webp`.
+     */
+    suspend fun faceAttempts(limit: Int = 60): List<FaceAttempt> {
+        val train = faces()["train"].orEmpty()
+        return train.mapNotNull { file ->
+            val parts = file.substringBeforeLast('.').split('-')
+            if (parts.size < 5) return@mapNotNull null
+            val name = parts[3].replace('_', ' ')
+            FaceAttempt(
+                file = file,
+                eventId = parts[0] + "-" + parts[1],
+                timestamp = parts[2].toDoubleOrNull() ?: 0.0,
+                name = name,
+                score = parts[4].toDoubleOrNull() ?: 0.0,
+            )
+        }.sortedByDescending { it.timestamp }.take(limit)
+    }
+
+    /** Gán một ảnh trong faces/train cho tên người (huấn luyện). */
+    suspend fun trainFaceFromTrainingFile(name: String, fileName: String) {
+        call { trainFace(name, FaceTrainBody(training_file = fileName)) }
+    }
+
+    /** Nhận diện lại một ảnh train (Frigate trả tên/điểm mới và đổi tên file). */
+    suspend fun reprocessFace(fileName: String): Pair<String, Double>? {
+        val res = call { reprocessFace(FaceTrainBody(training_file = fileName)) }.string()
+        val obj = kotlinx.serialization.json.Json.parseToJsonElement(res)
+            as? kotlinx.serialization.json.JsonObject ?: return null
+        val name = (obj["face_name"] as? kotlinx.serialization.json.JsonPrimitive)?.content
+            ?: return null
+        val score = (obj["score"] as? kotlinx.serialization.json.JsonPrimitive)
+            ?.content?.toDoubleOrNull() ?: 0.0
+        return name to score
+    }
+
+    fun faceAttemptUrl(file: String) = url("/clips/faces/train/$file")
+
     /** Khuôn mặt đã đăng ký: tên -> danh sách file ảnh. */
     suspend fun faces(): Map<String, List<String>> {
         val element = call { facesApi() }

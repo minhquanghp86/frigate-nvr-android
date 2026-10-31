@@ -60,6 +60,14 @@ data class PasswordBody(
     val old_password: String? = null,
 )
 
+data class FaceAttempt(
+    val file: String,
+    val eventId: String,
+    val timestamp: Double,
+    val name: String,
+    val score: Double,
+)
+
 @Serializable
 data class FaceDeleteBody(val ids: List<String>)
 
