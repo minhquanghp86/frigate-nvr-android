@@ -33,7 +33,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Cast
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.CastConnected
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.NotificationsActive
@@ -978,6 +980,7 @@ fun CameraLiveScreen(
                 ) {
                     LiveIconButton(Icons.Outlined.ArrowBack, "Quay lại", onBack)
                     Spacer(Modifier.weight(1f))
+                    LiveIconButton(Icons.Outlined.Article, "Sự kiện của camera") { panel = 1 }
                     LiveIconButton(
                         if (cast.connected) Icons.Outlined.CastConnected else Icons.Outlined.Cast,
                         if (cast.connected) "Đang phát lên TV" else "Phát lên TV",
@@ -1027,7 +1030,7 @@ fun CameraLiveScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Pill("Sự kiện", panel == 1, onClick = { panel = if (panel == 1) 0 else 1 })
+                    Pill("Live", panel == 0, onClick = { panel = 0 })
                     Pill("Xem lại", false, onClick = { onOpenTimeline(camera) })
                 }
                 Text(

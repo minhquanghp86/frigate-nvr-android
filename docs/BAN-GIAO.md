@@ -672,6 +672,15 @@ git tag v0.2.0 && git push --tags  # tạo Release kèm APK
 Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) — xem `~/.ssh/config`.
 
 
+## 4x. Cập nhật 31/10/2026 — thông báo mở đúng sự kiện + nút Live
+
+- **Thông báo sự kiện** giờ mở **trang sự kiện** và phát clip của đúng sự kiện đó
+  (`DeepLinks.openEvent(eventId, camera)`; MainActivity ưu tiên `EXTRA_EVENT_ID`).
+  Trước đó mở live kèm panel sự kiện.
+- Màn live: nút **“Sự kiện” đổi thành “Live”** (bấm về trình phát live, panel = 0);
+  xem danh sách sự kiện của camera bằng **icon Sự kiện trên toolbar** (panel = 1).
+  “Xem lại” giữ nguyên (mở timeline của camera).
+
 ## 5. Bàn giao v1.0.0 (29/10/2026)
 
 ### 5.1 Trạng thái

@@ -65,13 +65,12 @@ object Notify {
         )
     }
 
-    /** Mở live của camera đã báo, kèm panel sự kiện của camera đó. */
-    fun openCameraEventsIntent(context: Context, camera: String, eventId: String): PendingIntent {
+    /** Mở đúng trang sự kiện (và phát clip của sự kiện đó). */
+    fun openEventIntent(context: Context, eventId: String, camera: String): PendingIntent {
         val intent = Intent(context, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            putExtra(MainActivity.EXTRA_CAMERA, camera)
-            putExtra(MainActivity.EXTRA_OPEN_EVENTS, true)
             putExtra(MainActivity.EXTRA_EVENT_ID, eventId)
+            putExtra(MainActivity.EXTRA_CAMERA, camera)
         }
         return PendingIntent.getActivity(
             context,
@@ -194,7 +193,7 @@ class EventWatchService : Service() {
             )
             .setContentText(text)
             .setAutoCancel(true)
-            .setContentIntent(Notify.openCameraEventsIntent(this, e.camera, e.id))
+            .setContentIntent(Notify.openEventIntent(this, e.id, e.camera))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
 
         if (snapshot != null) {
