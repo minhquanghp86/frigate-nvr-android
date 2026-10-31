@@ -29,6 +29,8 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
   - **WebRTC/WHEP** qua proxy có xác thực của Frigate (độ trễ thấp nhất, fps gốc)
   - **MP4** và **HLS** qua go2rtc
   - **MJPEG** (Frigate, chọn fps/độ phân giải, đo fps thực)
+- Thanh điều khiển 1 hàng sát đáy (play · thời gian · seekbar · toàn màn hình) dạng gradient mờ,
+  che khung hình tối thiểu; tự ẩn sau 4 giây.
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
 - **Cast lên TV/Chromecast**:

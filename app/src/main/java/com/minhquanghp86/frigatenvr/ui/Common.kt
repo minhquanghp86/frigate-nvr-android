@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -333,72 +334,77 @@ fun VideoPlayer(
         )
 
         if (showControls) {
-            Column(
+            // Một hàng duy nhất sát đáy: phát · thời gian · seekbar · tổng · toàn màn hình.
+            // Chỉ dùng gradient mờ thay vì thanh đen để che khung hình ít nhất.
+            Row(
                 Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color(0xB3000000))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color(0x88000000)),
+                        ),
+                    )
+                    .padding(start = 4.dp, end = 4.dp, top = 10.dp, bottom = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        formatClock(
-                            if (dragging) (dragValue * durationMs).toLong() else positionMs,
-                        ),
-                        color = Color.White,
-                        fontSize = 11.sp,
-                    )
-                    Slider(
-                        value = when {
-                            durationMs <= 0 -> 0f
-                            dragging -> dragValue
-                            else -> (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
-                        },
-                        onValueChange = { v ->
-                            dragging = true
-                            dragValue = v
-                        },
-                        onValueChangeFinished = {
-                            if (durationMs > 0) player.seekTo((dragValue * durationMs).toLong())
-                            dragging = false
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 6.dp),
-                        colors = SliderDefaults.colors(
-                            thumbColor = IOSBlue,
-                            activeTrackColor = IOSBlue,
-                            inactiveTrackColor = Color(0x66FFFFFF),
-                        ),
-                    )
-                    Text(
-                        formatClock(durationMs),
-                        color = Color.White,
-                        fontSize = 11.sp,
+                IconButton(
+                    onClick = {
+                        if (player.isPlaying) player.pause() else player.play()
+                        showControls = true
+                    },
+                    modifier = Modifier.size(34.dp),
+                ) {
+                    Icon(
+                        if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = if (isPlaying) "Tạm dừng" else "Phát",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = {
-                            if (player.isPlaying) player.pause() else player.play()
-                            showControls = true
-                        },
-                    ) {
+                Text(
+                    formatClock(
+                        if (dragging) (dragValue * durationMs).toLong() else positionMs,
+                    ),
+                    color = Color.White,
+                    fontSize = 10.sp,
+                )
+                Slider(
+                    value = when {
+                        durationMs <= 0 -> 0f
+                        dragging -> dragValue
+                        else -> (positionMs.toFloat() / durationMs).coerceIn(0f, 1f)
+                    },
+                    onValueChange = { v ->
+                        dragging = true
+                        dragValue = v
+                    },
+                    onValueChangeFinished = {
+                        if (durationMs > 0) player.seekTo((dragValue * durationMs).toLong())
+                        dragging = false
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 4.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = IOSBlue,
+                        activeTrackColor = IOSBlue,
+                        inactiveTrackColor = Color(0x66FFFFFF),
+                    ),
+                )
+                Text(
+                    formatClock(durationMs),
+                    color = Color.White,
+                    fontSize = 10.sp,
+                )
+                if (onFullscreen != null) {
+                    IconButton(onClick = onFullscreen, modifier = Modifier.size(34.dp)) {
                         Icon(
-                            if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = if (isPlaying) "Tạm dừng" else "Phát",
+                            Icons.Outlined.Fullscreen,
+                            contentDescription = "Toàn màn hình",
                             tint = Color.White,
+                            modifier = Modifier.size(20.dp),
                         )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    if (onFullscreen != null) {
-                        IconButton(onClick = onFullscreen) {
-                            Icon(
-                                Icons.Outlined.Fullscreen,
-                                contentDescription = "Toàn màn hình",
-                                tint = Color.White,
-                            )
-                        }
                     }
                 }
             }
