@@ -10,6 +10,7 @@ import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
@@ -211,7 +212,11 @@ fun VideoPlayer(
     var dragging by remember(url) { mutableStateOf(false) }
     var dragValue by remember(url) { mutableFloatStateOf(0f) }
 
-    val player = remember(url) {
+    var retry by remember(url) { mutableIntStateOf(0) }
+    // Lỗi giải mã phần cứng -> thử lại bằng FFmpeg (phần mềm); lỗi mạng -> tự thử lại 1 lần.
+    var softwareOnly by remember(url) { mutableStateOf(false) }
+    var autoRetried by remember(url) { mutableStateOf(false) }
+    val player = remember(url, retry, softwareOnly) {
         val ok = repo.okhttp()
         val dataSourceFactory = OkHttpDataSource.Factory(ok)
         val mediaSource = if (url.contains(".m3u8")) {
@@ -221,13 +226,50 @@ fun VideoPlayer(
             ProgressiveMediaSource.Factory(dataSourceFactory)
                 .createMediaSource(MediaItem.fromUri(url))
         }
-        ExoPlayer.Builder(context).build().apply {
+        // Renderer: ưu tiên giải mã phần cứng, tự chuyển sang FFmpeg (phần mềm) khi codec
+        // không được hỗ trợ (vd. H.265 của một số camera).
+        val renderers = io.github.anilbeesetti.nextlib.media3ext.ffdecoder.NextRenderersFactory(context)
+            .setExtensionRendererMode(
+                if (softwareOnly) {
+                    androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+                } else {
+                    androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON
+                },
+            )
+            .setEnableDecoderFallback(true)
+        ExoPlayer.Builder(context, renderers).build().apply {
             setMediaSource(mediaSource)
             prepare()
             this.playWhenReady = playWhenReady
             addListener(object : Player.Listener {
                 override fun onPlayerError(e: PlaybackException) {
-                    error = e.errorCodeName
+                    val code = e.errorCode
+                    val decoderProblem = code == PlaybackException.ERROR_CODE_DECODER_INIT_FAILED ||
+                        code == PlaybackException.ERROR_CODE_DECODER_QUERY_FAILED
+                    if (decoderProblem && !softwareOnly) {
+                        // Phần cứng không nhận codec (H.265, hoặc hết slot decoder) -> chuyển FFmpeg.
+                        softwareOnly = true
+                        retry++
+                        return
+                    }
+                    val transient = code == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ||
+                        code == PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT ||
+                        code == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
+                        code == PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS
+                    if (transient && !autoRetried) {
+                        autoRetried = true
+                        android.os.Handler(android.os.Looper.getMainLooper())
+                            .postDelayed({ retry++ }, 900)
+                        return
+                    }
+                    error = when {
+                        decoderProblem ->
+                            "Không khởi tạo được bộ giải mã video (đã thử cả phần mềm)."
+                        code == PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED ->
+                            "Định dạng video không được hỗ trợ."
+                        transient -> "Lỗi mạng khi tải video (${e.errorCodeName})."
+                        else -> e.errorCodeName
+                    }
                 }
             })
         }
@@ -363,15 +405,27 @@ fun VideoPlayer(
         }
 
         if (error != null) {
-            Text(
-                text = "Không phát được video ($error)",
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
+            Column(
+                Modifier
                     .align(Alignment.Center)
-                    .background(Color(0xAA000000))
+                    .background(Color(0xAA000000), RoundedCornerShape(8.dp))
                     .padding(12.dp),
-            )
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "Không phát được video\n$error",
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.size(8.dp))
+                androidx.compose.material3.OutlinedButton(
+                    onClick = {
+                        error = null
+                        autoRetried = false
+                        retry++
+                    },
+                ) { Text("Thử lại", color = Color.White) }
+            }
         }
     }
 }

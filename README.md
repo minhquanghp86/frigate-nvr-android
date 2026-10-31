@@ -207,6 +207,11 @@ Phân tích API & lộ trình Play: [`docs/PHAN-TICH-2026-10-29.md`](docs/PHAN-T
 
 | Hiện tượng | Cách xử lý |
 |---|---|
+| “Không phát được video” ở Xem lại | App tự chuyển sang giải mã **FFmpeg** khi phần cứng từ chối codec (H.265) và tự thử lại lỗi mạng; bấm **Thử lại** nếu vẫn lỗi |
+
+
+| Hiện tượng | Cách xử lý |
+|---|---|
 | Không đăng nhập được | Kiểm tra port 8971, bật “Tin chứng chỉ tự ký”, tài khoản ≥ 12 ký tự |
 | Live tải chậm / đen | Ưu tiên WebRTC; kiểm tra go2rtc URL trong Cài đặt nếu dùng MP4/HLS |
 | “Không phát được video” ở Xem lại | Chọn khung giờ có dải ghi hình; app chặn tua vượt thời điểm hiện tại |
