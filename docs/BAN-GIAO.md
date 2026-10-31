@@ -681,6 +681,19 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
   xem danh sách sự kiện của camera bằng **icon Sự kiện trên toolbar** (panel = 1).
   “Xem lại” giữ nguyên (mở timeline của camera).
 
+## 4y. Cập nhật 31/10/2026 — sửa lỗi phát lại (DECODER_INIT_FAILED, lỗi rải rác)
+
+- Nguyên nhân: HLS bản ghi có camera dùng **H.265/HEVC**; phần cứng điện thoại có thể từ chối
+  khởi tạo decoder (đặc biệt khi nhiều player/luồng cùng dùng decoder) → ExoPlayer báo
+  `ERROR_CODE_DECODER_INIT_FAILED`; lỗi "thỉnh thoảng" ở camera khác do tranh chấp decoder hoặc IO mạng.
+- Sửa:
+  1. Nâng **Media3 1.4.1 → 1.11.1**, thêm **nextlib FFmpeg** (`nextlib-media3ext:1.11.1-0.17.0`,
+     Kotlin 2.2.10) → giải mã phần mềm H.264/HEVC/VP8/VP9/AV1 khi phần cứng không nhận.
+  2. Renderer mặc định `ON` (phần cứng trước); khi gặp lỗi decoder → tự chuyển `PREFER` (FFmpeg)
+     và tạo lại player; lỗi IO/timeout → tự thử lại 1 lần sau 0,9 s.
+  3. UI lỗi có nút **“Thử lại”**, hiển thị lý do thân thiện thay vì mã lỗi trần.
+- Lưu ý: APK tăng kích thước do thư viện FFmpeg (AAB vẫn chia theo ABI khi phát hành Play).
+
 ## 5. Bàn giao v1.0.0 (29/10/2026)
 
 ### 5.1 Trạng thái

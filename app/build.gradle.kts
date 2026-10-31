@@ -92,10 +92,12 @@ dependencies {
 
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    implementation("androidx.media3:media3-exoplayer:1.4.1")
-    implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
-    implementation("androidx.media3:media3-ui:1.4.1")
-    implementation("androidx.media3:media3-datasource-okhttp:1.4.1")
+    implementation("androidx.media3:media3-exoplayer:1.11.1")
+    implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
+    implementation("androidx.media3:media3-ui:1.11.1")
+    implementation("androidx.media3:media3-datasource-okhttp:1.11.1")
+    // FFmpeg software decoders: cần cho camera H.265/HEVC (lỗi DECODER_INIT_FAILED) và codec lạ.
+    implementation("io.github.anilbeesetti:nextlib-media3ext:1.11.1-0.17.0")
 
     // WebRTC (WHEP) để xem live fps gốc qua proxy có xác thực của Frigate.
     implementation("io.github.webrtc-sdk:android:137.7151.05")
