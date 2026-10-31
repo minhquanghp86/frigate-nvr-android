@@ -14,6 +14,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
+import androidx.compose.material.icons.outlined.Replay5
+import androidx.compose.material.icons.outlined.Forward5
+import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
@@ -217,6 +221,7 @@ fun VideoPlayer(
     // Lỗi giải mã phần cứng -> thử lại bằng FFmpeg (phần mềm); lỗi mạng -> tự thử lại 1 lần.
     var softwareOnly by remember(url) { mutableStateOf(false) }
     var autoRetried by remember(url) { mutableStateOf(false) }
+    var muted by remember(url) { mutableStateOf(false) }
     val player = remember(url, retry, softwareOnly) {
         val ok = repo.okhttp()
         val dataSourceFactory = OkHttpDataSource.Factory(ok)
@@ -274,6 +279,10 @@ fun VideoPlayer(
                 }
             })
         }
+    }
+
+    LaunchedEffect(player, muted) {
+        player.volume = if (muted) 0f else 1f
     }
 
     // Nhảy tới đúng thời điểm (timeline: chọn 10:35 -> phát từ phút 35).
@@ -362,6 +371,37 @@ fun VideoPlayer(
                         modifier = Modifier.size(20.dp),
                     )
                 }
+                // Tua lùi 5s
+                IconButton(
+                    onClick = {
+                        player.seekTo((player.currentPosition - 5_000).coerceAtLeast(0L))
+                        showControls = true
+                    },
+                    modifier = Modifier.size(30.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.Replay5,
+                        contentDescription = "Tua lùi 5 giây",
+                        tint = Color.White,
+                        modifier = Modifier.size(19.dp),
+                    )
+                }
+                // Tua tiến 5s
+                IconButton(
+                    onClick = {
+                        val max = if (durationMs > 0) durationMs else Long.MAX_VALUE
+                        player.seekTo((player.currentPosition + 5_000).coerceAtMost(max))
+                        showControls = true
+                    },
+                    modifier = Modifier.size(30.dp),
+                ) {
+                    Icon(
+                        Icons.Outlined.Forward5,
+                        contentDescription = "Tua tiến 5 giây",
+                        tint = Color.White,
+                        modifier = Modifier.size(19.dp),
+                    )
+                }
                 Text(
                     formatClock(
                         if (dragging) (dragValue * durationMs).toLong() else positionMs,
@@ -397,6 +437,20 @@ fun VideoPlayer(
                     color = Color.White,
                     fontSize = 10.sp,
                 )
+                IconButton(
+                    onClick = {
+                        muted = !muted
+                        showControls = true
+                    },
+                    modifier = Modifier.size(30.dp),
+                ) {
+                    Icon(
+                        if (muted) Icons.Outlined.VolumeOff else Icons.Outlined.VolumeUp,
+                        contentDescription = if (muted) "Bật âm thanh" else "Tắt âm thanh",
+                        tint = Color.White,
+                        modifier = Modifier.size(19.dp),
+                    )
+                }
                 if (onFullscreen != null) {
                     IconButton(onClick = onFullscreen, modifier = Modifier.size(34.dp)) {
                         Icon(

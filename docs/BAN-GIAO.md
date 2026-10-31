@@ -702,6 +702,14 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
   icon 20dp trong nút 34dp, nhãn 10sp.
 - Hành vi giữ nguyên: chạm để hiện/ẩn, tự ẩn sau 4s khi đang phát, kéo seekbar để tua.
 
+## 4aa. Cập nhật 31/10/2026 — thêm tua ±5s, tắt tiếng; cố định khung xem trước timeline
+
+- Player (dùng chung mọi trình phát): thêm **tua lùi 5s**, **tua tiến 5s** ngay sau nút play/phát,
+  và **tắt/bật tiếng** cạnh nút toàn màn hình (icon VolumeOff/VolumeUp, áp dụng qua `player.volume`).
+  Hàng điều khiển vẫn 1 hàng sát đáy (nút 30–34dp, icon 19–20dp).
+- Timeline 24h: **khung xem trước luôn chiếm chỗ cố định 64dp** phía trên dải timeline; khi kéo playhead
+  mới hiện ảnh + giờ bên trong khung đó → timeline không còn bị đẩy xuống/lên khi thao tác.
+
 ## 5. Bàn giao v1.0.0 (29/10/2026)
 
 ### 5.1 Trạng thái
