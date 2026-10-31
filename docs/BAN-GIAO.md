@@ -702,6 +702,20 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
   icon 20dp trong nút 34dp, nhãn 10sp.
 - Hành vi giữ nguyên: chạm để hiện/ẩn, tự ẩn sau 4s khi đang phát, kéo seekbar để tua.
 
+## 4ab. Cập nhật 31/10/2026 — Huấn luyện khuôn mặt từ ảnh nhận diện gần đây
+
+- Làm rõ dữ liệu: `GET /api/faces` trả **mọi thư mục** trong `clips/faces`, gồm key **“train”** —
+  đây là **ảnh nhận diện gần đây** với tên file `<event_id>-<timestamp>-<tên_đoán>-<điểm>.webp`
+  (do `face_recognition.save_attempts` lưu). App trước đây hiển thị “train” như một người → đã lọc bỏ.
+- Thêm màn **“Huấn luyện khuôn mặt”** (Thư viện khuôn mặt → “Ảnh nhận diện gần đây”):
+  lưới ảnh crop gần đây, nhãn tên/`chưa rõ` + % điểm; mỗi ảnh có nút **Thêm**:
+  - Chọn người đã đăng ký → `POST /api/faces/train/{name}/classify {training_file}` (Frigate chuyển ảnh
+    từ `faces/train` sang thư mục người đó và huấn luyện).
+  - Nhập tên mới → gọi `POST /api/faces/{name}/create` rồi classify.
+  - Nút phụ **“Nhận diện lại”** → `POST /api/faces/reprocess {training_file}` (Frigate nhận diện lại,
+    đổi tên file theo tên/điểm mới).
+- Thư viện khuôn mặt bỏ key “train” khỏi danh sách người; thêm dòng “Ảnh nhận diện gần đây (N ảnh)”.
+
 ## 4aa. Cập nhật 31/10/2026 — thêm tua ±5s, tắt tiếng; cố định khung xem trước timeline
 
 - Player (dùng chung mọi trình phát): thêm **tua lùi 5s**, **tua tiến 5s** ngay sau nút play/phát,

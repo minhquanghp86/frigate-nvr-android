@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -60,6 +63,7 @@ import kotlinx.coroutines.withContext
 fun FacesScreen(
     onBack: () -> Unit,
     onOpenPerson: (String) -> Unit = {},
+    onOpenTrain: () -> Unit = {},
 ) {
     val repo = rememberRepo()
     val context = LocalContext.current
@@ -93,7 +97,9 @@ fun FacesScreen(
     Column(Modifier.fillMaxSize()) {
         LargeTitleHeader(
             title = "Khuôn mặt",
-            subtitle = faces?.let { "${it.size} người đã đăng ký" } ?: "Đang tải…",
+            subtitle = faces?.let {
+                "${it.keys.count { k -> k != "train" }} người đã đăng ký"
+            } ?: "Đang tải…",
             trailing = {
                 if (faceEnabled != false) {
                     IconButton(
@@ -124,6 +130,30 @@ fun FacesScreen(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
             )
         }
+        val trainCount = faces?.get("train")?.size ?: 0
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onOpenTrain)
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Outlined.PhotoLibrary,
+                contentDescription = null,
+                tint = IOSBlue,
+                modifier = Modifier.height(18.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "Ảnh nhận diện gần đây",
+                color = IOSLabel,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text("$trainCount ảnh ›", color = IOSBlue, fontSize = 12.sp)
+        }
+
         error?.let {
             Text(
                 it,
@@ -155,7 +185,7 @@ fun FacesScreen(
                 CircularProgressIndicator()
             }
 
-            data.isEmpty() -> Box(Modifier.fillMaxSize(), Alignment.Center) {
+            data.keys.count { it != "train" } == 0 -> Box(Modifier.fillMaxSize(), Alignment.Center) {
                 Text(
                     "Chưa có khuôn mặt nào.\nBật Face Recognition trong Frigate rồi bấm + để thêm người/ảnh.",
                     color = IOSSecondaryLabel,
@@ -170,7 +200,7 @@ fun FacesScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxSize(),
             ) {
-                items(data.keys.toList()) { name ->
+                items(data.keys.filter { it != "train" }) { name ->
                     val files = data[name].orEmpty()
                     val file = files.firstOrNull()
                     Column(
