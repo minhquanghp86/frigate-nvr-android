@@ -702,6 +702,26 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
   icon 20dp trong nút 34dp, nhãn 10sp.
 - Hành vi giữ nguyên: chạm để hiện/ẩn, tự ẩn sau 4s khi đang phát, kéo seekbar để tua.
 
+## 4ac. Cập nhật 31/10/2026 — xử lý nhận diện SAI (nhãn phụ không đúng)
+
+**Frigate xử lý thế nào?** (theo docs `face_recognition.md` và API):
+- Frigate **chỉ học danh tính đúng** (“who someone is”), **không có API “người này KHÔNG phải A”**.
+  Nhãn phụ trên sự kiện là kết quả suy luận; ảnh trong `faces/train` là **gợi ý của từng lần nhận diện**,
+  không phải người thật.
+- Nếu ảnh **rõ** và đúng là người B → **gán cho B** (classify `training_file` hoặc `reclassify`),
+  ảnh được thêm vào bộ train của B.
+- Nếu ảnh **mờ/xa/sai rõ ràng** → **xoá ảnh khỏi train**, không gán vào A; thay bằng ảnh chất lượng tốt
+  của A. Gán ảnh mờ vào A sẽ làm giảm độ chính xác của cả A.
+- Nhãn của **sự kiện** (bản ghi) sửa bằng `POST /api/events/{id}/sub_label` — chỉ sửa dữ liệu sự kiện,
+  **không** thay đổi bộ train.
+- Không tạo hồ sơ cho người lạ bị nhận nhầm; giữ `unknown` và cải thiện ảnh train của người bị nhầm.
+
+**App đã bổ sung**:
+- Màn Huấn luyện → hộp thoại ảnh có thêm **“Xoá ảnh”** (`/api/faces/train/delete`) để bỏ ảnh xấu.
+- Chi tiết người (ảnh đã train) → chạm ảnh: **Xoá ảnh** hoặc **Chuyển sang người khác**
+  (`/api/faces/{name}/reclassify {id,new_name}`), kèm cảnh báo chỉ chuyển khi ảnh rõ/đúng người.
+- Trang sự kiện: “Sửa thông tin sự kiện” → đổi **Nhãn phụ** (`/events/{id}/sub_label`).
+
 ## 4ab. Cập nhật 31/10/2026 — Huấn luyện khuôn mặt từ ảnh nhận diện gần đây
 
 - Làm rõ dữ liệu: `GET /api/faces` trả **mọi thư mục** trong `clips/faces`, gồm key **“train”** —

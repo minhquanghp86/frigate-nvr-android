@@ -216,7 +216,8 @@ fun FaceTrainScreen(onBack: () -> Unit) {
                 Column {
                     Text(
                         "Frigate đoán: ${current.name} (${(current.score * 100).toInt()}%). " +
-                            "Chọn người đã đăng ký hoặc nhập tên mới.",
+                            "Chọn người đã đăng ký hoặc nhập tên mới — chỉ làm khi ảnh rõ và đúng là " +
+                            "người đó. Ảnh mờ/nhãn sai thì nên Xoá để không làm hỏng bộ train.",
                         fontSize = 11.sp,
                         color = IOSSecondaryLabel,
                     )
@@ -264,25 +265,44 @@ fun FaceTrainScreen(onBack: () -> Unit) {
                 ) { Text("Huấn luyện") }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        target = null
-                        busy = true
-                        scope.launch {
-                            try {
-                                val result = repo.reprocessFace(current.file)
+                Row {
+                    TextButton(
+                        onClick = {
+                            target = null
+                            busy = true
+                            scope.launch {
+                                try {
+                                    repo.deleteFaceImages("train", listOf(current.file))
+                                    message = "Đã xoá ảnh khỏi danh sách nhận diện"
+                                    reload()
+                                } catch (e: Exception) {
+                                    error = e.message ?: "Không xoá được ảnh"
+                                } finally {
+                                    busy = false
+                                }
+                            }
+                        },
+                    ) { Text("Xoá ảnh", color = IOSRed) }
+                    TextButton(
+                        onClick = {
+                            target = null
+                            busy = true
+                            scope.launch {
+                                try {
+                                    val result = repo.reprocessFace(current.file)
                                 message = result?.let {
                                     "Nhận diện lại: ${it.first} (${(it.second * 100).toInt()}%)"
                                 } ?: "Không nhận diện lại được"
                                 reload()
                             } catch (e: Exception) {
-                                error = e.message ?: "Không nhận diện lại được"
-                            } finally {
-                                busy = false
+                                    error = e.message ?: "Không nhận diện lại được"
+                                } finally {
+                                    busy = false
+                                }
                             }
-                        }
-                    },
-                ) { Text("Nhận diện lại", color = IOSSecondaryLabel) }
+                        },
+                    ) { Text("Nhận diện lại", color = IOSSecondaryLabel) }
+                }
             },
         )
     }

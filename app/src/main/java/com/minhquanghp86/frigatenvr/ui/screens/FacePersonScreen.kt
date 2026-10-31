@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -78,6 +79,8 @@ fun FacePersonScreen(
     var pendingDelete by remember { mutableStateOf<String?>(null) }
     var confirmDeleteAll by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
+    var moveImage by remember { mutableStateOf<String?>(null) }
+    var moveTarget by remember { mutableStateOf("") }
     var renameInput by remember { mutableStateOf(name) }
 
     fun reload() {
@@ -231,6 +234,54 @@ fun FacePersonScreen(
                 }
             }
         }
+    }
+
+    moveImage?.let { file ->
+        AlertDialog(
+            onDismissRequest = { moveImage = null },
+            title = { Text("Chuyển ảnh sang người khác") },
+            text = {
+                Column {
+                    Text(
+                        "Chỉ dùng khi ảnh rõ và thực sự là người đó. Frigate không có API " +
+                            "\"không phải người này\" — ảnh mờ nên xoá thay vì chuyển.",
+                        fontSize = 11.sp,
+                        color = IOSSecondaryLabel,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = moveTarget,
+                        onValueChange = { moveTarget = it },
+                        label = { Text("Tên người đích", fontSize = 13.sp) },
+                        singleLine = true,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val to = moveTarget.trim()
+                        if (to.isBlank()) return@TextButton
+                        moveImage = null
+                        busy = true
+                        scope.launch {
+                            try {
+                                repo.reclassifyFace(name, file, to)
+                                message = "Đã chuyển ảnh sang $to"
+                                reload()
+                            } catch (e: Exception) {
+                                error = e.message ?: "Không chuyển được ảnh"
+                            } finally {
+                                busy = false
+                            }
+                        }
+                    },
+                ) { Text("Chuyển") }
+            },
+            dismissButton = {
+                TextButton(onClick = { moveImage = null }) { Text("Huỷ") }
+            },
+        )
     }
 
     pendingDelete?.let { file ->

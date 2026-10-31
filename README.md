@@ -225,6 +225,7 @@ Phân tích API & lộ trình Play: [`docs/PHAN-TICH-2026-10-29.md`](docs/PHAN-T
 | “Không phát được video” ở Xem lại | Chọn khung giờ có dải ghi hình; app chặn tua vượt thời điểm hiện tại |
 | Không có thông báo | Bật chip **Thông báo**, cấp quyền POST_NOTIFICATIONS, kiểm tra bộ lọc camera/nhãn |
 | Khuôn mặt trống | Bật `face_recognition.enabled` trong Frigate rồi khởi động lại |
+| Nhận diện sai người | Ảnh rõ & đúng người khác → “Thêm/Chuyển sang người khác”; ảnh mờ/người lạ → **Xoá ảnh** khỏi train, bổ sung ảnh tốt. Frigate không có API “không phải người này” |
 | Cấu hình Camera báo lỗi | Cần tài khoản **admin** (API trả 400/403) |
 | Cast không thấy TV | TV/Chromecast cùng WiFi; go2rtc port 1984 mở, không đặt auth; HLS phải được hỗ trợ |
 | Muốn xem log | Cài đặt → Cấu hình Frigate → **Nhật ký** → nguồn `app` (có Copy/Share) |
