@@ -652,6 +652,8 @@ fun CameraLiveScreen(
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var immersive by rememberSaveable { mutableStateOf(false) }
     var panel by rememberSaveable(camera, initialPanel) { mutableIntStateOf(initialPanel) }
+    // Xem live: giữ màn hình sáng cho tới khi rời màn.
+    com.minhquanghp86.frigatenvr.ui.KeepScreenOn()
     var showSettings by remember { mutableStateOf(false) }
     var reloadKey by remember { mutableIntStateOf(0) }
     var streamName by remember(camera) { mutableStateOf(camera) }

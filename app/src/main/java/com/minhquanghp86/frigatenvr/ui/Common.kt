@@ -198,6 +198,17 @@ fun ScreenHeader(
 }
 
 /** Trình phát video (mp4/HLS) với thanh điều khiển tự viết — tự co giãn theo bề ngang. */
+/** Giữ màn hình sáng (chặn tắt đèn nền) trong lúc xem live/phát video. */
+@Composable
+fun KeepScreenOn(enabled: Boolean = true) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.DisposableEffect(view, enabled) {
+        val previous = view.keepScreenOn
+        if (enabled) view.keepScreenOn = true
+        onDispose { view.keepScreenOn = previous }
+    }
+}
+
 @Composable
 fun VideoPlayer(
     url: String,
@@ -284,6 +295,9 @@ fun VideoPlayer(
     LaunchedEffect(player, muted) {
         player.volume = if (muted) 0f else 1f
     }
+
+    // Đang phát (hoặc đang tua) thì không cho màn hình tắt.
+    KeepScreenOn(enabled = isPlaying || dragging)
 
     // Nhảy tới đúng thời điểm (timeline: chọn 10:35 -> phát từ phút 35).
     LaunchedEffect(player, startPositionMs) {
