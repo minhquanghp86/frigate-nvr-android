@@ -35,6 +35,7 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
   toàn màn hình, dạng gradient mờ, tự ẩn sau 4 giây.
 - Timeline có **khung xem trước cố định** (không đẩy layout) khi kéo playhead.
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
+- **Giữ màn hình sáng** khi đang xem live và khi video đang phát/tua.
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
 - **Cast lên TV/Chromecast**:
   - **Google Cast (LAN)**: Cast SDK + Default Media Receiver, phát HLS go2rtc (cần điện thoại cùng WiFi).

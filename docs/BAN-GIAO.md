@@ -754,6 +754,14 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
   - **Xoá** → xoá hàng loạt khỏi `faces/train` (`/api/faces/train/delete {ids}`) sau khi xác nhận.
 - Chạm ảnh khi **không** ở chế độ chọn vẫn mở hộp thoại từng ảnh (Huấn luyện / Nhận diện lại / Xoá ảnh).
 
+## 4ae. Cập nhật 31/10/2026 — giữ màn hình sáng khi xem live/playback
+
+- Thêm `KeepScreenOn(enabled)` (Compose): bật/tắt `view.keepScreenOn` (FLAG_KEEP_SCREEN_ON) và khôi phục
+  trạng thái cũ khi rời màn.
+- **Live**: bật liên tục trong `CameraLiveScreen` (mọi chế độ MJPEG/WebRTC/HLS/MP4, kể cả khi ẩn chrome).
+- **Video** (sự kiện, xem lại, toàn màn hình): bật khi `isPlaying` hoặc đang kéo seekbar → tạm dừng lâu
+  vẫn cho phép màn hình tắt như bình thường.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
