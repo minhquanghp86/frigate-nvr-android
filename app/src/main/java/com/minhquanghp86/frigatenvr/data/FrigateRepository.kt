@@ -870,9 +870,35 @@ class FrigateRepository(
         call { reclassifyFace(name, FaceReclassifyBody(imageId, newName)) }
     }
 
-    /** Train khuôn mặt từ một sự kiện (Frigate tự cắt khuôn mặt trong ảnh sự kiện). */
+    /**
+     * Train khuôn mặt từ một sự kiện.
+     *
+     * Frigate 0.18.2 có lỗi: `train_face(event_id=...)` đọc `event.data["attributes"][0]["box"]`,
+     * nhưng nhiều event (kể cả event có sub_label) có `attributes: []` → IndexError → HTTP 500.
+     * Fallback: lấy ảnh snapshot sạch của event rồi POST /api/faces/{name}/register để Frigate
+     * tự detect & cắt khuôn mặt từ ảnh đó.
+     */
     suspend fun trainFaceFromEvent(name: String, eventId: String) {
-        call { trainFace(name, FaceTrainBody(event_id = eventId)) }
+        try {
+            call { trainFace(name, FaceTrainBody(event_id = eventId)) }
+            return
+        } catch (e: Exception) {
+            val bytes = withContext(Dispatchers.IO) {
+                runCatching {
+                    okhttp().newCall(
+                        okhttp3.Request.Builder().url(eventSnapshotRaw(eventId)).build(),
+                    ).execute().use { r ->
+                        if (!r.isSuccessful) throw e
+                        r.body?.bytes() ?: throw e
+                    }
+                }.getOrNull()
+            } ?: throw e
+            try {
+                registerFace(name, bytes, "$eventId.jpg", "image/jpeg")
+            } catch (_: Exception) {
+                throw e
+            }
+        }
     }
 
     /**
