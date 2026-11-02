@@ -762,6 +762,15 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
 - **Video** (sự kiện, xem lại, toàn màn hình): bật khi `isPlaying` hoặc đang kéo seekbar → tạm dừng lâu
   vẫn cho phép màn hình tắt như bình thường.
 
+## 4af. Cập nhật 02/11/2026 — thời gian hh:mm:ss + đồng hồ trên live
+
+- Trình phát (mọi nơi): `formatClock` luôn **hh:mm:ss** (trước chỉ mm:ss khi dưới 1 giờ) — áp dụng cho
+  thời gian hiện tại/tổng thời lượng trên thanh seekbar.
+- Xem lại: giờ đã chọn (dưới timeline), bubble playhead và nhãn ảnh xem trước đổi sang **HH:mm:ss**
+  (`fmtMinutesOfDay`).
+- Live: thêm **đồng hồ thời gian thực HH:mm:ss** (cập nhật mỗi giây) ở góc trên-phải khung hình
+  (cách toolbar 56dp), nền mờ — hiển thị cả khi thanh điều khiển đã ẩn.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
