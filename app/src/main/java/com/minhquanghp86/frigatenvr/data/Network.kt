@@ -77,6 +77,13 @@ interface FrigateApi {
         @Query("cameras") cameras: String = "all",
     ): Map<String, Boolean>
 
+    @GET("api/{camera}/recordings")
+    suspend fun recordings(
+        @Path("camera") camera: String,
+        @Query("after") after: Long,
+        @Query("before") before: Long,
+    ): kotlinx.serialization.json.JsonElement
+
     @GET("api/{camera}/recordings/summary")
     suspend fun cameraRecordingsSummary(
         @Path("camera") camera: String,

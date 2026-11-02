@@ -218,6 +218,7 @@ fun VideoPlayer(
     startPositionMs: Long = 0L,
     onFullscreen: (() -> Unit)? = null,
     onPosition: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
+    restartToken: Int = 0,
 ) {
     val context = LocalContext.current
     val repo = rememberRepo()
@@ -234,7 +235,7 @@ fun VideoPlayer(
     var softwareOnly by remember(url) { mutableStateOf(false) }
     var autoRetried by remember(url) { mutableStateOf(false) }
     var muted by remember(url) { mutableStateOf(false) }
-    val player = remember(url, retry, softwareOnly) {
+    val player = remember(url, retry, softwareOnly, restartToken) {
         val ok = repo.okhttp()
         val dataSourceFactory = OkHttpDataSource.Factory(ok)
         val mediaSource = if (url.contains(".m3u8")) {

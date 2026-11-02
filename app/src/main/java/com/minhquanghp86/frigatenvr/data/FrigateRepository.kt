@@ -474,6 +474,20 @@ class FrigateRepository(
     fun eventThumbnail(id: String) = url("/api/events/$id/thumbnail.jpg")
 
     /** Ảnh chụp từ bản ghi tại thời điểm bất kỳ (dùng để xem trước khi tua timeline). */
+    /** Segment ghi hình (epoch giây) trong khoảng [after, before) — dùng để map offset HLS <-> giờ thực. */
+    suspend fun recordingSegments(camera: String, after: Long, before: Long): List<Pair<Long, Long>> =
+        call { recordings(camera, after, before) }.let { el ->
+            val arr = el as? kotlinx.serialization.json.JsonArray ?: return@let emptyList()
+            arr.mapNotNull { row ->
+                val obj = row as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                fun num(key: String) = (obj[key] as? kotlinx.serialization.json.JsonPrimitive)
+                    ?.content?.toDoubleOrNull()
+                val start = num("start_time") ?: return@mapNotNull null
+                val end = num("end_time") ?: return@mapNotNull null
+                start.toLong() to end.toLong()
+            }
+        }
+
     fun recordingSnapshot(camera: String, epoch: Double, height: Int = 180) =
         url("/api/$camera/recordings/$epoch/snapshot.jpg?height=$height")
 
