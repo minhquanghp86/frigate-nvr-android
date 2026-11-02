@@ -257,7 +257,9 @@ fun VideoPlayer(
             )
             .setEnableDecoderFallback(true)
         ExoPlayer.Builder(context, renderers).build().apply {
-            setMediaSource(mediaSource)
+            // Áp mốc bắt đầu NGAY khi nạp media (API chuẩn cho HLS VOD). seekTo sau READY
+            // đôi khi bị bỏ qua với HLS của Frigate -> video phát lại từ HH:00:00.
+            setMediaSource(mediaSource, startPositionMs.coerceAtLeast(0L))
             prepare()
             this.playWhenReady = playWhenReady
             addListener(object : Player.Listener {
@@ -301,9 +303,10 @@ fun VideoPlayer(
     // Đang phát (hoặc đang tua) thì không cho màn hình tắt.
     KeepScreenOn(enabled = isPlaying || dragging)
 
-    // Nhảy tới đúng thời điểm (timeline: chọn 10:35 -> phát từ phút 35).
+    // Nếu cùng player mà mốc thay đổi (ít khi xảy ra vì Timeline tạo lại player), seek bổ sung.
+    val createdWithPos = remember(player) { startPositionMs }
     LaunchedEffect(player, startPositionMs) {
-        if (startPositionMs <= 0) return@LaunchedEffect
+        if (startPositionMs <= 0 || startPositionMs == createdWithPos) return@LaunchedEffect
         androidx.compose.runtime.snapshotFlow { player.playbackState }
             .first { it == Player.STATE_READY }
         player.seekTo(startPositionMs)
