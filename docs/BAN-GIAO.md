@@ -894,6 +894,18 @@ Thiết kế mới (`TimelineScreen`):
   lọc `data.recognized_license_plate`; model thêm `FrigateEvent.recognizedPlate`.
 - Ảnh dùng `eventSnapshot`, fallback `/{camera}/{label}/best.jpg`.
 
+## 4aq. Cập nhật 02/11/2026 — bật LPR cho dahua2
+
+- Main stream Dahua2 là **2304×1296** (subtype=0) — ảnh chụp xác nhận thấy rõ xe máy + biển số trong phòng.
+- go2rtc thêm `dahua2_main` (subtype=0, chỉ dùng detect/LPR); ghi hình giữ subtype=1 640×360.
+- dahua2: `detect 1280×720@5`, `motion` bật (threshold 30, contour_area 60, improve_contrast false)
+  + mask timestamp/logo (toạ độ dùng 0.999, tránh bug so chuỗi `> "1.0"`), `objects.track: [motorcycle, car]`,
+  `lpr: {enabled: true, min_area: 700}`, snapshots bật, `face_recognition: false` (phòng khách, tránh sinh
+  sự kiện khuôn mặt ngoài ý muốn).
+- Lưu ý runtime: config ghi `detect.enabled: true` nhưng trạng thái runtime vẫn OFF (override cũ) →
+  phải gọi `PUT /api/camera/dahua2/set/detect {"value":"ON"}`; sau đó runtime True, detect ~0.4 fps.
+- Đo sau khi bật: healthy, không lỗi validate/ffmpeg; `frigate.full_system` ~38 %, RAM dùng 78,7 % (theo dõi).
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
