@@ -1142,7 +1142,7 @@ fun CameraLiveScreen(
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    e.label + (e.subLabelDisplay?.let { " · $it" } ?: ""),
+                                    e.displayLabel + (e.subLabelDisplay?.let { " · $it" } ?: ""),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = IOSLabel,
                                     maxLines = 1,
