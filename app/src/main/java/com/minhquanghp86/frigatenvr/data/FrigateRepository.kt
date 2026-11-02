@@ -475,7 +475,7 @@ class FrigateRepository(
 
     /** Ảnh chụp từ bản ghi tại thời điểm bất kỳ (dùng để xem trước khi tua timeline). */
     /** Segment ghi hình (epoch giây) trong khoảng [after, before) — dùng để map offset HLS <-> giờ thực. */
-    suspend fun recordingSegments(camera: String, after: Long, before: Long): List<Pair<Long, Long>> =
+    suspend fun recordingSegments(camera: String, after: Long, before: Long): List<Pair<Double, Double>> =
         call { recordings(camera, after, before) }.let { el ->
             val arr = el as? kotlinx.serialization.json.JsonArray ?: return@let emptyList()
             arr.mapNotNull { row ->
@@ -484,7 +484,7 @@ class FrigateRepository(
                     ?.content?.toDoubleOrNull()
                 val start = num("start_time") ?: return@mapNotNull null
                 val end = num("end_time") ?: return@mapNotNull null
-                start.toLong() to end.toLong()
+                start to end
             }
         }
 

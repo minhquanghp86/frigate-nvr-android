@@ -124,7 +124,7 @@ fun TimelineScreen(
     // Playlist HLS của một giờ KHÔNG bắt đầu đúng HH:00:00 (đo thực tế: 08:00:06) và có thể
     // thiếu đoạn (gap), nên không thể tính "giờ = đầu giờ + position". Ta lấy danh sách segment
     // từ /api/{cam}/recordings rồi map offset giây <-> epoch tuyệt đối.
-    var playSegs by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
+    var playSegs by remember { mutableStateOf<List<Pair<Double, Double>>>(emptyList()) }
     var playHour by remember { mutableIntStateOf(-1) }
     var playGen by remember { mutableIntStateOf(0) }
     var videoRestart by remember { mutableIntStateOf(0) }
@@ -187,18 +187,18 @@ fun TimelineScreen(
         scope.launch {
             val segs = runCatching { repo.recordingSegments(cam, hourStart, hourStart + 3600) }
                 .getOrDefault(emptyList())
-                .filter { it.first >= hourStart && it.first < hourStart + 3600 }
+                .filter { it.first >= hourStart.toDouble() && it.first < (hourStart + 3600).toDouble() }
                 .sortedBy { it.first }
             if (gen != playGen) return@launch
             playSegs = segs
             playHour = hour
             playbackHourStart = hour * 60f
             val offsetSec = if (segs.isEmpty()) {
-                (targetEpoch - hourStart).coerceAtLeast(0L)
+                (targetEpoch - hourStart).coerceAtLeast(0L).toDouble()
             } else {
                 offsetForEpoch(segs, targetEpoch)
             }
-            startPosMs = offsetSec * 1000L
+            startPosMs = (offsetSec * 1000.0).toLong()
             // Tạo player mới để seek chắc chắn được áp dụng (seek trong player cũ đôi khi
             // bị bỏ qua khi cùng URL, khiến video đứng ở vị trí cũ trong khi nhãn đã nhảy).
             videoRestart++
@@ -457,7 +457,7 @@ fun TimelineScreen(
                                         val epoch = if (playSegs.isEmpty()) {
                                             base + playHour * 3600L + pos / 1000L
                                         } else {
-                                            epochForOffset(playSegs, pos / 1000L)
+                                            epochForOffset(playSegs, pos / 1000.0)
                                         }
                                         minutes = (((epoch - base) / 60.0).toFloat())
                                             .coerceIn(0f, maxMinutesFor(day))
@@ -487,7 +487,7 @@ fun TimelineScreen(
                         "t=" + fmtEpochSeconds(lastTargetEpoch) +
                             " off=" + (startPosMs / 1000) + " pos=" + (lastPosMs / 1000) +
                             " segs=" + playSegs.size +
-                            " s0=" + fmtEpochSeconds(playSegs.firstOrNull()?.first ?: 0L) +
+                            " s0=" + fmtEpochSeconds(playSegs.firstOrNull()?.first?.toLong() ?: 0L) +
                             " h=" + playHour + " en=" + displayEnabled,
                         color = Color.White,
                         fontSize = 9.sp,
@@ -778,25 +778,26 @@ fun TimelineScreen(
 
 /** Định dạng phút-trong-ngày thành HH:mm:ss (dùng cho timeline). */
 /** Offset (giây) trong playlist ứng với epoch tuyệt đối. */
-private fun offsetForEpoch(segs: List<Pair<Long, Long>>, target: Long): Long {
-    var acc = 0L
+private fun offsetForEpoch(segs: List<Pair<Double, Double>>, target: Long): Double {
+    var acc = 0.0
+    val t = target.toDouble()
     for ((start, end) in segs) {
-        if (target <= start) return acc
-        if (target < end) return acc + (target - start)
+        if (t <= start) return acc
+        if (t < end) return acc + (t - start)
         acc += (end - start)
     }
     return acc
 }
 
 /** Epoch tuyệt đối ứng với offset (giây) trong playlist. */
-private fun epochForOffset(segs: List<Pair<Long, Long>>, offset: Long): Long {
-    var acc = 0L
+private fun epochForOffset(segs: List<Pair<Double, Double>>, offset: Double): Long {
+    var acc = 0.0
     for ((start, end) in segs) {
         val d = end - start
-        if (offset < acc + d) return start + (offset - acc)
+        if (offset < acc + d) return (start + (offset - acc)).toLong()
         acc += d
     }
-    return segs.lastOrNull()?.second ?: 0L
+    return segs.lastOrNull()?.second?.toLong() ?: 0L
 }
 
 private fun fmtEpochSeconds(epoch: Long): String =
