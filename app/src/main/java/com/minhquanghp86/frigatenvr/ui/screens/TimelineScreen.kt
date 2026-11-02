@@ -431,7 +431,7 @@ fun TimelineScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "%02d:%02d".format(preview.toInt() / 60, preview.toInt() % 60),
+                                fmtMinutesOfDay(preview),
                                 color = IOSLabel,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -589,7 +589,7 @@ fun TimelineScreen(
                             pathEffect = androidx.compose.ui.graphics.PathEffect
                                 .dashPathEffect(floatArrayOf(8f, 6f), 0f),
                         )
-                        val label = "%02d:%02d".format(minutes.toInt() / 60, minutes.toInt() % 60)
+                        val label = fmtMinutesOfDay(minutes)
                         val bubble = textMeasurer.measure(
                             label,
                             style = TextStyle(color = Color.White, fontSize = 11.sp),
@@ -628,7 +628,7 @@ fun TimelineScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "%02d:%02d".format(minutes.toInt() / 60, minutes.toInt() % 60),
+                        fmtMinutesOfDay(minutes),
                         style = MaterialTheme.typography.titleMedium,
                         color = IOSLabel,
                     )
@@ -665,4 +665,14 @@ fun TimelineScreen(
             }
         }
     }
+}
+
+
+/** Định dạng phút-trong-ngày thành HH:mm:ss (dùng cho timeline). */
+private fun fmtMinutesOfDay(minutesOfDay: Float): String {
+    val total = (minutesOfDay * 60).toInt().coerceAtLeast(0)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val s = total % 60
+    return "%02d:%02d:%02d".format(h, m, s)
 }

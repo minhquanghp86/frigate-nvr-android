@@ -652,6 +652,15 @@ fun CameraLiveScreen(
     var chromeVisible by rememberSaveable { mutableStateOf(true) }
     var immersive by rememberSaveable { mutableStateOf(false) }
     var panel by rememberSaveable(camera, initialPanel) { mutableIntStateOf(initialPanel) }
+    // Đồng hồ thời gian thực hiển thị trên khung live.
+    var clockText by remember { mutableStateOf("") }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val fmt = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")
+        while (true) {
+            clockText = java.time.LocalTime.now().format(fmt)
+            delay(1_000)
+        }
+    }
     // Xem live: giữ màn hình sáng cho tới khi rời màn.
     com.minhquanghp86.frigatenvr.ui.KeepScreenOn()
     var showSettings by remember { mutableStateOf(false) }
@@ -953,6 +962,19 @@ fun CameraLiveScreen(
                             Text("Thử WebRTC")
                         }
                     }
+                }
+
+                if (clockText.isNotEmpty()) {
+                    Text(
+                        clockText,
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = 56.dp, end = 8.dp)
+                            .background(Color(0x88000000), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp),
+                    )
                 }
 
                 if (showStats && bitmap != null && (mode == LiveMode.MJPEG || mode == LiveMode.AUTO)) {
