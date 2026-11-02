@@ -903,6 +903,19 @@ class FrigateRepository(
         return call { events(params) }.filter { it.isFaceEvent }
     }
 
+    /** Sự kiện xe đã có biển số nhận diện (LPR), mới nhất trước. */
+    suspend fun plateEvents(after: Long? = null, limit: Int = 120): List<FrigateEvent> {
+        val params = mutableMapOf(
+            // chỉ các nhãn xe mới có thể mang biển số -> giảm dữ liệu tải về
+            "labels" to "car,motorcycle,truck,bus",
+            "has_snapshot" to "1",
+            "limit" to limit.toString(),
+            "include_thumbnails" to "1",
+        )
+        after?.let { params["after"] = it.toString() }
+        return call { events(params) }.filter { it.recognizedPlate != null }
+    }
+
     suspend fun createFace(name: String) {
         call { createFace(name) }
     }

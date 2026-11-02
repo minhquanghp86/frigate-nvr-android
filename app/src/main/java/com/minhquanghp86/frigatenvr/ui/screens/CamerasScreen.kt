@@ -144,6 +144,7 @@ fun CamerasScreen(
     onOpenCamera: (String) -> Unit,
     onOpenEvent: (String) -> Unit = {},
     onOpenFaceEvents: () -> Unit = {},
+    onOpenPlates: () -> Unit = {},
 ) {
     val vm: CamerasViewModel = viewModel()
     val state by vm.state.collectAsState()
@@ -154,6 +155,7 @@ fun CamerasScreen(
     var stats by remember { mutableStateOf<kotlinx.serialization.json.JsonObject?>(null) }
     var todayCounts by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var faceToday by remember { mutableStateOf<List<FrigateEvent>>(emptyList()) }
+    var plateToday by remember { mutableStateOf<List<FrigateEvent>>(emptyList()) }
     var tick by remember { mutableIntStateOf(0) }
     var refreshing by remember { mutableStateOf(false) }
     val notifyEnabled by repo.notifyEnabled.collectAsState()
@@ -201,12 +203,13 @@ fun CamerasScreen(
         while (true) {
             stats = runCatching { repo.statsJson() }.getOrNull()
             todayCounts = runCatching { repo.eventsToday() }.getOrDefault(emptyMap())
-            faceToday = runCatching {
-                val startOfDay = java.time.LocalDate.now()
-                    .atStartOfDay(java.time.ZoneId.systemDefault())
-                    .toEpochSecond()
-                repo.faceEvents(after = startOfDay, limit = 60)
-            }.getOrDefault(emptyList())
+            val startOfDay = java.time.LocalDate.now()
+                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .toEpochSecond()
+            faceToday = runCatching { repo.faceEvents(after = startOfDay, limit = 60) }
+                .getOrDefault(emptyList())
+            plateToday = runCatching { repo.plateEvents(after = startOfDay, limit = 120) }
+                .getOrDefault(emptyList())
             tick++
             delay(8_000)
         }
@@ -288,6 +291,14 @@ fun CamerasScreen(
                         FaceWatchCard(
                             events = faceToday,
                             onOpenAll = onOpenFaceEvents,
+                            onOpenEvent = onOpenEvent,
+                        )
+                    }
+
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        PlateWatchCard(
+                            events = plateToday,
+                            onOpenAll = onOpenPlates,
                             onOpenEvent = onOpenEvent,
                         )
                     }
