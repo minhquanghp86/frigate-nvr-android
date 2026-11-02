@@ -217,6 +217,7 @@ fun VideoPlayer(
     fit: Boolean = true,
     startPositionMs: Long = 0L,
     onFullscreen: (() -> Unit)? = null,
+    onPosition: (positionMs: Long, durationMs: Long) -> Unit = { _, _ -> },
 ) {
     val context = LocalContext.current
     val repo = rememberRepo()
@@ -312,6 +313,7 @@ fun VideoPlayer(
             if (!dragging) {
                 positionMs = player.currentPosition.coerceAtLeast(0L)
                 durationMs = player.duration.coerceAtLeast(0L)
+                onPosition(positionMs, durationMs)
             }
             isPlaying = player.isPlaying
             delay(350)

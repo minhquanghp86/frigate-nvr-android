@@ -771,6 +771,15 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
 - Live: thêm **đồng hồ thời gian thực HH:mm:ss** (cập nhật mỗi giây) ở góc trên-phải khung hình
   (cách toolbar 56dp), nền mờ — hiển thị cả khi thanh điều khiển đã ẩn.
 
+## 4ag. Cập nhật 02/11/2026 — thời gian/playhead Xem lại chạy theo video
+
+- `VideoPlayer` có thêm callback `onPosition(positionMs, durationMs)` (báo mỗi 350 ms khi không kéo seekbar).
+- `TimelineScreen`: lưu `playbackHourStart` (phút đầu giờ của lần phát); khi đang phát và **không kéo playhead**,
+  `minutes = playbackHourStart + pos/60000` → **giờ đã chọn và bubble/playhead chạy theo vị trí thực**.
+  Kéo playhead vẫn tạm dừng cập nhật (previewMinutes != null).
+- Hết đoạn ghi của giờ hiện tại (pos ≥ duration−1,5 s) → tự phát **giờ kế tiếp** nếu còn dữ liệu
+  (guard `autoAdvancedHour`, không vượt thời điểm hiện tại).
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái

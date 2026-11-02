@@ -52,7 +52,8 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
   rồi upload (`/api/faces/{name}/register`) — dùng khi Frigate không tự tìm thấy mặt trong ảnh toàn cảnh.
 
 ### Xem lại
-- Timeline 24h kiểu Frigate: vạch giờ, dải ghi hình, tick sự kiện theo nhãn, playhead kéo độc lập.
+- Timeline 24h kiểu Frigate: vạch giờ, dải ghi hình, tick sự kiện theo nhãn, playhead kéo độc lập;
+  khi phát, giờ hiển thị và playhead **chạy theo vị trí video** và tự nối giờ kế tiếp khi hết đoạn nếu còn dữ liệu.
 - Mở tab → phát **tại thời điểm hiện tại** (ngày cũ: 00:00 hoặc khung sớm nhất có dữ liệu).
 - Không tua vượt thời điểm hiện tại (tránh vùng chưa ghi hình / lỗi “Không phát được video”).
 - Kéo playhead → hiện **ảnh xem trước** trong khung cố định phía trên (timeline không bị dịch chuyển).
