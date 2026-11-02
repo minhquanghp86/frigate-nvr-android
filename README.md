@@ -37,7 +37,8 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
 - **Giữ màn hình sáng** khi đang xem live và khi video đang phát/tua.
 - **Tính năng AI**: bật/tắt LPR và nhận diện khuôn mặt (global + từng camera) ngay trong app;
-  chi tiết sự kiện xe có **OCR lại biển số**; trang Camera có thẻ **Biển số** ngay dưới thẻ Khuôn mặt.
+  chi tiết sự kiện xe có **OCR lại biển số**; trang Camera có thẻ **Biển số** ngay dưới thẻ Khuôn mặt
+  (hiển thị cả sự kiện `license_plate` của dedicated LPR).
 - Thời gian **hh:mm:ss** trên thanh phát và timeline; **đồng hồ thời gian thực** trên khung live.
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
 - **Cast lên TV/Chromecast**:

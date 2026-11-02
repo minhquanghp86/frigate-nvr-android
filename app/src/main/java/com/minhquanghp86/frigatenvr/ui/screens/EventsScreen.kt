@@ -350,7 +350,7 @@ private fun EventCard(event: FrigateEvent, onClick: () -> Unit) {
             }
             Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp)) {
                 Text(
-                    event.label + (event.subLabelDisplay?.let { " · $it" } ?: ""),
+                    event.displayLabel + (event.subLabelDisplay?.let { " · $it" } ?: ""),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,

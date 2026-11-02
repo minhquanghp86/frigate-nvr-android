@@ -50,6 +50,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +73,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.minhquanghp86.frigatenvr.data.ServerSession
 import com.minhquanghp86.frigatenvr.notify.EventWatchService
 import com.minhquanghp86.frigatenvr.ui.IOSBlue
+import com.minhquanghp86.frigatenvr.ui.rememberRepo
 import com.minhquanghp86.frigatenvr.ui.IOSGreen
 import com.minhquanghp86.frigatenvr.ui.IOSLabel
 import com.minhquanghp86.frigatenvr.ui.IOSOrange
@@ -102,6 +104,11 @@ fun SettingsScreen(
     onOpenAlerts: () -> Unit = {},
     onOpenPrivacy: () -> Unit = {},
 ) {
+    val settingsRepo = rememberRepo()
+    var plateCount by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(Unit) {
+        plateCount = runCatching { settingsRepo.licensePlates().size }.getOrNull()
+    }
     val vm: SettingsViewModel = viewModel()
     val repo = vm.repo()
     val version by vm.version.collectAsState()
@@ -370,6 +377,7 @@ fun SettingsScreen(
                     IosDivider(56)
                     IosRow(
                         "Biển số đã nhận diện",
+                        subtitle = plateCount?.let { "$it biển số" } ?: "Đang tải…",
                         icon = Icons.Outlined.DirectionsCar,
                         chevron = true,
                         onClick = onOpenPlates,

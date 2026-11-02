@@ -907,7 +907,7 @@ class FrigateRepository(
     suspend fun plateEvents(after: Long? = null, limit: Int = 120): List<FrigateEvent> {
         val params = mutableMapOf(
             // chỉ các nhãn xe mới có thể mang biển số -> giảm dữ liệu tải về
-            "labels" to "car,motorcycle,truck,bus",
+            "labels" to "car,motorcycle,truck,bus,license_plate",
             "has_snapshot" to "1",
             "limit" to limit.toString(),
             "include_thumbnails" to "1",

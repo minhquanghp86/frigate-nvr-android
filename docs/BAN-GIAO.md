@@ -906,6 +906,17 @@ Thiết kế mới (`TimelineScreen`):
   phải gọi `PUT /api/camera/dahua2/set/detect {"value":"ON"}`; sau đó runtime True, detect ~0.4 fps.
 - Đo sau khi bật: healthy, không lỗi validate/ffmpeg; `frigate.full_system` ~38 %, RAM dùng 78,7 % (theo dõi).
 
+## 4ar. Cập nhật 02/11/2026 — test LPR cận cảnh + sửa thẻ Biển số
+
+- Test thành công trên **chuông cửa** (di động, đưa sát biển): dedicated LPR đọc đúng
+  `15F137811` (từ “15-F1 378.11”), score **0.99**, 2 event `license_plate` lúc 19:14–19:15.
+- Nguyên nhân thẻ Biển số hiện “0 biển”: dedicated LPR tạo event label **`license_plate`**, còn
+  app chỉ query `labels=car,motorcycle,truck,bus` → sửa thành thêm `license_plate`.
+- App: thêm `FrigateEvent.displayLabel` (license_plate → “Biển số”, person → “Người”, xe → tiếng Việt);
+  Cài đặt hiển thị **“N biển số”** ở mục Biển số đã nhận diện.
+- Server: trả chuông cửa về chế độ thường (giữ `track: [person, car, motorcycle]`), dahua2 bỏ `type: lpr`;
+  tắt `debug_save_plates`, xoá `/media/frigate/clips/lpr`. Đo lại: healthy, CPU ~58 %, không lỗi.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái

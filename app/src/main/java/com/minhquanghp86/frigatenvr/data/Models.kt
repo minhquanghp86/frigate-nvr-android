@@ -141,6 +141,19 @@ data class FrigateEvent(
     val faceName: String?
         get() = subLabelDisplay?.takeIf { !isUnknownFace }
 
+    /** Nhãn hiển thị thân thiện (license_plate -> Biển số). */
+    val displayLabel: String
+        get() = when (label) {
+            "license_plate" -> "Biển số"
+            "person" -> "Người"
+            "car" -> "Ô tô"
+            "motorcycle" -> "Xe máy"
+            "bicycle" -> "Xe đạp"
+            "truck" -> "Xe tải"
+            "bus" -> "Xe buýt"
+            else -> label
+        }
+
     /** Biển số đã nhận diện cho sự kiện xe (LPR). */
     val recognizedPlate: String?
         get() = data?.recognizedLicensePlate?.takeIf { it.isNotBlank() }
