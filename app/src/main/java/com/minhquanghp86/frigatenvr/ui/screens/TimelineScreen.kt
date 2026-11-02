@@ -122,6 +122,8 @@ fun TimelineScreen(
     // Mốc phút đầu giờ của lần phát hiện tại — dùng để playhead/giờ chạy theo vị trí thực.
     var playbackHourStart by remember { mutableStateOf(0f) }
     var autoAdvancedHour by remember { mutableStateOf(-1) }
+    // Mốc seek đang chờ áp dụng: tránh cập nhật giờ từ position=0 trước khi player seek xong.
+    var pendingSeekMs by remember { mutableStateOf<Long?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(cameras, initialCamera) {
@@ -156,10 +158,13 @@ fun TimelineScreen(
         val day = selectedDay ?: return
         val clamped = value.coerceIn(0f, maxMinutesFor(day))
         minutes = clamped
-        val total = clamped.toInt().coerceIn(0, 1439)
-        val hour = total / 60
+        // Giữ nguyên GIÂY: 07:01:05 -> seek đúng 07:01:05 (trước đây cắt thành phút nguyên).
+        val totalSeconds = (clamped * 60f).toInt().coerceAtLeast(0)
+        val hour = (totalSeconds / 3600).coerceIn(0, 23)
+        val offsetMs = ((totalSeconds % 3600).toLong()) * 1000L
         playbackHourStart = hour * 60f
-        startPosMs = ((total % 60) * 60L) * 1000L
+        startPosMs = offsetMs
+        pendingSeekMs = offsetMs
         vm.play(day, hour.toString())
     }
 
@@ -387,7 +392,12 @@ fun TimelineScreen(
                             onPosition = { pos, dur ->
                                 if (previewMinutes == null) {
                                     val day = selectedDay
-                                    val shown = playbackHourStart + pos / 60_000f
+                                    val anchor = pendingSeekMs
+                                    if (anchor != null && pos >= anchor - 1_000) {
+                                        pendingSeekMs = null
+                                    }
+                                    val effective = pendingSeekMs ?: pos
+                                    val shown = playbackHourStart + effective / 60_000f
                                     minutes = shown.coerceIn(0f, maxMinutesFor(day))
                                     // Hết đoạn ghi của giờ hiện tại -> tự phát tiếp giờ kế (nếu còn dữ liệu).
                                     if (dur > 0 && pos >= dur - 1_500) {

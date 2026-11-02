@@ -780,6 +780,14 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
 - Hết đoạn ghi của giờ hiện tại (pos ≥ duration−1,5 s) → tự phát **giờ kế tiếp** nếu còn dữ liệu
   (guard `autoAdvancedHour`, không vượt thời điểm hiện tại).
 
+## 4ah. Cập nhật 02/11/2026 — kéo timeline không còn nhảy về phút chẵn
+
+- Nguyên nhân: `playAt` cắt `minutes.toInt()` (mất giây) và callback vị trí cập nhật lúc player còn ở
+  0 giây (trước khi seek) → giờ hiển thị/playhead bị kéo về đầu giờ.
+- Sửa: `playAt` tính **theo giây** (`totalSeconds`), `startPosMs` giữ phần giây; thêm `pendingSeekMs`
+  chặn cập nhật vị trí cho tới khi player đã seek tới mốc (pos ≥ mốc − 1 s), sau đó mới chạy theo video.
+  Kéo 07:01:05 → nhả tay phát và giữ đúng 07:01:05.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
