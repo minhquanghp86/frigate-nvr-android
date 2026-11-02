@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Article
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Group
@@ -94,6 +95,7 @@ fun SettingsScreen(
     onOpenStorage: () -> Unit = {},
     onOpenOverview: () -> Unit = {},
     onOpenPlates: () -> Unit = {},
+    onOpenAi: () -> Unit = {},
     onOpenFaces: () -> Unit = {},
     onOpenUsers: () -> Unit = {},
     onOpenCameraConfig: () -> Unit = {},
@@ -356,6 +358,14 @@ fun SettingsScreen(
                         icon = Icons.Outlined.Face,
                         chevron = true,
                         onClick = onOpenFaces,
+                    )
+                    IosDivider(56)
+                    IosRow(
+                        "Tính năng AI",
+                        subtitle = "LPR · nhận diện khuôn mặt",
+                        icon = Icons.Outlined.AutoAwesome,
+                        chevron = true,
+                        onClick = onOpenAi,
                     )
                     IosDivider(56)
                     IosRow(

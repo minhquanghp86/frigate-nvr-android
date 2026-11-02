@@ -19,6 +19,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -473,6 +475,9 @@ class FrigateRepository(
 
     fun eventThumbnail(id: String) = url("/api/events/$id/thumbnail.jpg")
 
+    /** Ảnh đẹp nhất gần đây của một nhãn trên camera (dùng làm ảnh dự phòng). */
+    fun bestSnapshot(camera: String, label: String) = url("/api/$camera/$label/best.jpg")
+
     /** Ảnh chụp từ bản ghi tại thời điểm bất kỳ (dùng để xem trước khi tua timeline). */
     /** Segment ghi hình (epoch giây) trong khoảng [after, before) — dùng để map offset HLS <-> giờ thực. */
     suspend fun recordingSegments(camera: String, after: Long, before: Long): List<Pair<Double, Double>> =
@@ -553,6 +558,52 @@ class FrigateRepository(
             ?.filter { it.isNotBlank() }
             ?: emptyList()
     }
+
+    suspend fun configJson(): kotlinx.serialization.json.JsonElement = call { configJson() }
+
+    /** Bật/tắt một tính năng AI (lpr | face_recognition) cho 1 camera — áp dụng ngay, không restart. */
+    suspend fun setCameraAi(camera: String, feature: String, enabled: Boolean) {
+        val data = kotlinx.serialization.json.buildJsonObject {
+            putJsonObject("cameras") {
+                putJsonObject(camera) {
+                    putJsonObject(feature) { put("enabled", enabled) }
+                }
+            }
+        }
+        call {
+            configSet(
+                ConfigSetBody(
+                    requiresRestart = 0,
+                    updateTopic = "config/cameras/$camera/$feature",
+                    configData = data,
+                ),
+            )
+        }
+    }
+
+    /** Bật/tắt tính năng AI ở cấp global (lpr | face_recognition). */
+    suspend fun setGlobalAi(feature: String, enabled: Boolean) {
+        val data = kotlinx.serialization.json.buildJsonObject {
+            putJsonObject(feature) { put("enabled", enabled) }
+        }
+        call {
+            configSet(
+                ConfigSetBody(
+                    requiresRestart = 0,
+                    updateTopic = "config/$feature",
+                    configData = data,
+                ),
+            )
+        }
+    }
+
+    /** OCR lại biển số cho một sự kiện xe (PUT /api/lpr/reprocess?event_id=…). */
+    suspend fun reprocessPlate(eventId: String) {
+        call { reprocessPlate(eventId) }
+    }
+
+    /** Lịch sử stats của server (dùng để nạp sẵn biểu đồ). */
+    suspend fun statsHistory(): kotlinx.serialization.json.JsonElement = call { statsHistory(null) }
 
     /** Số sự kiện hôm nay theo từng camera (dùng /api/events/summary). */
     suspend fun eventsToday(): Map<String, Int> = runCatching {

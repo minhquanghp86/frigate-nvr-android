@@ -118,8 +118,10 @@ fun FrigateImage(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop,
     cacheKey: String? = null,
+    fallbackUrl: String? = null,
 ) {
     val repo = rememberRepo()
+    var useFallback by remember(url, fallbackUrl) { mutableStateOf(false) }
     val context = LocalContext.current
     val client = remember(repo.okhttp()) { repo.okhttp() }
     val imageLoader = remember(client) {
@@ -129,7 +131,7 @@ fun FrigateImage(
             .build()
     }
     val request = ImageRequest.Builder(context)
-        .data(url)
+        .data(if (useFallback && fallbackUrl != null) fallbackUrl else url)
         .apply {
             if (cacheKey != null) {
                 memoryCacheKey("$url|$cacheKey")
@@ -143,6 +145,9 @@ fun FrigateImage(
         contentScale = contentScale,
         modifier = modifier,
         imageLoader = imageLoader,
+        onError = {
+            if (!useFallback && fallbackUrl != null) useFallback = true
+        },
     )
 }
 

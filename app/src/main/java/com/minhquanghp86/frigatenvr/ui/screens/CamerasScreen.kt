@@ -1118,6 +1118,13 @@ fun CameraLiveScreen(
                                         url = repo.eventThumbnail(e.id),
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop,
+                                        fallbackUrl = repo.bestSnapshot(e.camera, e.label),
+                                    )
+                                } else if (e.camera.isNotBlank() && e.label.isNotBlank()) {
+                                    FrigateImage(
+                                        url = repo.bestSnapshot(e.camera, e.label),
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop,
                                     )
                                 }
                             }

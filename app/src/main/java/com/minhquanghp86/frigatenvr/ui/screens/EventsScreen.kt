@@ -318,6 +318,13 @@ private fun EventCard(event: FrigateEvent, onClick: () -> Unit) {
                         url = repo.eventThumbnail(event.id),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
+                        fallbackUrl = repo.bestSnapshot(event.camera, event.label),
+                    )
+                } else if (event.camera.isNotBlank() && event.label.isNotBlank()) {
+                    FrigateImage(
+                        url = repo.bestSnapshot(event.camera, event.label),
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
                     )
                 } else {
                     Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -789,6 +796,24 @@ fun EventDetailScreen(
                             }
                         },
                     ) { Text("Đánh dấu false positive") }
+                    if (dialogEvent.label in setOf("car", "motorcycle", "truck", "bus")) {
+                        TextButton(
+                            enabled = !editBusy,
+                            onClick = {
+                                editBusy = true
+                                similarScope.launch {
+                                    try {
+                                        repo.reprocessPlate(dialogEvent.id)
+                                        editMessage = "Đã gửi OCR lại biển số"
+                                    } catch (e: Exception) {
+                                        editMessage = e.message ?: "Không gửi được"
+                                    } finally {
+                                        editBusy = false
+                                    }
+                                }
+                            },
+                        ) { Text("OCR lại biển số") }
+                    }
                     editMessage?.let {
                         Text(it, color = IOSSecondaryLabel, fontSize = 11.sp)
                     }

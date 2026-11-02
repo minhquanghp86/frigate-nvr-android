@@ -24,6 +24,14 @@ data class FrigateUser(
 data class CameraSetBody(val value: String)
 
 @Serializable
+data class ConfigSetBody(
+    @SerialName("requires_restart") val requiresRestart: Int = 0,
+    @SerialName("update_topic") val updateTopic: String? = null,
+    @SerialName("config_data") val configData: kotlinx.serialization.json.JsonElement? = null,
+    @SerialName("skip_save") val skipSave: Boolean = false,
+)
+
+@Serializable
 data class SubLabelBody(
     val subLabel: String,
     val subLabelScore: Double? = null,

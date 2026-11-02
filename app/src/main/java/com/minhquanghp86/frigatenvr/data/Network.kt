@@ -45,6 +45,22 @@ interface FrigateApi {
     @GET("api/config")
     suspend fun config(): FrigateConfig
 
+    @GET("api/config")
+    suspend fun configJson(): kotlinx.serialization.json.JsonElement
+
+    @PUT("api/config/set")
+    suspend fun configSet(@Body body: ConfigSetBody): retrofit2.Response<ResponseBody>
+
+    @PUT("api/lpr/reprocess")
+    suspend fun reprocessPlate(
+        @Query("event_id") eventId: String,
+    ): retrofit2.Response<ResponseBody>
+
+    @GET("api/stats/history")
+    suspend fun statsHistory(
+        @Query("keys") keys: String? = null,
+    ): kotlinx.serialization.json.JsonElement
+
     @GET("api/events")
     suspend fun events(
         @QueryMap params: Map<String, @JvmSuppressWildcards String>,

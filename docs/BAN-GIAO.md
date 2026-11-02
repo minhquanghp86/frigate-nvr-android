@@ -872,6 +872,20 @@ Thiết kế mới (`TimelineScreen`):
 - Còn lại: `debug_save_plates` đang bật để kiểm tra crop (`/media/frigate/clips/lpr/<camera>/<event>`);
   tắt sau khi xác nhận. Muốn đặt tên biển quen (sub_label) thì thêm `lpr.known_plates`.
 
+## 4ao. Cập nhật 02/11/2026 — Tính năng AI, OCR lại biển số, best.jpg, stats history
+
+- Màn mới **Tính năng AI** (Cài đặt → Tính năng AI): switch global + theo từng camera cho
+  `lpr` và `face_recognition`, gọi `PUT /api/config/set`
+  (`update_topic: config/cameras/{cam}/{feature}` hoặc `config/{feature}`, `requires_restart: 0`).
+  Tắt global sẽ tự tắt ở mọi camera trước (Frigate bắt buộc thứ tự này).
+- Chi tiết sự kiện xe (car/motorcycle/truck/bus) có nút **OCR lại biển số** →
+  `PUT /api/lpr/reprocess?event_id=…`.
+- Ảnh sự kiện: fallback sang `GET /api/{camera}/{label}/best.jpg` khi thiếu/hỏng thumbnail
+  (FrigateImage có thêm `fallbackUrl`).
+- Trang Hệ thống: biểu đồ nạp sẵn từ `GET /api/stats/history` (thay vì chờ đủ 60 mẫu).
+- Lưu ý API: `PUT /api/camera/{cam}/set/lpr` KHÔNG tồn tại (400 unknown feature) — chỉ lpr/face qua
+  `config/set` như trên. Global LPR tắt được khi mọi camera đã tắt LPR.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
