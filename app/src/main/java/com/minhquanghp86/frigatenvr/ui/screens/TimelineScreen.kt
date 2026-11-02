@@ -119,6 +119,9 @@ fun TimelineScreen(
     var autoPlayed by rememberSaveable { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var previewMinutes by remember { mutableStateOf<Float?>(null) }
+    // Mốc phút đầu giờ của lần phát hiện tại — dùng để playhead/giờ chạy theo vị trí thực.
+    var playbackHourStart by remember { mutableStateOf(0f) }
+    var autoAdvancedHour by remember { mutableStateOf(-1) }
     var message by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(cameras, initialCamera) {
@@ -155,6 +158,7 @@ fun TimelineScreen(
         minutes = clamped
         val total = clamped.toInt().coerceIn(0, 1439)
         val hour = total / 60
+        playbackHourStart = hour * 60f
         startPosMs = ((total % 60) * 60L) * 1000L
         vm.play(day, hour.toString())
     }
@@ -380,6 +384,23 @@ fun TimelineScreen(
                         VideoPlayer(
                             url = stream,
                             startPositionMs = startPosMs,
+                            onPosition = { pos, dur ->
+                                if (previewMinutes == null) {
+                                    val day = selectedDay
+                                    val shown = playbackHourStart + pos / 60_000f
+                                    minutes = shown.coerceIn(0f, maxMinutesFor(day))
+                                    // Hết đoạn ghi của giờ hiện tại -> tự phát tiếp giờ kế (nếu còn dữ liệu).
+                                    if (dur > 0 && pos >= dur - 1_500) {
+                                        val nextStart = playbackHourStart + 60f
+                                        val maxMin = maxMinutesFor(day)
+                                        val nextHour = (nextStart / 60).toInt()
+                                        if (nextStart < maxMin && autoAdvancedHour != nextHour) {
+                                            autoAdvancedHour = nextHour
+                                            playAt(nextStart)
+                                        }
+                                    }
+                                }
+                            },
                             modifier = Modifier.fillMaxSize(),
                             onFullscreen = {
                                 // Nhả player nội tuyến trước khi mở player toàn màn hình
