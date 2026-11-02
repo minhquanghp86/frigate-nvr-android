@@ -130,7 +130,6 @@ fun TimelineScreen(
     var videoRestart by remember { mutableIntStateOf(0) }
     var displayEnabled by remember { mutableStateOf(true) }
     var lastPosMs by remember { mutableLongStateOf(0L) }
-    var lastTargetEpoch by remember { mutableLongStateOf(0L) }
     var watchdogArmed by remember { mutableStateOf(false) }
     var playbackHourStart by remember { mutableStateOf(0f) }
     var autoAdvancedHour by remember { mutableStateOf(-1) }
@@ -178,7 +177,6 @@ fun TimelineScreen(
         val clamped = value.coerceIn(0f, maxMinutesFor(day))
         minutes = clamped
         val targetEpoch = dayEpoch(day) + (clamped * 60f).toLong()
-        lastTargetEpoch = targetEpoch
         val hour = (clamped.toInt() / 60).coerceIn(0, 23)
         val hourStart = dayEpoch(day) + hour * 3600L
         val gen = ++playGen
@@ -483,19 +481,6 @@ fun TimelineScreen(
                             },
                         )
                     }
-                    Text(
-                        "t=" + fmtEpochSeconds(lastTargetEpoch) +
-                            " off=" + (startPosMs / 1000) + " pos=" + (lastPosMs / 1000) +
-                            " segs=" + playSegs.size +
-                            " s0=" + fmtEpochSeconds(playSegs.firstOrNull()?.first?.toLong() ?: 0L) +
-                            " h=" + playHour + " en=" + displayEnabled,
-                        color = Color.White,
-                        fontSize = 9.sp,
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .background(Color(0x99000000))
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                    )
                     if (stream == null) {
                         Text(
                             "Chạm vào timeline bên dưới để xem",
@@ -799,11 +784,6 @@ private fun epochForOffset(segs: List<Pair<Double, Double>>, offset: Double): Lo
     }
     return segs.lastOrNull()?.second?.toLong() ?: 0L
 }
-
-private fun fmtEpochSeconds(epoch: Long): String =
-    if (epoch <= 0L) "--:--:--" else java.time.Instant.ofEpochSecond(epoch)
-        .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("HH:mm:ss"))
 
 private fun fmtMinutesOfDay(minutesOfDay: Float): String {
     val total = (minutesOfDay * 60).toInt().coerceAtLeast(0)
