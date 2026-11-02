@@ -851,6 +851,27 @@ Thiết kế mới (`TimelineScreen`):
 - Lưu ý: train chỉ bổ sung ảnh vào thư viện; **không** đổi `sub_label` của event. Muốn sửa nhãn hiển thị
   thì dùng "Nhãn phụ" trong chi tiết sự kiện (POST /api/events/{id}/sub_label).
 
+## 4an. Cập nhật 02/11/2026 — bật LPR (license plate recognition)
+
+- Global:
+  `lpr: enabled: true, device: CPU, model_size: small, detection_threshold: 0.7,
+   recognition_threshold: 0.9, min_plate_length: 4, min_area: 1000, debug_save_plates: true`.
+- Chỉ bật ở **dahua1** (main stream mới `dahua1_main` 2304×1296, subtype=0, chỉ dùng cho detect/LPR;
+  ghi hình vẫn subtype=1 640×360): `lpr: {enabled: true, min_area: 700}`, `detect: 1280×720@5`,
+  `motion` bật (threshold 30, contour_area 60, improve_contrast false) + mask timestamp/logo,
+  `objects.track: [car, motorcycle]`, snapshots bật.
+- **Tắt LPR ở ezviz** (nhìn qua song sắt, biển xa/bị che → OCR không đáng tin, tốn CPU); ezviz giữ
+  `track: [person]` như cũ. Các camera còn lại không track xe nên LPR không chạy.
+- Model đã tải: `paddleocr-onnx/detection_v5-small.onnx`, `recognition_v4.onnx`, `ppocr_keys_v1.txt`,
+  `yolov9_license_plate/yolov9-256-license-plates.onnx`.
+- Lỗi đã gặp khi cấu hình: (1) `motion.mask` phải là **dict** `{tên: {coordinates: ...}}` (0.18);
+  (2) toạ độ chuẩn hoá **không được dùng 1.00** — code so sánh chuỗi `> "1.0"` nên hiểu nhầm là toạ độ
+  pixel và gọi `int("0.70")` → dùng `0.999`.
+- Đo sau khi bật: healthy, không lỗi validate/ffmpeg, `dahua1` 5 fps (detect ~4), reconnects 0,
+  `frigate.full_system` ~24%, RAM 9,7 GB dùng 7,3 GB.
+- Còn lại: `debug_save_plates` đang bật để kiểm tra crop (`/media/frigate/clips/lpr/<camera>/<event>`);
+  tắt sau khi xác nhận. Muốn đặt tên biển quen (sub_label) thì thêm `lpr.known_plates`.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
