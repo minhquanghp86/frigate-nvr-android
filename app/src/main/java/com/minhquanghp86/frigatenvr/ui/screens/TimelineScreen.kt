@@ -482,7 +482,21 @@ fun TimelineScreen(
                                 onFullscreen(stream, startPosMs)
                             },
                         )
-                    } else {
+                    }
+                    Text(
+                        "t=" + fmtEpochSeconds(lastTargetEpoch) +
+                            " off=" + (startPosMs / 1000) + " pos=" + (lastPosMs / 1000) +
+                            " segs=" + playSegs.size +
+                            " s0=" + fmtEpochSeconds(playSegs.firstOrNull()?.first ?: 0L) +
+                            " h=" + playHour + " en=" + displayEnabled,
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .background(Color(0x99000000))
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                    )
+                    if (stream == null) {
                         Text(
                             "Chạm vào timeline bên dưới để xem",
                             color = IOSSecondaryLabel,
