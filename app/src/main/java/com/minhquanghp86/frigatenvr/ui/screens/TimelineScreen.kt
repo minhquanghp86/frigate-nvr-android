@@ -41,6 +41,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -119,11 +120,19 @@ fun TimelineScreen(
     var autoPlayed by rememberSaveable { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var previewMinutes by remember { mutableStateOf<Float?>(null) }
-    // Mốc phút đầu giờ của lần phát hiện tại — dùng để playhead/giờ chạy theo vị trí thực.
+    // ---- Mô hình thời gian theo segment ghi hình thật của Frigate ----
+    // Playlist HLS của một giờ KHÔNG bắt đầu đúng HH:00:00 (đo thực tế: 08:00:06) và có thể
+    // thiếu đoạn (gap), nên không thể tính "giờ = đầu giờ + position". Ta lấy danh sách segment
+    // từ /api/{cam}/recordings rồi map offset giây <-> epoch tuyệt đối.
+    var playSegs by remember { mutableStateOf<List<Pair<Long, Long>>>(emptyList()) }
+    var playHour by remember { mutableIntStateOf(-1) }
+    var playGen by remember { mutableIntStateOf(0) }
+    var videoRestart by remember { mutableIntStateOf(0) }
+    var displayEnabled by remember { mutableStateOf(true) }
+    var lastPosMs by remember { mutableLongStateOf(0L) }
+    var watchdogArmed by remember { mutableStateOf(false) }
     var playbackHourStart by remember { mutableStateOf(0f) }
     var autoAdvancedHour by remember { mutableStateOf(-1) }
-    // Mốc seek đang chờ áp dụng: tránh cập nhật giờ từ position=0 trước khi player seek xong.
-    var pendingSeekMs by remember { mutableStateOf<Long?>(null) }
     var message by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(cameras, initialCamera) {
@@ -142,6 +151,10 @@ fun TimelineScreen(
         vm.loadDayEvents(day)
         minutes = 0f
         autoPlayed = false
+        playSegs = emptyList()
+        playHour = -1
+        autoAdvancedHour = -1
+        lastPosMs = 0L
     }
 
     // Ngày hôm nay chỉ cho phép tới thời điểm hiện tại (chưa có dữ liệu tương lai).
@@ -154,18 +167,43 @@ fun TimelineScreen(
     fun maxMinutesFor(day: String?): Float =
         if (day != null && day == java.time.LocalDate.now().toString()) nowMinutes() else 1439f
 
+    fun dayEpoch(day: String): Long =
+        ZonedDateTime.of(LocalDate.parse(day), LocalTime.MIDNIGHT, ZoneId.systemDefault())
+            .toEpochSecond()
+
     fun playAt(value: Float) {
         val day = selectedDay ?: return
+        val cam = camera ?: return
         val clamped = value.coerceIn(0f, maxMinutesFor(day))
         minutes = clamped
-        // Giữ nguyên GIÂY: 07:01:05 -> seek đúng 07:01:05 (trước đây cắt thành phút nguyên).
-        val totalSeconds = (clamped * 60f).toInt().coerceAtLeast(0)
-        val hour = (totalSeconds / 3600).coerceIn(0, 23)
-        val offsetMs = ((totalSeconds % 3600).toLong()) * 1000L
-        playbackHourStart = hour * 60f
-        startPosMs = offsetMs
-        pendingSeekMs = offsetMs
-        vm.play(day, hour.toString())
+        val targetEpoch = dayEpoch(day) + (clamped * 60f).toLong()
+        val hour = (clamped.toInt() / 60).coerceIn(0, 23)
+        val hourStart = dayEpoch(day) + hour * 3600L
+        val gen = ++playGen
+        // Tạm khoá cập nhật từ player cũ cho tới khi có segment của giờ mới.
+        displayEnabled = false
+        scope.launch {
+            val segs = runCatching { repo.recordingSegments(cam, hourStart, hourStart + 3600) }
+                .getOrDefault(emptyList())
+                .filter { it.first >= hourStart && it.first < hourStart + 3600 }
+                .sortedBy { it.first }
+            if (gen != playGen) return@launch
+            playSegs = segs
+            playHour = hour
+            playbackHourStart = hour * 60f
+            val offsetSec = if (segs.isEmpty()) {
+                (targetEpoch - hourStart).coerceAtLeast(0L)
+            } else {
+                offsetForEpoch(segs, targetEpoch)
+            }
+            startPosMs = offsetSec * 1000L
+            // Tạo player mới để seek chắc chắn được áp dụng (seek trong player cũ đôi khi
+            // bị bỏ qua khi cùng URL, khiến video đứng ở vị trí cũ trong khi nhãn đã nhảy).
+            videoRestart++
+            watchdogArmed = true
+            // Giữ nhãn ở mốc đích cho tới khi player thực sự seek tới (tránh nháy về đầu giờ).
+            vm.play(day, "%02d".format(hour))
+        }
     }
 
     // Phát ngay khi vào tab: hôm nay phát từ THỜI ĐIỂM HIỆN TẠI; ngày cũ phát 00:00
@@ -183,6 +221,21 @@ fun TimelineScreen(
         }
         autoPlayed = true
         playAt(minute)
+    }
+
+    // Watchdog: nếu sau 6 s player vẫn chưa tới mốc seek (seek bị bỏ qua), tạo lại player 1 lần.
+    LaunchedEffect(playGen) {
+        if (playGen == 0) return@LaunchedEffect
+        val gen = playGen
+        kotlinx.coroutines.delay(6_000)
+        // Đọc lại startPosMs SAU khi coroutine tải segment đã gán (tránh đọc giá trị cũ = 0).
+        val target = startPosMs
+        if (gen == playGen && watchdogArmed && kotlin.math.abs(lastPosMs - target) > 8_000L) {
+            watchdogArmed = false
+            videoRestart++
+            // Không để nhãn bị "đóng băng" mãi nếu seek vẫn không áp dụng.
+            displayEnabled = true
+        }
     }
 
     val notifyPermLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -389,16 +442,24 @@ fun TimelineScreen(
                         VideoPlayer(
                             url = stream,
                             startPositionMs = startPosMs,
+                            restartToken = videoRestart,
                             onPosition = { pos, dur ->
-                                if (previewMinutes == null) {
+                                lastPosMs = pos
+                                if (!displayEnabled && pos >= startPosMs - 2_000L) {
+                                    displayEnabled = true
+                                }
+                                if (previewMinutes == null && displayEnabled) {
                                     val day = selectedDay
-                                    val anchor = pendingSeekMs
-                                    if (anchor != null && pos >= anchor - 1_000) {
-                                        pendingSeekMs = null
+                                    if (day != null && playHour >= 0) {
+                                        val base = dayEpoch(day)
+                                        val epoch = if (playSegs.isEmpty()) {
+                                            base + playHour * 3600L + pos / 1000L
+                                        } else {
+                                            epochForOffset(playSegs, pos / 1000L)
+                                        }
+                                        minutes = (((epoch - base) / 60.0).toFloat())
+                                            .coerceIn(0f, maxMinutesFor(day))
                                     }
-                                    val effective = pendingSeekMs ?: pos
-                                    val shown = playbackHourStart + effective / 60_000f
-                                    minutes = shown.coerceIn(0f, maxMinutesFor(day))
                                     // Hết đoạn ghi của giờ hiện tại -> tự phát tiếp giờ kế (nếu còn dữ liệu).
                                     if (dur > 0 && pos >= dur - 1_500) {
                                         val nextStart = playbackHourStart + 60f
@@ -700,6 +761,28 @@ fun TimelineScreen(
 
 
 /** Định dạng phút-trong-ngày thành HH:mm:ss (dùng cho timeline). */
+/** Offset (giây) trong playlist ứng với epoch tuyệt đối. */
+private fun offsetForEpoch(segs: List<Pair<Long, Long>>, target: Long): Long {
+    var acc = 0L
+    for ((start, end) in segs) {
+        if (target <= start) return acc
+        if (target < end) return acc + (target - start)
+        acc += (end - start)
+    }
+    return acc
+}
+
+/** Epoch tuyệt đối ứng với offset (giây) trong playlist. */
+private fun epochForOffset(segs: List<Pair<Long, Long>>, offset: Long): Long {
+    var acc = 0L
+    for ((start, end) in segs) {
+        val d = end - start
+        if (offset < acc + d) return start + (offset - acc)
+        acc += d
+    }
+    return segs.lastOrNull()?.second ?: 0L
+}
+
 private fun fmtMinutesOfDay(minutesOfDay: Float): String {
     val total = (minutesOfDay * 60).toInt().coerceAtLeast(0)
     val h = total / 3600

@@ -788,6 +788,27 @@ Repo local dùng remote SSH `github-frigate` (deploy key riêng, quyền ghi) �
   chặn cập nhật vị trí cho tới khi player đã seek tới mốc (pos ≥ mốc − 1 s), sau đó mới chạy theo video.
   Kéo 07:01:05 → nhả tay phát và giữ đúng 07:01:05.
 
+## 4ai. Cập nhật 02/11/2026 — thiết kế lại thời gian Xem lại theo segment thật
+
+Đo trên server (ezviz, giờ 08 ngày 02/11) chứng minh công thức cũ sai:
+- Playlist HLS của giờ dài **3495,1 s** (thiếu ~105 s so với 3600 s) và bắt đầu tại segment đầu tiên
+  **08:00:06**, không phải 08:00:00.
+- Với mốc 08:41:05, offset đúng theo segment là **2378,2 s**, còn "đầu giờ + phút" cho ra 2465 s
+  → lệch **87 s** (có gap). Cộng dồn nhiều gap có thể lệch hàng phút.
+- Kiểm chứng đồng hồ camera: frame từ file `41.12.mp4` (ghi lúc 08:41:12) có OSD **08:41:10**
+  ⇒ OSD camera đúng, lỗi nằm ở app (seek + map thời gian), không phải lệch giờ camera.
+
+Thiết kế mới (`TimelineScreen`):
+- Gọi `GET /api/{camera}/recordings?after=<hourStart>&before=<hourStart+3600>`, lọc segment có
+  `start_time` nằm trong giờ (khớp cách Frigate chia thư mục giờ), sắp xếp.
+- `offsetForEpoch(segs, epoch)` khi seek; `epochForOffset(segs, position)` khi hiển thị
+  ⇒ giờ hiển thị/playhead = **thời gian thật của frame đang phát**, xử lý cả playlist lệch đầu giờ và gap.
+- Mỗi lần chọn mốc: tạo lại player (`videoRestart`) để **seek chắc chắn được áp dụng** (trước đây seek
+  trong player cũ cùng URL đôi khi bị bỏ qua → video đứng ở vị trí cũ, nhãn bị `pendingSeek` giữ nguyên).
+- Nhãn giữ ở mốc đích đến khi position tới gần mốc (≤2 s), có **watchdog 6 s**: nếu vẫn lệch >8 s thì
+  tạo lại player và mở khoá hiển thị ⇒ không còn "đứng im" vĩnh viễn.
+- Hour gửi lên VOD dạng `%02d`; đã kiểm tra cả `8` và `08` đều 200.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
