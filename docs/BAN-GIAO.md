@@ -818,6 +818,18 @@ Thiết kế mới (`TimelineScreen`):
   sau READY chỉ còn là đường dự phòng khi cùng player mà mốc đổi (`createdWithPos`).
 - Giữ nguyên: map thời gian theo segment thật, tạo lại player mỗi lần chọn mốc, watchdog.
 
+## 4ak. Cập nhật 02/11/2026 — sửa lệch ~2 phút do cắt lẻ giây segment
+
+- Debug trên máy (v1.2.10): `t=11:48:47 off=2704 pos=2706 segs=335 s0=11:00:00` nhưng video ở OSD
+  11:45:51 → seek đúng vị trí app yêu cầu, nhưng **offset bị hụt ~170 s**.
+- Đo server cùng giờ: API `n=343 sum=3368.4s`, offset đúng cho 11:48:47 = **2874,7 s**.
+- Nguyên nhân: app parse `start_time/end_time` rồi `.toLong()` → **mỗi segment mất phần lẻ (tới ~1 s,
+  trung bình ~0,5 s)**; 300–340 segment/giờ ⇒ hụt ~170 s. Vì cả seek lẫn hiển thị dùng chung danh sách
+  nên nhãn vẫn "khớp" với offset sai, còn video thì lệch thời gian thực.
+- Sửa: `recordingSegments` trả `Pair<Double, Double>`; `offsetForEpoch`/`epochForOffset` tính bằng giây
+  thực (Double); `startPosMs` quy đổi từ Double. Debug overlay giữ lại ở v1.2.11 để đối chiếu
+  (`off` phải ≈ 2874 với mốc 11:48:47), sau đó bỏ.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
