@@ -837,6 +837,20 @@ Thiết kế mới (`TimelineScreen`):
 - Bỏ overlay debug, state `lastTargetEpoch`, helper `fmtEpochSeconds`; dọn ảnh/file tạm trên HA
   (`/addon_configs/.../f41.png`, `chk_*.png`, `offchk.png`, `init.mp4`, `seg.m4s`, `join.mp4`).
 
+## 4am. Cập nhật 02/11/2026 — HTTP 500 khi train khuôn mặt từ sự kiện
+
+- Tái hiện: `POST /api/faces/train/Bà nội/classify {"event_id": "1793584310.038385-hfr1k2"}` → 500.
+  Traceback: `/opt/frigate/frigate/api/classification.py:216` — `event.data["attributes"][0]["box"]`
+  → **IndexError: list index out of range**.
+- Nguyên nhân: Frigate 0.18.2 giả định event luôn có `data.attributes[0].box`; thực tế **cả 4 event có
+  sub_label hôm nay đều `attributes: []`** (kể cả event Kem 08:51). Ngoài ra `faces/train` **không có**
+  file crop nào của các event đó → không thể fallback bằng `training_file`.
+- Fix app (`trainFaceFromEvent`): thử `event_id` trước; nếu lỗi thì tải snapshot sạch
+  (`/api/events/{id}/snapshot.jpg`) và `POST /api/faces/{name}/register` để Frigate tự detect & cắt mặt.
+  Đã test server-side: register từ snapshot trả 200, tạo `faces/Bà nội/Bà nội_<ts>.webp` (32×56 px).
+- Lưu ý: train chỉ bổ sung ảnh vào thư viện; **không** đổi `sub_label` của event. Muốn sửa nhãn hiển thị
+  thì dùng "Nhãn phụ" trong chi tiết sự kiện (POST /api/events/{id}/sub_label).
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
