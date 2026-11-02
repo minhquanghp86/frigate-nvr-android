@@ -830,6 +830,13 @@ Thiết kế mới (`TimelineScreen`):
   thực (Double); `startPosMs` quy đổi từ Double. Debug overlay giữ lại ở v1.2.11 để đối chiếu
   (`off` phải ≈ 2874 với mốc 11:48:47), sau đó bỏ.
 
+## 4al. Cập nhật 02/11/2026 — bỏ debug, chốt bản sạch
+
+- Đã xác nhận trên thiết bị: `off` khớp server (≈2874 cho mốc 11:48:47); video đúng mốc, chỉ còn
+  lệch **vài giây** do nginx gộp segment/rounding EXTINF — chấp nhận được.
+- Bỏ overlay debug, state `lastTargetEpoch`, helper `fmtEpochSeconds`; dọn ảnh/file tạm trên HA
+  (`/addon_configs/.../f41.png`, `chk_*.png`, `offchk.png`, `init.mp4`, `seg.m4s`, `join.mp4`).
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
