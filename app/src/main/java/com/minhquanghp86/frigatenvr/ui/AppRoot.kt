@@ -187,6 +187,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                 CamerasScreen(
                     onOpenEvent = { id -> navController.navigate("event/$id") },
                     onOpenFaceEvents = { navController.navigate("faceEvents") },
+                    onOpenPlates = { navController.navigate("lpr") },
                     modifier = Modifier,
                     onOpenCamera = { navController.navigate("camera/$it") },
                 )

@@ -140,6 +140,10 @@ data class FrigateEvent(
     /** Tên người đã đăng ký (null nếu chưa rõ). */
     val faceName: String?
         get() = subLabelDisplay?.takeIf { !isUnknownFace }
+
+    /** Biển số đã nhận diện cho sự kiện xe (LPR). */
+    val recognizedPlate: String?
+        get() = data?.recognizedLicensePlate?.takeIf { it.isNotBlank() }
 }
 
 private fun JsonElement.asText(): String? = try {

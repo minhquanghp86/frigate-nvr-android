@@ -886,6 +886,14 @@ Thiết kế mới (`TimelineScreen`):
 - Lưu ý API: `PUT /api/camera/{cam}/set/lpr` KHÔNG tồn tại (400 unknown feature) — chỉ lpr/face qua
   `config/set` như trên. Global LPR tắt được khi mọi camera đã tắt LPR.
 
+## 4ap. Cập nhật 02/11/2026 — thẻ Biển số trên trang Camera
+
+- Thêm `PlateWatchCard` ngay dưới `FaceWatchCard` ở trang Camera: tiêu đề "Biển số",
+  chip "Hôm nay N biển" + biển mới nhất, dải thumbnail sự kiện xe kèm biển số, "Xem tất cả" → màn Biển số.
+- Dữ liệu: `repo.plateEvents(after=đầu ngày)` gọi `/api/events?labels=car,motorcycle,truck,bus&has_snapshot=1`,
+  lọc `data.recognized_license_plate`; model thêm `FrigateEvent.recognizedPlate`.
+- Ảnh dùng `eventSnapshot`, fallback `/{camera}/{label}/best.jpg`.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
