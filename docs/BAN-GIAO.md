@@ -809,6 +809,15 @@ Thiết kế mới (`TimelineScreen`):
   tạo lại player và mở khoá hiển thị ⇒ không còn "đứng im" vĩnh viễn.
 - Hour gửi lên VOD dạng `%02d`; đã kiểm tra cả `8` và `08` đều 200.
 
+## 4aj. Cập nhật 02/11/2026 — sửa "kéo 10:32 nhưng phát lại từ 10:00:00"
+
+- Nguyên nhân: player mới được tạo với `setMediaSource(source)` rồi mới `seekTo()` sau `STATE_READY`;
+  với HLS VOD của Frigate (fMP4 + `EXT-X-MAP`), `seekTo` sau READY đôi khi **bị bỏ qua** → phát từ 0
+  (đầu giờ). Watchdog 6 s lại mở khoá hiển thị nên nhãn hiển thị đúng vị trí thực = HH:00:00.
+- Sửa: dùng API chuẩn `setMediaSource(mediaSource, startPositionMs)` ngay khi nạp media; `seekTo`
+  sau READY chỉ còn là đường dự phòng khi cùng player mà mốc đổi (`createdWithPos`).
+- Giữ nguyên: map thời gian theo segment thật, tạo lại player mỗi lần chọn mốc, watchdog.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
