@@ -36,6 +36,8 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 - Timeline có **khung xem trước cố định** (không đẩy layout) khi kéo playhead.
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
 - **Giữ màn hình sáng** khi đang xem live và khi video đang phát/tua.
+- **Tính năng AI**: bật/tắt LPR và nhận diện khuôn mặt (global + từng camera) ngay trong app;
+  chi tiết sự kiện xe có **OCR lại biển số**.
 - Thời gian **hh:mm:ss** trên thanh phát và timeline; **đồng hồ thời gian thực** trên khung live.
 - Bottom sheet quản trị nhanh: Camera, Phát hiện, Ghi hình, Chụp ảnh.
 - **Cast lên TV/Chromecast**:

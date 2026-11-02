@@ -273,6 +273,7 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
                     onOpenStorage = { navController.navigate("storage") },
                     onOpenOverview = { navController.navigate("overview") },
                     onOpenPlates = { navController.navigate("lpr") },
+                    onOpenAi = { navController.navigate("ai") },
                     onOpenFaces = { navController.navigate("faces") },
                     onOpenUsers = { navController.navigate("users") },
                     onOpenCameraConfig = { navController.navigate("cameraConfig") },
@@ -313,6 +314,11 @@ private fun MainScaffold(repo: FrigateRepository, state: SessionState.Ready) {
             ) { entry ->
                 FacePersonScreen(
                     name = entry.arguments?.getString("name").orEmpty(),
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable("ai") {
+                com.minhquanghp86.frigatenvr.ui.screens.AiFeaturesScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

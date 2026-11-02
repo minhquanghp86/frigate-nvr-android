@@ -110,6 +110,19 @@ fun OverviewScreen(
     LaunchedEffect(Unit) {
         loadSlow()
         loading = false
+        // Nạp lịch sử server để biểu đồ có dữ liệu ngay (thay vì chờ 60 mẫu).
+        runCatching { repo.statsHistory() }.getOrNull()?.let { history ->
+            (history as? JsonArray)?.forEach { row ->
+                val o = row as? JsonObject ?: return@forEach
+                val det = (o["detectors"] as? JsonObject)?.values?.firstOrNull() as? JsonObject
+                det?.d("inference_speed")?.let { inference += it.toFloat() }
+                det?.d("cpu")?.let { cpu += it.toFloat() }
+                det?.d("mem")?.let { mem += it.toFloat() }
+            }
+            while (inference.size > MAX_SAMPLES) inference.removeAt(0)
+            while (cpu.size > MAX_SAMPLES) cpu.removeAt(0)
+            while (mem.size > MAX_SAMPLES) mem.removeAt(0)
+        }
         var i = 0
         while (true) {
             val s = runCatching { repo.statsJson() }.getOrNull()
