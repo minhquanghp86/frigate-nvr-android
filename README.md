@@ -36,6 +36,7 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 - Timeline có **khung xem trước cố định** (không đẩy layout) khi kéo playhead.
 - Toàn màn hình ngang, Picture-in-Picture, fit/crop, mute, overlay fps/bitrate.
 - **Giữ màn hình sáng** khi đang xem live và khi video đang phát/tua.
+- **Tự tạm dừng khi app xuống nền** (Home/khoá máy) — không còn phát âm thanh nền; mở lại thì phát tiếp.
 - **Tính năng AI**: bật/tắt LPR và nhận diện khuôn mặt (global + từng camera) ngay trong app;
   chi tiết sự kiện xe có **OCR lại biển số**; trang Camera có thẻ **Biển số** ngay dưới thẻ Khuôn mặt
   (hiển thị cả sự kiện `license_plate` của dedicated LPR).

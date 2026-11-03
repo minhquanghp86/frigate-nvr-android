@@ -917,6 +917,13 @@ Thiết kế mới (`TimelineScreen`):
 - Server: trả chuông cửa về chế độ thường (giữ `track: [person, car, motorcycle]`), dahua2 bỏ `type: lpr`;
   tắt `debug_save_plates`, xoá `/media/frigate/clips/lpr`. Đo lại: healthy, CPU ~58 %, không lỗi.
 
+## 4as. Cập nhật 02/11/2026 — tự dừng phát khi app xuống nền
+
+- `VideoPlayer` (Xem lại, sự kiện, toàn màn hình) thêm `LifecycleEventObserver`:
+  `ON_STOP` (Home/khoá màn hình) → nhớ trạng thái và `player.pause()` (hết âm thanh nền);
+  `ON_START` → phát tiếp nếu trước đó đang phát (không tự phát nếu người dùng đã pause).
+- Dùng `androidx.lifecycle.compose.LocalLifecycleOwner` (lifecycle-runtime-compose 2.8.6).
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái
