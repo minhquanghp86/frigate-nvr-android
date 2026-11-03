@@ -1,6 +1,9 @@
 package com.minhquanghp86.frigatenvr.ui
 
 import android.content.Context
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.unit.sp
@@ -299,6 +302,34 @@ fun VideoPlayer(
                 }
             })
         }
+    }
+
+    // Xuống nền (Home, không thoát app) thì tạm dừng; quay lại phát tiếp nếu trước đó đang phát.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeOnForeground by remember(player) { mutableStateOf(false) }
+    DisposableEffect(lifecycleOwner, player) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    resumeOnForeground = player.isPlaying
+                    if (player.isPlaying) {
+                        player.pause()
+                        isPlaying = false
+                    }
+                }
+
+                Lifecycle.Event.ON_START -> {
+                    if (resumeOnForeground) {
+                        player.play()
+                        resumeOnForeground = false
+                    }
+                }
+
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     LaunchedEffect(player, muted) {
