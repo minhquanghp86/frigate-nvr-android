@@ -167,7 +167,8 @@ Yêu cầu: **JDK 17**, **Android SDK 36** + **Build-Tools 36.0.0** (`local.prop
 ## 4. Quyền riêng tư
 
 - Không thu thập, không gửi dữ liệu về máy chủ nhà phát triển; **không quảng cáo**, không SDK analytics.
-- Dữ liệu lưu cục bộ: URL máy chủ, tài khoản, (tuỳ chọn) mật khẩu, token, tuỳ chọn UI, crash log.
+- Dữ liệu lưu cục bộ: URL máy chủ, tài khoản, tuỳ chọn UI, crash log. Mật khẩu, JWT và token Home Assistant được lưu **đã mã hóa** bằng Android Keystore (EncryptedSharedPreferences, AES256-GCM), không còn plaintext trong DataStore. Cert tự ký chỉ được tin khi người dùng bật rõ ràng, và được pin bằng fingerprint SHA-256 (TOFU); HTTP chỉ cho phép với host LAN riêng tư, server công khai bắt buộc HTTPS.
+- **Keystore ký APK không còn trong repo** (key cũ đã lộ, xem `keystore/README.md` để xoay key và đưa key mới vào GitHub Secrets).
 - Ảnh/clip tải về lưu ở `Downloads/FriCam` (MediaStore).
 - Chi tiết: [`docs/privacy.md`](docs/privacy.md) và màn **Cài đặt → Ứng dụng → Chính sách quyền riêng tư**.
 
