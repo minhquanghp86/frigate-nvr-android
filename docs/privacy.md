@@ -9,8 +9,8 @@ FriCam là ứng dụng **không chính thức** để xem và quản trị máy
 Ứng dụng lưu cục bộ (vùng riêng của app, không chia sẻ với ứng dụng khác):
 
 - Địa chỉ máy chủ Frigate bạn nhập (ví dụ `https://192.168.1.10:8971`)
-- Tên đăng nhập; mật khẩu **chỉ khi bạn bật “Ghi nhớ mật khẩu”**
-- Token phiên (JWT) do máy chủ Frigate cấp
+- Tên đăng nhập; mật khẩu **chỉ khi bạn bật “Ghi nhớ mật khẩu”** — được lưu **đã mã hóa** bằng Android Keystore (EncryptedSharedPreferences), không lưu plaintext
+- Token phiên (JWT) do máy chủ Frigate cấp — cũng được lưu đã mã hóa như trên
 - Tuỳ chọn giao diện: thông báo bật/tắt, bộ lọc camera/nhãn, mức chất lượng xem, địa chỉ go2rtc
 - Nhật ký lỗi ứng dụng (chỉ trên máy, dùng để bạn tự chẩn đoán)
 
