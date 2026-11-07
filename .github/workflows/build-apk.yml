@@ -43,6 +43,19 @@ jobs:
           fi
           ls "${SDKDIR}/platforms"
 
+      - name: Khôi phục keystore từ GitHub Secrets (nếu có)
+        # Keystore KHÔNG còn commit trong repo (key cũ đã lộ).
+        # Đặt secret KEYSTORE_BASE64 + KEYSTORE_PASSWORD + KEY_PASSWORD + KEY_ALIAS
+        # theo keystore/README.md. Nếu chưa đặt secret, build vẫn chạy
+        # nhưng release sẽ ký bằng debug key — chỉ để test, không phát hành.
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > keystore/frigate-release.jks
+            echo "Đã khôi phục keystore từ secret."
+          else
+            echo "::warning::KEYSTORE_BASE64 chưa đặt — bản release sẽ ký bằng debug key."
+          fi
+
       - name: Xac dinh version
         id: ver
         run: |
@@ -59,6 +72,9 @@ jobs:
         run: ./gradlew assembleRelease bundleRelease testReleaseUnitTest --no-daemon
         env:
           APP_VERSION_NAME: ${{ steps.ver.outputs.name }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
