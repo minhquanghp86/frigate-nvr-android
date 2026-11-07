@@ -9,3 +9,9 @@
 .externalNativeBuild
 .cxx
 app/release/
+# Signing keys — never commit. See keystore/README.md.
+keystore/*.jks
+keystore/*.keystore
+keystore/*.p12
+*.jks
+*.keystore
