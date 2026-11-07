@@ -49,7 +49,7 @@ fun LoginScreen(repo: FrigateRepository) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var keepPass by remember { mutableStateOf(true) }
-    var trust by remember { mutableStateOf(true) }
+    var trust by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val busy by repo.busy.collectAsState()
@@ -138,6 +138,16 @@ fun LoginScreen(repo: FrigateRepository) {
                 "Tin chứng chỉ tự ký (HTTPS nội bộ)",
                 style = MaterialTheme.typography.bodyMedium,
                 color = IOSLabel,
+            )
+        }
+
+        if (trust) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Cảnh báo: chỉ bật khi server của bạn dùng cert tự ký. " +
+                    "App sẽ ghi nhớ fingerprint của cert đó và từ chối cert khác.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
             )
         }
 

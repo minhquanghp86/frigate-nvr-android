@@ -36,6 +36,18 @@ class FrigateRepository(
     private val store: DataStore<Preferences>,
 ) {
 
+    /** Bí mật (mật khẩu / JWT / token HA) chỉ nằm trong EncryptedSharedPreferences. */
+    private val secureStorage = SecureStorage(context)
+
+    private fun netConfigFor(baseUrl: String, token: String?, trustSelfSigned: Boolean): NetConfig =
+        NetConfig(
+            baseUrl = baseUrl,
+            token = token,
+            trustSelfSigned = trustSelfSigned,
+            acceptedCertFingerprints = secureStorage.getAcceptedCertFingerprints(),
+            onAcceptCertFingerprint = { fp -> secureStorage.addAcceptedCertFingerprint(fp) },
+        )
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _state = MutableStateFlow<SessionState>(SessionState.Loading)
@@ -170,9 +182,20 @@ class FrigateRepository(
             ?.filter { it.isNotBlank() }
             ?.toSet()
             ?: emptySet()
+        // Migration một lần: chuyển mật khẩu / token / token HA từ DataStore
+        // plaintext sang SecureStorage đã mã hóa, rồi xóa key cũ.
+        val legacyPass = prefs[KEY_PASS]
+        val legacyToken = prefs[KEY_TOKEN]
+        val legacyHaToken = prefs[KEY_HA_TOKEN]
+        if (legacyPass != null || legacyToken != null || legacyHaToken != null) {
+            if (!legacyPass.isNullOrBlank()) secureStorage.putPassword(legacyPass)
+            if (!legacyToken.isNullOrBlank()) secureStorage.putToken(legacyToken)
+            if (!legacyHaToken.isNullOrBlank()) secureStorage.putHaToken(legacyHaToken)
+            store.edit { it.remove(KEY_PASS); it.remove(KEY_TOKEN); it.remove(KEY_HA_TOKEN) }
+        }
         _integrations.value = Integrations(
             haUrl = prefs[KEY_HA_URL].orEmpty(),
-            haToken = prefs[KEY_HA_TOKEN].orEmpty(),
+            haToken = secureStorage.getHaToken(),
         )
         _notifyLabels.value = prefs[KEY_NOTIFY_LABELS]
             ?.split(",")
@@ -187,10 +210,10 @@ class FrigateRepository(
         val session = ServerSession(
             baseUrl = base,
             username = prefs[KEY_USER] ?: "",
-            password = prefs[KEY_PASS] ?: "",
+            password = secureStorage.getPassword(),
             rememberPassword = prefs[KEY_REMEMBER] ?: false,
-            trustSelfSigned = prefs[KEY_TRUST] ?: true,
-            token = prefs[KEY_TOKEN]?.takeIf { it.isNotBlank() },
+            trustSelfSigned = prefs[KEY_TRUST] ?: false,
+            token = secureStorage.getToken(),
             authDisabled = prefs[KEY_AUTH_OFF] ?: false,
             go2rtcUrl = prefs[KEY_GO2RTC]?.takeIf { it.isNotBlank() },
         )
@@ -199,13 +222,16 @@ class FrigateRepository(
     }
 
     private suspend fun persist(s: ServerSession) {
+        // Bí mật chỉ vào SecureStorage (mã hóa bằng Android Keystore).
+        if (s.rememberPassword) secureStorage.putPassword(s.password) else secureStorage.putPassword("")
+        secureStorage.putToken(s.token)
         store.edit { p ->
             p[KEY_BASE] = s.baseUrl
             p[KEY_USER] = s.username
-            if (s.rememberPassword) p[KEY_PASS] = s.password else p.remove(KEY_PASS)
+            p.remove(KEY_PASS)
             p[KEY_REMEMBER] = s.rememberPassword
             p[KEY_TRUST] = s.trustSelfSigned
-            p[KEY_TOKEN] = s.token.orEmpty()
+            p.remove(KEY_TOKEN)
             p[KEY_AUTH_OFF] = s.authDisabled
             if (s.go2rtcUrl.isNullOrBlank()) p.remove(KEY_GO2RTC) else p[KEY_GO2RTC] = s.go2rtcUrl
         }
@@ -233,7 +259,7 @@ class FrigateRepository(
 
         _busy.value = true
         try {
-            val client = FrigateNet.client(NetConfig(base, null, trustSelfSigned), { null }, {})
+            val client = FrigateNet.client(netConfigFor(base, null, trustSelfSigned), { null }, {})
             val body = Json.encodeToString(LoginRequest(username.trim(), password))
                 .toRequestBody("application/json".toMediaType())
             val request = Request.Builder().url("$base/api/login").post(body).build()
@@ -270,7 +296,7 @@ class FrigateRepository(
                     "Đăng nhập thành công nhưng không lấy được JWT — kiểm tra lại địa chỉ server."
 
                 else -> {
-                    val cfg = NetConfig(base, token, trustSelfSigned)
+                    val cfg = netConfigFor(base, token, trustSelfSigned)
                     val api = FrigateNet.api(FrigateNet.client(cfg, { token }, {}), base)
                     val profile = runCatching { api.profile().body() }.getOrNull()
                     val session = ServerSession(
@@ -326,6 +352,7 @@ class FrigateRepository(
             }
         }
         store.edit { it.clear() }
+        secureStorage.clearSecrets()
         client = null
         clientKey = null
         api = null
@@ -366,8 +393,8 @@ class FrigateRepository(
     // ---------------------------------------------------------------- mạng API
 
     private fun clientFor(session: ServerSession): OkHttpClient {
-        val cfg = NetConfig(session.baseUrl, session.authHeader, session.trustSelfSigned)
-        val key = "$cfg"
+        val cfg = netConfigFor(session.baseUrl, session.authHeader, session.trustSelfSigned)
+        val key = "$cfg|${secureStorage.getAcceptedCertFingerprints().sorted()}"
         if (client != null && clientKey == key) return client!!
         val built = FrigateNet.client(cfg, { current?.authHeader }, ::handleUnauthorized)
         client = built
@@ -693,9 +720,10 @@ class FrigateRepository(
             haUrl = haUrl.trim().trimEnd('/'),
             haToken = haToken.trim(),
         )
+        secureStorage.putHaToken(clean.haToken)
         store.edit {
             it[KEY_HA_URL] = clean.haUrl
-            it[KEY_HA_TOKEN] = clean.haToken
+            it.remove(KEY_HA_TOKEN)
         }
         _integrations.value = clean
     }
@@ -1109,6 +1137,7 @@ class FrigateRepository(
     companion object {
         private val KEY_BASE = stringPreferencesKey("base_url")
         private val KEY_USER = stringPreferencesKey("username")
+        // Legacy — chỉ để migration một lần từ plaintext sang SecureStorage.
         private val KEY_PASS = stringPreferencesKey("password")
         private val KEY_TOKEN = stringPreferencesKey("token")
         private val KEY_REMEMBER = booleanPreferencesKey("remember_password")
