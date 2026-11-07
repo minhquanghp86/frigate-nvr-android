@@ -31,17 +31,17 @@ android {
         create("release") {
             val ks = rootProject.file("keystore/frigate-release.jks")
             if (ks.exists()) {
-                val storePassword = System.getenv("KEYSTORE_PASSWORD")
+                val storePass = System.getenv("KEYSTORE_PASSWORD")
                     ?: throw GradleException(
                         "KEYSTORE_PASSWORD is not set. " +
                             "Set it in local.properties / environment or GitHub Secrets.",
                     )
-                val keyPassword = System.getenv("KEY_PASSWORD")
+                val keyPass = System.getenv("KEY_PASSWORD")
                     ?: throw GradleException("KEY_PASSWORD is not set.")
                 storeFile = ks
-                storePassword = storePassword
+                storePassword = storePass
                 keyAlias = System.getenv("KEY_ALIAS") ?: "frigate"
-                keyPassword = keyPassword
+                keyPassword = keyPass
             }
         }
     }
