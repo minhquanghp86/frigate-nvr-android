@@ -20,19 +20,50 @@ import retrofit2.http.Query
 import retrofit2.http.QueryMap
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
-import java.security.SecureRandom
+import javax.net.ssl.HttpsURLConnection
+import java.security.MessageDigest
+import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
 /** Cấu hình kết nối (URL + chứng chỉ + token) — key để tái tạo client khi thay đổi. */
-data class NetConfig(
+class NetConfig(
     val baseUrl: String,
     val token: String?,
     val trustSelfSigned: Boolean,
-)
+    /** SHA-256 fingerprint (hex, chữ thường) của các cert tự ký đã được chấp nhận. */
+    val acceptedCertFingerprints: Set<String> = emptySet(),
+    /** Gọi khi gặp cert tự ký mới lần đầu (TOFU) — caller lưu fingerprint vào SecureStorage. */
+    val onAcceptCertFingerprint: ((String) -> Unit)? = null,
+) {
+    // Callback không tham gia equals/hashCode: mỗi lần tạo lambda mới là một
+    // object khác, nếu tính vào equals thì client sẽ bị build lại liên tục.
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is NetConfig) return false
+        return baseUrl == other.baseUrl &&
+            token == other.token &&
+            trustSelfSigned == other.trustSelfSigned &&
+            acceptedCertFingerprints.map { it.lowercase() }.toSet() ==
+            other.acceptedCertFingerprints.map { it.lowercase() }.toSet()
+    }
+
+    override fun hashCode(): Int {
+        var result = baseUrl.hashCode()
+        result = 31 * result + (token?.hashCode() ?: 0)
+        result = 31 * result + trustSelfSigned.hashCode()
+        result = 31 * result + acceptedCertFingerprints.map { it.lowercase() }.toSet().hashCode()
+        return result
+    }
+
+    override fun toString(): String =
+        "NetConfig(baseUrl=$baseUrl, trustSelfSigned=$trustSelfSigned, " +
+            "fingerprints=${acceptedCertFingerprints.sorted()})"
+}
 
 interface FrigateApi {
 
@@ -286,15 +317,102 @@ object FrigateNet {
         return url
     }
 
-    /** Chỉ build SSL "tin tất cả" khi người dùng chủ động bật cho server tự ký. */
-    private fun trustAllSsl(): Pair<javax.net.ssl.SSLSocketFactory, X509TrustManager> {
+    /** Chỉ cho phép HTTP (không mã hóa) với host LAN riêng tư / localhost. */
+    fun isPrivateHost(host: String): Boolean {
+        val h = host.trim().lowercase().removeSuffix(".")
+        if (h == "localhost" || h.endsWith(".local") || h.endsWith(".lan")) return true
+        if (h.startsWith("10.") || h.startsWith("192.168.")) return true
+        if (h.startsWith("172.")) {
+            val second = h.removePrefix("172.").substringBefore('.').toIntOrNull()
+            if (second != null && second in 16..31) return true
+        }
+        // IPv6 loopback / ULA
+        if (h == "::1" || h.startsWith("fd") || h.startsWith("fe80:")) return true
+        return false
+    }
+
+    /** Từ chối HTTP tới host công khai — mật khẩu/token không được đi qua HTTP công khai. */
+    fun requireHttpsForPublicHost(baseUrl: String) {
+        val parsed = runCatching { okhttp3.HttpUrl.parse(baseUrl) }.getOrNull() ?: return
+        if (parsed.scheme == "http" && !isPrivateHost(parsed.host)) {
+            throw IllegalArgumentException(
+                "Chỉ cho phép HTTP với địa chỉ LAN riêng tư. " +
+                    "Server công khai phải dùng HTTPS.",
+            )
+        }
+    }
+
+    private fun sha256Hex(cert: X509Certificate): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(cert.encoded)
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    private fun isSelfSigned(cert: X509Certificate): Boolean {
+        return try {
+            if (cert.issuerX500Principal != cert.subjectX500Principal) return false
+            cert.verify(cert.publicKey)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun defaultTrustManager(): X509TrustManager {
+        val factory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        factory.init(null as java.security.KeyStore?)
+        return factory.trustManagers.filterIsInstance<X509TrustManager>().first()
+    }
+
+    /**
+     * Thay thế trust-all cũ.
+     *
+     * Trước đây: bất kỳ cert nào, bất kỳ host nào cũng được tin, và
+     * hostnameVerifier luôn trả true — kẻ tấn công MITM chỉ cần một cert
+     * tự ký bất kỳ là đọc được mật khẩu/token.
+     *
+     * Từ nay: thử trust hệ thống trước. Chỉ khi người dùng đã bật
+     * "Tin chứng chỉ tự ký" VÀ cert là self-signed duy nhất, còn hạn,
+     * thì mới chấp nhận theo cơ chế TOFU: lần đầu ghi lại fingerprint
+     * SHA-256, các lần sau bắt buộc fingerprint phải khớp. Hostname vẫn
+     * được kiểm tra bằng verifier mặc định, trừ khi fingerprint đã pin.
+     */
+    private fun scopedTrustManager(config: NetConfig): Pair<javax.net.ssl.SSLSocketFactory, X509TrustManager> {
+        val defaultTm = defaultTrustManager()
         val trustManager = object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
-            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                defaultTm.checkClientTrusted(chain, authType)
+            }
+
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                try {
+                    defaultTm.checkServerTrusted(chain, authType)
+                    return
+                } catch (e: CertificateException) {
+                    if (!config.trustSelfSigned) throw e
+                    val certs = chain ?: throw e
+                    if (certs.size != 1) throw e
+                    val cert = certs[0]
+                    if (!isSelfSigned(cert)) throw e
+                    cert.checkValidity() // hết hạn thì từ chối
+                    val fingerprint = sha256Hex(cert)
+                    val accepted = config.acceptedCertFingerprints.map { it.lowercase() }.toSet()
+                    if (fingerprint in accepted) return
+                    // Lần đầu gặp cert này: chỉ chấp nhận nếu caller cho phép ghi TOFU.
+                    // Caller (FrigateRepository) ghi fingerprint vào SecureStorage.
+                    val onAccept = config.onAcceptCertFingerprint
+                        ?: throw CertificateException(
+                            "Chứng chỉ tự ký chưa được chấp nhận (SHA-256: $fingerprint). " +
+                                "Bật 'Tin chứng chỉ tự ký' và đăng nhập lại để chấp nhận cert này.",
+                            e,
+                        )
+                    onAccept(fingerprint)
+                }
+            }
+
+            override fun getAcceptedIssuers(): Array<X509Certificate> = defaultTm.acceptedIssuers
         }
         val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf<TrustManager>(trustManager), SecureRandom())
+            init(null, arrayOf<TrustManager>(trustManager), null)
         }
         return sslContext.socketFactory to trustManager
     }
@@ -304,6 +422,7 @@ object FrigateNet {
         tokenProvider: () -> String?,
         onUnauthorized: () -> Unit,
     ): OkHttpClient {
+        requireHttpsForPublicHost(config.baseUrl)
         val builder = OkHttpClient.Builder()
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -311,9 +430,23 @@ object FrigateNet {
             .addInterceptor(AuthInterceptor(tokenProvider, onUnauthorized))
 
         if (config.trustSelfSigned) {
-            val (ssl, tm) = trustAllSsl()
+            val (ssl, tm) = scopedTrustManager(config)
             builder.sslSocketFactory(ssl, tm)
-            builder.hostnameVerifier { _, _ -> true }
+            // Không dùng hostnameVerifier luôn-true nữa. Dùng verifier mặc định,
+            // nhưng cho phép lệch hostname khi cert đã được pin bằng fingerprint.
+            val defaultVerifier = HttpsURLConnection.getDefaultHostnameVerifier()
+            builder.hostnameVerifier { hostname, session ->
+                if (defaultVerifier.verify(hostname, session)) return@hostnameVerifier true
+                return@hostnameVerifier try {
+                    val cert = session.peerCertificates.firstOrNull() as? X509Certificate
+                        ?: return@hostnameVerifier false
+                    if (!isSelfSigned(cert)) return@hostnameVerifier false
+                    val fingerprint = sha256Hex(cert)
+                    fingerprint in config.acceptedCertFingerprints.map { it.lowercase() }.toSet()
+                } catch (_: Exception) {
+                    false
+                }
+            }
         }
 
         if (com.minhquanghp86.frigatenvr.BuildConfig.DEBUG) {
