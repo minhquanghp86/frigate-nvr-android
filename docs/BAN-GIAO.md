@@ -935,13 +935,30 @@ Thiết kế mới (`TimelineScreen`):
   2) `isPrivateHost` thêm Tailscale `100.64/10`, IPv6 ULA `fc00::/7`, `*.ts.net`.
   3) Thiếu keystore thì `assembleRelease/bundleRelease` **fail** (không còn ký debug im lặng).
   4) `allowBackup=false` (tránh lỗi khôi phục EncryptedSharedPreferences).
-- Version mặc định `2.0.0-dev`; bản phát hành security/key mới: **v2.0.0** (breaking, phải cài lại).
-- Còn tồn: purge keystore cũ khỏi history + force-push; xoay upload key trên Play Console.
+- Version mặc định nay là `2.0.1` (chính sách ≥ 1.0.0); bản security/key mới: **v2.0.0 → v2.0.1**
+  (breaking: đổi signing key, bản ≤ v1.2.17 phải gỡ/cài lại một lần).
 
-## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
+## 4au. Chốt dự án 2026-11-07 — purge history, phát hành v2.0.0/v2.0.1
+
+- **Purge keystore cũ**: dùng `git filter-branch` xoá `keystore/frigate-release.jks` khỏi **toàn bộ refs
+  và tags**, force-push `main` + tất cả tag. `git rev-list --all --objects` không còn blob keystore;
+  `commits?path=keystore/frigate-release.jks` trên GitHub trả **0 commit**.
+  Backup mirror trước khi rewrite: `/root/work/backups/frigate-android-mirror-20261107-024127.git`.
+- **Phát hành**: `v2.0.0` (run 42330676084) và `v2.0.1` (run 42331967905) — CI success, APK + AAB,
+  ký bằng keystore mới từ GitHub Secrets (log: `Đã khôi phục keystore từ secret.`).
+  Người dùng đã tải/cài v2.0.1 và test cập nhật OK.
+- **Play Console**: chưa từng upload AAB → **không cần xoay upload key**; lần upload đầu tiên sẽ dùng
+  keystore mới. (Chỉ xoay khi đã từng upload bằng key cũ.)
+- **Tồn dư cần biết**: GitHub có thể vẫn phục vụ commit cũ theo SHA/PR refs trong thời gian cache
+  (đã kiểm tra `GET /commits/99cd02a` vẫn 200) — key cũ coi như đã lộ vĩnh viễn, đã ngừng dùng;
+  không ảnh hưởng vì chưa phát hành Play.
+- **Việc còn lại (user-side, không chặn code)**: bật GitHub Pages cho `docs/privacy.html`; nộp AAB
+  lên Play Console + App content; closed test 12 tester/14 ngày nếu dùng tài khoản cá nhân.
+
+## 5. Bàn giao v1.1.3 (31/10/2026) — mốc lịch sử (bản ổn định hiện tại: **v2.0.1**, xem mục 4au)
 
 ### 5.1 Trạng thái
-- Bản ổn định: **v1.1.3** (APK + AAB), CI xanh, build local xanh.
+- Mốc v1.1.3 (APK + AAB), CI xanh, build local xanh. Bản ổn định hiện tại: **v2.0.1**.
 - Toolchain: AGP 8.10.1 · Gradle 8.11.1 · Kotlin 2.2.10 · Media3 1.11.1 ·
   NextLib FFmpeg 1.11.1-0.17.0 · compileSdk/targetSdk 36 (Android 16).
 - Kích thước: APK ~51,7 MB · AAB ~33,8 MB (FFmpeg làm APK tăng; AAB chia ABI khi phát hành).

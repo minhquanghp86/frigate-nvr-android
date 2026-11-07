@@ -172,8 +172,16 @@ CI trên `main` (run 42326924511, commit `1954e4c`) success và log có `Đã kh
    nếu thiếu `keystore/frigate-release.jks`.
 4. `allowBackup="true"` với EncryptedSharedPreferences dễ lỗi khi restore sang máy khác → đặt `false`.
 
-**Chính sách version từ 2026-11-07**: versionName mặc định `2.0.0-dev`, không dùng `0.x` nữa;
-bản phát hành security/key mới là **v2.0.0** (breaking: đổi signing key buộc gỡ/cài lại).
+**Chính sách version từ 2026-11-07**: versionName mặc định **`2.0.1`**, không dùng `0.x` nữa;
+bản phát hành security/key mới **v2.0.0 → v2.0.1** (breaking: đổi signing key buộc gỡ/cài lại).
 
-**Còn tồn**: purge keystore cũ khỏi lịch sử git + force-push; xoay upload key trên Play Console
-(user thực hiện); người dùng bản cũ phải gỡ và cài lại.
+**Đã hoàn tất sau mục này**:
+- Purge `keystore/frigate-release.jks` khỏi **toàn bộ history + tags** bằng `git filter-branch`,
+  force-push `main` và mọi tag; GitHub `commits?path=keystore/frigate-release.jks` = 0 commit.
+  Backup mirror: `/root/work/backups/frigate-android-mirror-20261107-024127.git`.
+- CI `main`/`v2.0.0`/`v2.0.1` đều success, ký bằng keystore mới từ Secrets; user đã cài v2.0.1.
+- **Play Console chưa từng upload** → không cần xoay upload key; lần upload đầu tiên dùng key mới.
+
+**Tồn dư**: commit cũ vẫn có thể truy cập qua SHA/PR refs trên GitHub (cache) — key cũ đã bị coi là lộ,
+không dùng lại; chưa ảnh hưởng vì chưa phát hành Play. Việc còn lại là user-side (GitHub Pages privacy,
+nộp Play, closed test 12 tester nếu tài khoản cá nhân).

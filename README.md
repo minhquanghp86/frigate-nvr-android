@@ -16,9 +16,13 @@
 
 ## Trạng thái dự án
 
-**Ổn định — v1.1.3** (31/10/2026). CI build APK + AAB xanh; dùng với Frigate 0.18.2.
+**Ổn định — v2.0.1** (07/11/2026). CI build APK + AAB xanh; dùng với Frigate 0.18.2.
 Toolchain: AGP 8.10.1 · Gradle 8.11.1 · Kotlin 2.2.10 · Media3 1.11.1 + NextLib FFmpeg · targetSdk 36.
 Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BAN-GIAO.md).
+
+> **Từ v2.0.0 đổi signing key** (key cũ từng bị commit công khai). Bản ≤ v1.2.17 phải **gỡ và cài lại**
+> một lần; từ v2.0.0 trở đi cập nhật đè bình thường. Keystore không nằm trong repo — CI ký bằng
+> GitHub Secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_PASSWORD`, `KEY_ALIAS`).
 
 ## 1. Tính năng
 
@@ -111,8 +115,9 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 
 1. Tải APK mới nhất ở [**Releases**](https://github.com/minhquanghp86/frigate-nvr-android/releases).
 2. Cài lên điện thoại (cho phép cài từ nguồn không xác định).
-   - APK release ký bằng keystore cố định trong repo → các bản sau **cập nhật đè được**.
-   - Người dùng bản rất cũ (≤ v0.1.4) cần gỡ một lần.
+   - APK release được CI ký bằng keystore lưu trong **GitHub Secrets** (không có trong repo).
+   - Bản ≤ v1.2.17 dùng key cũ (đã lộ) → cần **gỡ và cài lại** một lần khi lên v2.0.x;
+     từ v2.0.0 trở đi các bản cập nhật đè được.
 3. Mở app → nhập địa chỉ máy chủ (mặc định `https://192.168.10.2:8971`) và tài khoản Frigate,
    hoặc bấm **“Dùng bản demo”**.
 
@@ -149,6 +154,9 @@ Yêu cầu: **JDK 17**, **Android SDK 36** + **Build-Tools 36.0.0** (`local.prop
 - Build **APK + AAB** và chạy unit test.
 - Upload artifact `…-apk` và `…-aab`; tag `v*` tạo **GitHub Release** kèm cả hai tệp.
 - `versionName` = tên tag bỏ tiền tố `v`; `versionCode` = `GITHUB_RUN_NUMBER` (luôn tăng).
+- Trước khi build, CI khôi phục `keystore/frigate-release.jks` từ secret `KEYSTORE_BASE64`.
+  Build release **local** mà thiếu keystore sẽ **fail** (không còn ký debug im lặng).
+- Chính sách phiên bản: từ 2026-11-07 dùng **≥ 1.0.0** (mặc định dev hiện tại `2.0.1`).
 
 ### Phát hành Google Play (trạng thái)
 
@@ -183,10 +191,13 @@ app/src/main/java/com/minhquanghp86/frigatenvr/
 ├── data/
 │   ├── Models.kt              # Event, ReviewItem, Config (đọc lỏng 0.18), Faces, Exports…
 │   ├── Session.kt             # ServerSession, trạng thái phiên
-│   ├── Network.kt             # OkHttp (JWT, TLS tự ký), Retrofit FrigateApi
+│   ├── SecureStorage.kt       # EncryptedSharedPreferences (mật khẩu/JWT/HA token, cert pin)
+│   ├── Network.kt             # OkHttp (JWT, TLS tự ký + pin SHA-256), Retrofit FrigateApi
 │   ├── FrigateRepository.kt   # login/refresh, DataStore, URL media, export, faces, users
 │   ├── MediaSaver.kt          # tải về Downloads + notification tiến trình
 │   └── MjpegSource.kt         # giải mã MJPEG → Flow<Bitmap>
+├── res/xml/network_security_config.xml
+app/src/test/java/.../data/SecurityTest.kt
 ├── notify/
 │   ├── EventWatchService.kt   # foreground service + thông báo có ảnh
 │   ├── DeepLinks.kt           # điều hướng từ thông báo
