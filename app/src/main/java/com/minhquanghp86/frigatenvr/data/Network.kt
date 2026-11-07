@@ -20,6 +20,7 @@ import retrofit2.http.Query
 import retrofit2.http.QueryMap
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import javax.net.ssl.HttpsURLConnection
 import java.security.MessageDigest
 import java.security.cert.CertificateException
@@ -333,7 +334,7 @@ object FrigateNet {
 
     /** Từ chối HTTP tới host công khai — mật khẩu/token không được đi qua HTTP công khai. */
     fun requireHttpsForPublicHost(baseUrl: String) {
-        val parsed = runCatching { okhttp3.HttpUrl.parse(baseUrl) }.getOrNull() ?: return
+        val parsed = baseUrl.toHttpUrlOrNull() ?: return
         if (parsed.scheme == "http" && !isPrivateHost(parsed.host)) {
             throw IllegalArgumentException(
                 "Chỉ cho phép HTTP với địa chỉ LAN riêng tư. " +
