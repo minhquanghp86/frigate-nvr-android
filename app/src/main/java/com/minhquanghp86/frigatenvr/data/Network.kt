@@ -321,14 +321,24 @@ object FrigateNet {
     /** Chỉ cho phép HTTP (không mã hóa) với host LAN riêng tư / localhost. */
     fun isPrivateHost(host: String): Boolean {
         val h = host.trim().lowercase().removeSuffix(".")
-        if (h == "localhost" || h.endsWith(".local") || h.endsWith(".lan")) return true
+        if (h == "localhost" || h.endsWith(".local") || h.endsWith(".lan") ||
+            h.endsWith(".ts.net")
+        ) {
+            return true
+        }
         if (h.startsWith("10.") || h.startsWith("192.168.")) return true
         if (h.startsWith("172.")) {
             val second = h.removePrefix("172.").substringBefore('.').toIntOrNull()
             if (second != null && second in 16..31) return true
         }
-        // IPv6 loopback / ULA
-        if (h == "::1" || h.startsWith("fd") || h.startsWith("fe80:")) return true
+        // Tailscale CGNAT 100.64.0.0/10 (100.64.x.x – 100.127.x.x)
+        if (h.startsWith("100.")) {
+            val second = h.removePrefix("100.").substringBefore('.').toIntOrNull()
+            if (second != null && second in 64..127) return true
+        }
+        // IPv6 loopback / link-local / ULA fc00::/7
+        if (h == "::1" || h.startsWith("fe80:")) return true
+        if (h.contains(":") && (h.startsWith("fc") || h.startsWith("fd"))) return true
         return false
     }
 

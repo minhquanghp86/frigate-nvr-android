@@ -716,6 +716,8 @@ class FrigateRepository(
     // ------------------------------------------------------- cast ngoài LAN
 
     suspend fun setIntegrations(haUrl: String, haToken: String) {
+        val trimmedUrl = haUrl.trim().trimEnd('/')
+        if (trimmedUrl.isNotBlank()) FrigateNet.requireHttpsForPublicHost(trimmedUrl)
         val clean = Integrations(
             haUrl = haUrl.trim().trimEnd('/'),
             haToken = haToken.trim(),
@@ -1092,10 +1094,17 @@ class FrigateRepository(
     fun go2rtcBase(): String {
         val session = current ?: throw FrigateApiException("Chưa đăng nhập server Frigate.")
         session.go2rtcUrl?.takeIf { it.isNotBlank() }?.let {
-            return FrigateNet.normalizeBaseUrl(it)
+            val url = FrigateNet.normalizeBaseUrl(it)
+            FrigateNet.requireHttpsForPublicHost(url)
+            return url
         }
         val host = runCatching { java.net.URI(session.baseUrl).host }.getOrNull()
             ?: return FrigateNet.normalizeBaseUrl(session.baseUrl)
+        if (!FrigateNet.isPrivateHost(host)) {
+            throw FrigateApiException(
+                "go2rtc (cổng 1984) chỉ dùng trong LAN. Server công khai hãy dùng WHEP.",
+            )
+        }
         return "http://$host:1984"
     }
 

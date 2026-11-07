@@ -151,3 +151,29 @@ git ls-tree -r main --name-only | grep -i keystore || echo "khong co keystore tr
 - CI run #177 (success): https://github.com/minhquanghp86/frigate-nvr-android/actions/runs/42325046862
 - Secrets: Settings → Secrets and variables → Actions (4 secret, xem mục 4).
 - Keystore mới: user giữ bản duy nhất; agent không còn bản copy nào.
+
+
+## 8. Verification & fixes — agent tiếp theo (2026-11-07)
+
+Đã kiểm chứng lại toàn bộ mục 2–5 và bổ sung sửa lỗi phát hiện khi review:
+
+**Xác nhận đúng**: keystore đã rời HEAD; `.gitignore` chặn `*.jks`; signing không còn mật khẩu mặc định;
+CI trên `main` (run 42326924511, commit `1954e4c`) success và log có `Đã khôi phục keystore từ secret.`;
+`Network.kt` bỏ trust-all, TOFU pin SHA-256; `SecureStorage` EncryptedSharedPreferences + migration;
+`SecurityTest` chạy pass local (`testReleaseUnitTest`).
+
+**Lỗi phát hiện & đã sửa**:
+1. `usesCleartextTraffic=false` + NSC base `false` chặn **toàn bộ HTTP**, làm hỏng go2rtc
+   `http://<host>:1984` (HLS/MP4/MJPEG) và HA `http://192.168.x.x:8123`.
+   → Đã cho phép cleartext ở tầng Android, giữ chặn HTTP công khai trong code
+   (`requireHttpsForPublicHost`) và validate thêm `haUrl`, `go2rtcUrl`.
+2. `isPrivateHost` thiếu **Tailscale 100.64.0.0/10**, `fc00::/7`, `*.ts.net` → đã bổ sung + test.
+3. Release build thiếu keystore **âm thầm ký debug** → giờ `assembleRelease/bundleRelease` fail rõ ràng
+   nếu thiếu `keystore/frigate-release.jks`.
+4. `allowBackup="true"` với EncryptedSharedPreferences dễ lỗi khi restore sang máy khác → đặt `false`.
+
+**Chính sách version từ 2026-11-07**: versionName mặc định `2.0.0-dev`, không dùng `0.x` nữa;
+bản phát hành security/key mới là **v2.0.0** (breaking: đổi signing key buộc gỡ/cài lại).
+
+**Còn tồn**: purge keystore cũ khỏi lịch sử git + force-push; xoay upload key trên Play Console
+(user thực hiện); người dùng bản cũ phải gỡ và cài lại.

@@ -924,6 +924,20 @@ Thiết kế mới (`TimelineScreen`):
   `ON_START` → phát tiếp nếu trước đó đang phát (không tự phát nếu người dùng đã pause).
 - Dùng `androidx.lifecycle.compose.LocalLifecycleOwner` (lifecycle-runtime-compose 2.8.6).
 
+## 4at. Cập nhật 2026-11-07 — kiểm tra bản vá bảo mật (Muse) + sửa hồi quy
+
+- Xác minh handover `docs/agent-handover.md`: keystore rời HEAD, signing yêu cầu env, CI main xanh
+  (run 42326924511) + log khôi phục keystore, bỏ trust-all (TOFU pin SHA-256), SecureStorage mã hoá
+  + migration, SecurityTest pass.
+- Sửa hồi quy phát hiện khi review:
+  1) `usesCleartextTraffic=false` chặn mọi HTTP → hỏng go2rtc :1984 và HA HTTP; nay cho phép cleartext
+     ở Android nhưng vẫn chặn HTTP công khai trong code, validate `haUrl`/`go2rtcUrl`.
+  2) `isPrivateHost` thêm Tailscale `100.64/10`, IPv6 ULA `fc00::/7`, `*.ts.net`.
+  3) Thiếu keystore thì `assembleRelease/bundleRelease` **fail** (không còn ký debug im lặng).
+  4) `allowBackup=false` (tránh lỗi khôi phục EncryptedSharedPreferences).
+- Version mặc định `2.0.0-dev`; bản phát hành security/key mới: **v2.0.0** (breaking, phải cài lại).
+- Còn tồn: purge keystore cũ khỏi history + force-push; xoay upload key trên Play Console.
+
 ## 5. Bàn giao v1.1.3 (31/10/2026) — bản ổn định mới nhất
 
 ### 5.1 Trạng thái

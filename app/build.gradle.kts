@@ -14,12 +14,31 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
-        versionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "0.1.0-dev"
+        versionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "2.0.0"
         vectorDrawables { useSupportLibrary = true }
         ndk {
             // WebRTC chỉ cần ABI của điện thoại — bỏ x86 để APK nhẹ hơn.
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
+    }
+
+    // Release packaging MUST have a real keystore: fail loudly instead of
+    // silently producing a debug-signed "release" APK.
+    val releaseKeystoreFile = rootProject.file("keystore/frigate-release.jks")
+    val wantsReleasePackage = gradle.startParameter.taskNames.any { name ->
+        listOf(
+            "assembleRelease",
+            "bundleRelease",
+            "packageRelease",
+            "installRelease",
+            "publishRelease",
+        ).any { name.contains(it) }
+    }
+    if (wantsReleasePackage && !releaseKeystoreFile.exists()) {
+        throw GradleException(
+            "Không có keystore/frigate-release.jks — không thể build bản release đúng key. " +
+                "Đặt keystore vào keystore/ (không commit) hoặc để CI build bằng GitHub Secrets.",
+        )
     }
 
     signingConfigs {

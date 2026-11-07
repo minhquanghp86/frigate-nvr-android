@@ -15,6 +15,12 @@ class SecurityTest {
         assertTrue(FrigateNet.isPrivateHost("172.31.255.255"))
         assertTrue(FrigateNet.isPrivateHost("localhost"))
         assertTrue(FrigateNet.isPrivateHost("frigate.local"))
+        // Tailscale CGNAT 100.64.0.0/10
+        assertTrue(FrigateNet.isPrivateHost("100.64.0.1"))
+        assertTrue(FrigateNet.isPrivateHost("100.127.255.254"))
+        // IPv6 ULA fc00::/7
+        assertTrue(FrigateNet.isPrivateHost("fd12:3456::1"))
+        assertTrue(FrigateNet.isPrivateHost("fc00::1"))
     }
 
     @Test
@@ -22,6 +28,8 @@ class SecurityTest {
         assertFalse(FrigateNet.isPrivateHost("8.8.8.8"))
         assertFalse(FrigateNet.isPrivateHost("example.com"))
         assertFalse(FrigateNet.isPrivateHost("172.32.0.1"))
+        assertFalse(FrigateNet.isPrivateHost("100.63.255.255"))
+        assertFalse(FrigateNet.isPrivateHost("100.128.0.1"))
         assertFalse(FrigateNet.isPrivateHost("192.169.1.1"))
         assertThrows(IllegalArgumentException::class.java) {
             FrigateNet.requireHttpsForPublicHost("http://example.com:8971")

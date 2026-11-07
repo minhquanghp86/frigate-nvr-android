@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Cleartext (HTTP) bị cấm theo mặc định.
-     Frigate / go2rtc qua HTTP LAN vẫn đi qua OkHttp, và được kiểm soát
-     bằng code trong FrigateNet.requireHttpsForPublicHost():
-     HTTP chỉ được phép với host LAN riêng tư (10/172.16-31/192.168,
-     localhost, *.local), server công khai bắt buộc HTTPS.
-     Không dùng HTTP cho bất kỳ host công khai nào. -->
+<!-- Cho phép cleartext ở tầng Android vì Frigate/go2rtc/HA trong LAN
+     thường chạy HTTP (ví dụ go2rtc http://<host>:1984, HA http://192.168.x.x:8123).
+     Việc chặn HTTP công khai được thực hiện trong code:
+     FrigateNet.requireHttpsForPublicHost() — HTTP chỉ cho host nội bộ
+     (10/172.16-31/192.168, 100.64/10 Tailscale, localhost, *.local, IPv6 ULA),
+     host công khai bắt buộc HTTPS. -->
 <network-security-config>
-    <base-config cleartextTrafficPermitted="false">
+    <base-config cleartextTrafficPermitted="true">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
