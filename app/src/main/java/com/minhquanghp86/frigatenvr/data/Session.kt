@@ -11,7 +11,9 @@ data class ServerSession(
     val username: String = "",
     val password: String = "",
     val rememberPassword: Boolean = false,
-    val trustSelfSigned: Boolean = true,
+    // Mặc định KHÔNG tin cert tự ký. Người dùng phải bật rõ ràng ở màn
+    // đăng nhập / cài đặt, và cert đó sẽ được pin bằng fingerprint (TOFU).
+    val trustSelfSigned: Boolean = false,
     val token: String? = null,
     val authDisabled: Boolean = false,
     val profile: Profile? = null,

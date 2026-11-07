@@ -23,15 +23,25 @@ android {
     }
 
     signingConfigs {
-        // Keystore cố định để APK cập nhật được qua nhau (debug key của runner đổi mỗi build
-        // -> Android báo "xung đột gói", phải gỡ cài lại).
+        // Release signing key comes ONLY from the local keystore file
+        // (never committed — see keystore/README.md) plus env vars.
+        // No default passwords: a missing password must fail loudly
+        // instead of silently falling back to a well-known value.
+        // CI restores the keystore from the KEYSTORE_BASE64 secret.
         create("release") {
             val ks = rootProject.file("keystore/frigate-release.jks")
             if (ks.exists()) {
+                val storePassword = System.getenv("KEYSTORE_PASSWORD")
+                    ?: throw GradleException(
+                        "KEYSTORE_PASSWORD is not set. " +
+                            "Set it in local.properties / environment or GitHub Secrets.",
+                    )
+                val keyPassword = System.getenv("KEY_PASSWORD")
+                    ?: throw GradleException("KEY_PASSWORD is not set.")
                 storeFile = ks
-                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: "frigate-nvr"
+                storePassword = storePassword
                 keyAlias = System.getenv("KEY_ALIAS") ?: "frigate"
-                keyPassword = System.getenv("KEY_PASSWORD") ?: "frigate-nvr"
+                keyPassword = keyPassword
             }
         }
     }
@@ -75,6 +85,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.navigation:navigation-compose:2.8.2")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    // Encrypted storage for passwords / tokens (Android Keystore, AES256-GCM).
+    // Plain DataStore must never hold secrets — see data/SecureStorage.kt.
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
