@@ -106,6 +106,7 @@ fun SettingsScreen(
 ) {
     val settingsRepo = rememberRepo()
     var plateCount by remember { mutableStateOf<Int?>(null) }
+    var certMessage by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) {
         plateCount = runCatching { settingsRepo.licensePlates().size }.getOrNull()
     }
@@ -320,6 +321,28 @@ fun SettingsScreen(
                                     )
                                 }
                                 Text("Lưu & kết nối", style = MaterialTheme.typography.labelLarge)
+                            }
+                            TextButton(
+                                onClick = {
+                                    settingsRepo.clearTrustedCertificates()
+                                    certMessage =
+                                        "Đã xoá chứng chỉ đã tin. Bấm “Lưu & kết nối” để chấp nhận cert hiện tại."
+                                },
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                            ) {
+                                Text(
+                                    "Xoá chứng chỉ đã tin",
+                                    color = IOSOrange,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            certMessage?.let {
+                                Text(
+                                    it,
+                                    color = IOSSecondaryLabel,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+                                )
                             }
                             message?.let {
                                 Text(

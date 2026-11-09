@@ -402,6 +402,15 @@ class FrigateRepository(
         return built
     }
 
+    /** Xoá các fingerprint cert tự ký đã tin (dùng khi Frigate đổi cert). */
+    fun clearTrustedCertificates() {
+        secureStorage.clearAcceptedCertFingerprints()
+        client = null
+        clientKey = null
+        api = null
+        apiKey = null
+    }
+
     fun okhttp(): OkHttpClient {
         val session = current ?: throw FrigateApiException("Chưa đăng nhập server Frigate.")
         return clientFor(session)
@@ -410,7 +419,8 @@ class FrigateRepository(
     fun session(): ServerSession? = current
 
     private fun apiFor(session: ServerSession): FrigateApi {
-        val key = "${session.baseUrl}|${session.authHeader}|${session.trustSelfSigned}"
+        val pinsKey = secureStorage.getAcceptedCertFingerprints().sorted().joinToString(",")
+        val key = "${session.baseUrl}|${session.authHeader}|${session.trustSelfSigned}|$pinsKey"
         if (api != null && apiKey == key) return api!!
         val built = FrigateNet.api(clientFor(session), session.baseUrl)
         api = built

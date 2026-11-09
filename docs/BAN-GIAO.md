@@ -955,7 +955,26 @@ Thiết kế mới (`TimelineScreen`):
 - **Việc còn lại (user-side, không chặn code)**: bật GitHub Pages cho `docs/privacy.html`; nộp AAB
   lên Play Console + App content; closed test 12 tester/14 ngày nếu dùng tài khoản cá nhân.
 
-## 5. Bàn giao v1.1.3 (31/10/2026) — mốc lịch sử (bản ổn định hiện tại: **v2.0.1**, xem mục 4au)
+## 4av. Cập nhật 09/11/2026 — sửa lỗi “Hostname 192.168.10.2 not verified” (v2.0.2)
+
+- Triệu chứng: app báo `Hostname 192.168.10.2 not verified: certificate: sha256/… DN: CN=*, O=FRIGATE
+  DEFAULT CERT subjectAltNames: []` khi mở app.
+- Nguyên nhân gốc (Frigate tự sinh lại cert mặc định — cert hiện tại notBefore 09/11/2026 07:38):
+  1. `hostnameVerifier` đọc **snapshot** `acceptedCertFingerprints`; trong cùng handshake, trust manager
+     vừa TOFU-chấp nhận + pin cert mới nhưng verifier vẫn dùng tập cũ → chặn hostname (cert `CN=*`,
+     **không có SAN** nên verifier mặc định luôn fail).
+  2. `apiFor()` cache theo `baseUrl|auth|trust` — **không gồm fingerprints** → sau khi pin cert mới,
+     Retrofit/OkHttp cũ vẫn được dùng, lỗi lặp lại đến khi restart app.
+  3. TOFU cũ chấp nhận **mọi** cert tự ký mới kể cả khi đã có pin cũ (âm thầm đổi pin).
+- Sửa:
+  - Dùng chung tập pin “live” (CopyOnWriteArraySet) cho trust manager + hostname verifier trong handshake.
+  - TOFU chỉ auto-pin khi **chưa có pin nào**; nếu đã pin mà cert khác → từ chối kèm hướng dẫn.
+  - `apiFor` key thêm danh sách fingerprints → đổi pin là client/API được tạo lại.
+  - Thêm **Cài đặt → Kết nối → “Xoá chứng chỉ đã tin”** + `SecureStorage.clearAcceptedCertFingerprints()`
+    để chấp nhận cert mới sau khi Frigate đổi cert.
+- Phát hành **v2.0.2**; test: compile + `testReleaseUnitTest` pass.
+
+## 5. Bàn giao v1.1.3 (31/10/2026) — mốc lịch sử (bản ổn định hiện tại: **v2.0.2**, xem mục 4av)
 
 ### 5.1 Trạng thái
 - Mốc v1.1.3 (APK + AAB), CI xanh, build local xanh. Bản ổn định hiện tại: **v2.0.1**.

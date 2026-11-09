@@ -58,6 +58,10 @@ class SecureStorage(context: Context) {
         prefs.edit().putStringSet(KEY_CERT_FINGERPRINTS, updated).apply()
     }
 
+    fun clearAcceptedCertFingerprints() {
+        prefs.edit().remove(KEY_CERT_FINGERPRINTS).apply()
+    }
+
     fun clearSecrets() {
         prefs.edit()
             .remove(KEY_PASSWORD)

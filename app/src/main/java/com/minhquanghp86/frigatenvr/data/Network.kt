@@ -387,7 +387,10 @@ object FrigateNet {
      * SHA-256, các lần sau bắt buộc fingerprint phải khớp. Hostname vẫn
      * được kiểm tra bằng verifier mặc định, trừ khi fingerprint đã pin.
      */
-    private fun scopedTrustManager(config: NetConfig): Pair<javax.net.ssl.SSLSocketFactory, X509TrustManager> {
+    private fun scopedTrustManager(
+        config: NetConfig,
+        accepted: MutableSet<String>,
+    ): Pair<javax.net.ssl.SSLSocketFactory, X509TrustManager> {
         val defaultTm = defaultTrustManager()
         val trustManager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
@@ -406,17 +409,28 @@ object FrigateNet {
                     if (!isSelfSigned(cert)) throw e
                     cert.checkValidity() // hết hạn thì từ chối
                     val fingerprint = sha256Hex(cert)
-                    val accepted = config.acceptedCertFingerprints.map { it.lowercase() }.toSet()
                     if (fingerprint in accepted) return
-                    // Lần đầu gặp cert này: chỉ chấp nhận nếu caller cho phép ghi TOFU.
-                    // Caller (FrigateRepository) ghi fingerprint vào SecureStorage.
+
+                    // TOFU chỉ áp dụng khi CHƯA pin cert nào. Nếu đã có pin mà cert
+                    // khác xuất hiện, từ chối (có thể cert bị đổi hoặc bị MITM);
+                    // người dùng có thể xoá pin trong Cài đặt để chấp nhận cert mới.
                     val onAccept = config.onAcceptCertFingerprint
-                        ?: throw CertificateException(
-                            "Chứng chỉ tự ký chưa được chấp nhận (SHA-256: $fingerprint). " +
-                                "Bật 'Tin chứng chỉ tự ký' và đăng nhập lại để chấp nhận cert này.",
-                            e,
-                        )
-                    onAccept(fingerprint)
+                    if (accepted.isEmpty() && onAccept != null) {
+                        onAccept(fingerprint)
+                        accepted.add(fingerprint)
+                        return
+                    }
+
+                    throw CertificateException(
+                        "Chứng chỉ HTTPS đã thay đổi hoặc chưa được tin " +
+                            "(SHA-256: $fingerprint). " +
+                            if (accepted.isEmpty()) {
+                                "Bật 'Tin chứng chỉ tự ký' rồi đăng nhập lại."
+                            } else {
+                                "Mở Cài đặt → Kết nối → 'Xoá chứng chỉ đã tin' rồi đăng nhập lại."
+                            },
+                        e,
+                    )
                 }
             }
 
@@ -441,7 +455,12 @@ object FrigateNet {
             .addInterceptor(AuthInterceptor(tokenProvider, onUnauthorized))
 
         if (config.trustSelfSigned) {
-            val (ssl, tm) = scopedTrustManager(config)
+            // Tập pin dùng chung cho trust manager + hostname verifier trong cùng
+            // handshake: cert vừa được TOFU chấp nhận phải pass luôn bước kiểm tra
+            // hostname (Frigate default cert có CN=* và không có SAN).
+            val accepted = java.util.concurrent.CopyOnWriteArraySet<String>()
+            accepted.addAll(config.acceptedCertFingerprints.map { it.lowercase() })
+            val (ssl, tm) = scopedTrustManager(config, accepted)
             builder.sslSocketFactory(ssl, tm)
             // Không dùng hostnameVerifier luôn-true nữa. Dùng verifier mặc định,
             // nhưng cho phép lệch hostname khi cert đã được pin bằng fingerprint.
@@ -452,8 +471,7 @@ object FrigateNet {
                     val cert = session.peerCertificates.firstOrNull() as? X509Certificate
                         ?: return@hostnameVerifier false
                     if (!isSelfSigned(cert)) return@hostnameVerifier false
-                    val fingerprint = sha256Hex(cert)
-                    fingerprint in config.acceptedCertFingerprints.map { it.lowercase() }.toSet()
+                    sha256Hex(cert) in accepted
                 } catch (_: Exception) {
                     false
                 }

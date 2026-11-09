@@ -185,3 +185,11 @@ bản phát hành security/key mới **v2.0.0 → v2.0.1** (breaking: đổi sig
 **Tồn dư**: commit cũ vẫn có thể truy cập qua SHA/PR refs trên GitHub (cache) — key cũ đã bị coi là lộ,
 không dùng lại; chưa ảnh hưởng vì chưa phát hành Play. Việc còn lại là user-side (GitHub Pages privacy,
 nộp Play, closed test 12 tester nếu tài khoản cá nhân).
+
+
+## 9. Sự cố 09/11/2026 — cert Frigate đổi, app báo “Hostname … not verified” (đã sửa, v2.0.2)
+
+Frigate tự sinh lại cert mặc định (`CN=*`, không SAN) → xảy ra 2 lỗi phối hợp: hostname verifier dùng
+snapshot pin cũ trong khi trust manager vừa pin cert mới; và `apiFor()` cache không tính fingerprints
+nên client cũ bị dùng lại. Đã sửa: tập pin live dùng chung, TOFU chỉ auto-pin khi chưa có pin, cache key
+gồm fingerprints, thêm nút “Xoá chứng chỉ đã tin” trong Cài đặt → Kết nối. Xem mục 4av của BAN-GIAO.
