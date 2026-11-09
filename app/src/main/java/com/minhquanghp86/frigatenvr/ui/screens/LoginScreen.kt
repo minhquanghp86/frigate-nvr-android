@@ -15,7 +15,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -52,6 +54,7 @@ fun LoginScreen(repo: FrigateRepository) {
     var trust by remember { mutableStateOf(false) }
     var showPassword by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var certPrompt by remember { mutableStateOf<FrigateRepository.CertPrompt?>(null) }
     val busy by repo.busy.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -161,7 +164,12 @@ fun LoginScreen(repo: FrigateRepository) {
             onClick = {
                 error = null
                 scope.launch {
-                    error = repo.signIn(baseUrl, username, password, keepPass, trust)
+                    val prompt = runCatching { repo.certPromptFor(baseUrl, trust) }.getOrNull()
+                    if (prompt != null) {
+                        certPrompt = prompt
+                    } else {
+                        error = repo.signIn(baseUrl, username, password, keepPass, trust)
+                    }
                 }
             },
             enabled = !busy,
@@ -201,6 +209,50 @@ fun LoginScreen(repo: FrigateRepository) {
                 "Bản demo dùng máy chủ công khai demo.frigate.video.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    certPrompt?.let { prompt ->
+        AlertDialog(
+            onDismissRequest = { certPrompt = null },
+            title = {
+                Text(
+                    if (prompt.replacing) "Chứng chỉ máy chủ đã thay đổi"
+                    else "Máy chủ dùng chứng chỉ tự ký",
+                )
+            },
+            text = {
+                Text(
+                    buildString {
+                        append(prompt.commonName ?: "—")
+                        prompt.organization?.let { append(" · $it") }
+                        append("\nSHA-256: ")
+                        append(prompt.fingerprint.take(32))
+                        append("…")
+                        append(
+                            if (prompt.replacing) {
+                                "\n\nChỉ chấp nhận nếu bạn vừa cập nhật hoặc tạo lại Frigate."
+                            } else {
+                                "\n\nApp sẽ ghi nhớ chứng chỉ này cho các lần sau."
+                            },
+                        )
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        repo.acceptCertificate(prompt)
+                        certPrompt = null
+                        scope.launch {
+                            error = repo.signIn(baseUrl, username, password, keepPass, trust)
+                        }
+                    },
+                ) { Text(if (prompt.replacing) "Chấp nhận cert mới" else "Tin và kết nối") }
+            },
+            dismissButton = {
+                TextButton(onClick = { certPrompt = null }) { Text("Huỷ") }
+            },
         )
     }
 }

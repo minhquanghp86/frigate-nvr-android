@@ -974,7 +974,20 @@ Thiết kế mới (`TimelineScreen`):
     để chấp nhận cert mới sau khi Frigate đổi cert.
 - Phát hành **v2.0.2**; test: compile + `testReleaseUnitTest` pass.
 
-## 5. Bàn giao v1.1.3 (31/10/2026) — mốc lịch sử (bản ổn định hiện tại: **v2.0.2**, xem mục 4av)
+## 4aw. Cập nhật 09/11/2026 — UX chứng chỉ cho người dùng cuối (v2.0.3)
+
+- **Tự xoay pin khi cert mặc định của Frigate đổi**: lưu kèm `organization (O)` của cert đã pin
+  (`SecureStorage.accepted_cert_orgs`); nếu cert mới vẫn `O=FRIGATE DEFAULT CERT` và pin cũ cũng vậy
+  (hoặc pin cũ chưa có metadata) → tự thay pin + kết nối tiếp, hiện thông báo nhẹ
+  “Frigate đã tạo chứng chỉ HTTPS mới…”. Người dùng không phải làm gì (đúng ca add-on recreate/update).
+- **Preflight + hộp thoại 1 chạm khi đăng nhập**: `FrigateNet.inspectCertificate()` dò cert trước khi login;
+  nếu là cert tự ký lần đầu → dialog “Máy chủ dùng chứng chỉ tự ký” (CN/O/SHA-256) với nút
+  **Tin và kết nối**; nếu cert đổi khác cert mặc định → dialog **Chấp nhận cert mới** (chỉ nên bấm khi vừa
+  cập nhật Frigate). Chấp nhận xong app tự đăng nhập lại, không cần mở lại app.
+- Giữ nút nâng cao **Cài đặt → Kết nối → Xoá chứng chỉ đã tin** cho trường hợp cert lạ.
+- Test: compile + `testReleaseUnitTest` pass; phát hành **v2.0.3**.
+
+## 5. Bàn giao v1.1.3 (31/10/2026) — mốc lịch sử (bản ổn định hiện tại: **v2.0.3**, xem mục 4aw)
 
 ### 5.1 Trạng thái
 - Mốc v1.1.3 (APK + AAB), CI xanh, build local xanh. Bản ổn định hiện tại: **v2.0.1**.

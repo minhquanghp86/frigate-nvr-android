@@ -129,7 +129,7 @@ Hướng dẫn bàn giao & lịch sử thay đổi: [`docs/BAN-GIAO.md`](docs/BA
 | Port **5000** | Cổng nội bộ không xác thực, thường không mở ra LAN |
 | Reverse proxy / Nabu Casa | Nhập URL proxy, app không bắt buộc kết nối trực tiếp |
 | Auth disabled | App tự dùng phiên ẩn danh |
-| Lỗi `Hostname … not verified` sau khi Frigate đổi cert | Cài đặt → Kết nối → **Xoá chứng chỉ đã tin** → **Lưu & kết nối** (cert mới sẽ được pin lại) |
+| Lỗi `Hostname … not verified` sau khi Frigate đổi cert | App **tự cập nhật** khi cert mới vẫn là cert mặc định của Frigate; nếu là cert khác, xác nhận ở hộp thoại khi đăng nhập (hoặc Cài đặt → Kết nối → **Xoá chứng chỉ đã tin** → **Lưu & kết nối**) |
 
 Tài khoản: **Frigate → Settings → Users** (mật khẩu tối thiểu 12 ký tự).
 

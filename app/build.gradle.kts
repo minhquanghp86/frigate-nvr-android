@@ -14,7 +14,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1)
-        versionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "2.0.2"
+        versionName = System.getenv("APP_VERSION_NAME")?.takeIf { it.isNotBlank() } ?: "2.0.3"
         vectorDrawables { useSupportLibrary = true }
         ndk {
             // WebRTC chỉ cần ABI của điện thoại — bỏ x86 để APK nhẹ hơn.

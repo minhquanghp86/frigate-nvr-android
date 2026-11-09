@@ -31,6 +31,17 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.TrustManagerFactory
 import javax.net.ssl.X509TrustManager
 
+/** Thông tin cert HTTPS của server, dùng cho hộp thoại tin cậy. */
+data class CertInfo(
+    val fingerprint: String,
+    val organization: String?,
+    val commonName: String?,
+    val selfSigned: Boolean,
+)
+
+/** Organization trong subject của cert HTTPS mặc định do Frigate tự sinh. */
+const val FRIGATE_DEFAULT_CERT_ORG = "FRIGATE DEFAULT CERT"
+
 /** Cấu hình kết nối (URL + chứng chỉ + token) — key để tái tạo client khi thay đổi. */
 class NetConfig(
     val baseUrl: String,
@@ -38,8 +49,15 @@ class NetConfig(
     val trustSelfSigned: Boolean,
     /** SHA-256 fingerprint (hex, chữ thường) của các cert tự ký đã được chấp nhận. */
     val acceptedCertFingerprints: Set<String> = emptySet(),
-    /** Gọi khi gặp cert tự ký mới lần đầu (TOFU) — caller lưu fingerprint vào SecureStorage. */
-    val onAcceptCertFingerprint: ((String) -> Unit)? = null,
+    /** fingerprint -> organization (O) của cert đã pin, dùng nhận diện cert mặc định Frigate. */
+    val acceptedCertOrgs: Map<String, String> = emptyMap(),
+    /** Cho phép tự thay pin khi cert mới vẫn là cert mặc định của Frigate (add-on tạo lại). */
+    val autoRotateDefaultCert: Boolean = false,
+    /**
+     * Gọi khi chấp nhận cert tự ký: (fingerprint, organization, replaceAll).
+     * replaceAll = true khi xoay cert mặc định (thay pin cũ).
+     */
+    val onAcceptCertFingerprint: ((String, String?, Boolean) -> Unit)? = null,
 ) {
     // Callback không tham gia equals/hashCode: mỗi lần tạo lambda mới là một
     // object khác, nếu tính vào equals thì client sẽ bị build lại liên tục.
@@ -49,6 +67,7 @@ class NetConfig(
         return baseUrl == other.baseUrl &&
             token == other.token &&
             trustSelfSigned == other.trustSelfSigned &&
+            autoRotateDefaultCert == other.autoRotateDefaultCert &&
             acceptedCertFingerprints.map { it.lowercase() }.toSet() ==
             other.acceptedCertFingerprints.map { it.lowercase() }.toSet()
     }
@@ -57,6 +76,7 @@ class NetConfig(
         var result = baseUrl.hashCode()
         result = 31 * result + (token?.hashCode() ?: 0)
         result = 31 * result + trustSelfSigned.hashCode()
+        result = 31 * result + autoRotateDefaultCert.hashCode()
         result = 31 * result + acceptedCertFingerprints.map { it.lowercase() }.toSet().hashCode()
         return result
     }
@@ -318,6 +338,51 @@ object FrigateNet {
         return url
     }
 
+    /**
+     * Lấy thông tin cert HTTPS của server (chỉ để hiển thị/TOFU trước khi đăng nhập).
+     * Dùng trust-all riêng cho bước dò cert; KHÔNG dùng cho request dữ liệu.
+     */
+    fun inspectCertificate(baseUrl: String, timeoutMs: Int = 5_000): CertInfo? {
+        val url = baseUrl.trim().toHttpUrlOrNull() ?: return null
+        if (url.scheme != "https") return null
+        val trustAll = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) = Unit
+            override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+        }
+        return try {
+            val ctx = SSLContext.getInstance("TLS").apply {
+                init(null, arrayOf<TrustManager>(trustAll), java.security.SecureRandom())
+            }
+            val socket = ctx.socketFactory.createSocket() as javax.net.ssl.SSLSocket
+            socket.connect(java.net.InetSocketAddress(url.host, url.port), timeoutMs)
+            socket.soTimeout = timeoutMs
+            socket.startHandshake()
+            val cert = socket.session.peerCertificates.firstOrNull() as? X509Certificate
+            socket.close()
+            cert?.let { c ->
+                CertInfo(
+                    fingerprint = sha256Hex(c),
+                    organization = organizationOf(c),
+                    commonName = commonNameOf(c),
+                    selfSigned = isSelfSigned(c),
+                )
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun organizationOf(cert: X509Certificate): String? =
+        cert.subjectX500Principal.name.split(",")
+            .firstOrNull { it.trim().startsWith("O=") }
+            ?.substringAfter("O=")?.trim()
+
+    fun commonNameOf(cert: X509Certificate): String? =
+        cert.subjectX500Principal.name.split(",")
+            .firstOrNull { it.trim().startsWith("CN=") }
+            ?.substringAfter("CN=")?.trim()
+
     /** Chỉ cho phép HTTP (không mã hóa) với host LAN riêng tư / localhost. */
     fun isPrivateHost(host: String): Boolean {
         val h = host.trim().lowercase().removeSuffix(".")
@@ -415,8 +480,23 @@ object FrigateNet {
                     // khác xuất hiện, từ chối (có thể cert bị đổi hoặc bị MITM);
                     // người dùng có thể xoá pin trong Cài đặt để chấp nhận cert mới.
                     val onAccept = config.onAcceptCertFingerprint
+                    val org = organizationOf(cert)
+
                     if (accepted.isEmpty() && onAccept != null) {
-                        onAccept(fingerprint)
+                        onAccept(fingerprint, org, false)
+                        accepted.add(fingerprint)
+                        return
+                    }
+
+                    // Frigate tạo lại cert mặc định mỗi khi add-on bị recreate/update.
+                    // Nếu cert mới vẫn là cert mặc định của Frigate và pin cũ cũng vậy thì
+                    // tự xoay pin (không bắt người dùng làm gì).
+                    if (onAccept != null &&
+                        config.autoRotateDefaultCert &&
+                        org == FRIGATE_DEFAULT_CERT_ORG
+                    ) {
+                        onAccept(fingerprint, org, true)
+                        accepted.clear()
                         accepted.add(fingerprint)
                         return
                     }

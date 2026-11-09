@@ -52,14 +52,41 @@ class SecureStorage(context: Context) {
     fun getAcceptedCertFingerprints(): Set<String> =
         prefs.getStringSet(KEY_CERT_FINGERPRINTS, emptySet()).orEmpty()
 
-    fun addAcceptedCertFingerprint(fingerprint: String) {
+    fun addAcceptedCertFingerprint(fingerprint: String, organization: String? = null) {
         if (fingerprint.isBlank()) return
-        val updated = getAcceptedCertFingerprints().toMutableSet().apply { add(fingerprint.lowercase()) }
-        prefs.edit().putStringSet(KEY_CERT_FINGERPRINTS, updated).apply()
+        val fp = fingerprint.lowercase()
+        val updated = getAcceptedCertFingerprints().toMutableSet().apply { add(fp) }
+        val meta = getAcceptedCertOrgs().toMutableMap()
+        if (!organization.isNullOrBlank()) meta[fp] = organization else meta.remove(fp)
+        prefs.edit()
+            .putStringSet(KEY_CERT_FINGERPRINTS, updated)
+            .putStringSet(KEY_CERT_ORGS, meta.map { (k, v) -> "$k|$v" }.toSet())
+            .apply()
     }
 
+    /** Thay toàn bộ pin bằng đúng cert mới (dùng khi Frigate xoay cert mặc định). */
+    fun replaceAcceptedCert(fingerprint: String, organization: String?) {
+        if (fingerprint.isBlank()) return
+        val fp = fingerprint.lowercase()
+        val metaSet = if (organization.isNullOrBlank()) emptySet() else setOf("$fp|$organization")
+        prefs.edit()
+            .putStringSet(KEY_CERT_FINGERPRINTS, setOf(fp))
+            .putStringSet(KEY_CERT_ORGS, metaSet)
+            .apply()
+    }
+
+    /** fingerprint -> organization (O trong subject) của các cert đã pin. */
+    fun getAcceptedCertOrgs(): Map<String, String> =
+        prefs.getStringSet(KEY_CERT_ORGS, emptySet()).orEmpty()
+            .mapNotNull { entry ->
+                val idx = entry.indexOf('|')
+                if (idx <= 0) return@mapNotNull null
+                entry.substring(0, idx) to entry.substring(idx + 1)
+            }
+            .toMap()
+
     fun clearAcceptedCertFingerprints() {
-        prefs.edit().remove(KEY_CERT_FINGERPRINTS).apply()
+        prefs.edit().remove(KEY_CERT_FINGERPRINTS).remove(KEY_CERT_ORGS).apply()
     }
 
     fun clearSecrets() {
@@ -76,5 +103,6 @@ class SecureStorage(context: Context) {
         private const val KEY_TOKEN = "token"
         private const val KEY_HA_TOKEN = "ha_token"
         private const val KEY_CERT_FINGERPRINTS = "accepted_cert_fingerprints"
+        private const val KEY_CERT_ORGS = "accepted_cert_orgs"
     }
 }

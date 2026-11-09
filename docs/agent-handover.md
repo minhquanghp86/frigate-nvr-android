@@ -193,3 +193,11 @@ Frigate tự sinh lại cert mặc định (`CN=*`, không SAN) → xảy ra 2 l
 snapshot pin cũ trong khi trust manager vừa pin cert mới; và `apiFor()` cache không tính fingerprints
 nên client cũ bị dùng lại. Đã sửa: tập pin live dùng chung, TOFU chỉ auto-pin khi chưa có pin, cache key
 gồm fingerprints, thêm nút “Xoá chứng chỉ đã tin” trong Cài đặt → Kết nối. Xem mục 4av của BAN-GIAO.
+
+
+## 10. UX chứng chỉ (09/11/2026, v2.0.3)
+
+Cert mặc định của Frigate (`O=FRIGATE DEFAULT CERT`) bị xoay khi add-on recreate → app tự thay pin và
+hiện thông báo nhẹ. Cert lần đầu/cert khác được hỏi bằng hộp thoại 1 chạm trước khi đăng nhập
+(`certPromptFor` + `AlertDialog` trong LoginScreen), chấp nhận xong tự đăng nhập lại.
+Metadata `O` lưu trong `SecureStorage` (`accepted_cert_orgs`). Vẫn giữ nút “Xoá chứng chỉ đã tin”.

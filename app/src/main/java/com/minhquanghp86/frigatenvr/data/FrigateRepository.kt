@@ -39,14 +39,35 @@ class FrigateRepository(
     /** Bí mật (mật khẩu / JWT / token HA) chỉ nằm trong EncryptedSharedPreferences. */
     private val secureStorage = SecureStorage(context)
 
-    private fun netConfigFor(baseUrl: String, token: String?, trustSelfSigned: Boolean): NetConfig =
-        NetConfig(
+    private fun netConfigFor(baseUrl: String, token: String?, trustSelfSigned: Boolean): NetConfig {
+        val pins = secureStorage.getAcceptedCertFingerprints()
+        val orgs = secureStorage.getAcceptedCertOrgs()
+        val allDefaultOrUnknown = pins.all { pin ->
+            val org = orgs[pin.lowercase()] ?: return@all true
+            org == FRIGATE_DEFAULT_CERT_ORG
+        }
+        return NetConfig(
             baseUrl = baseUrl,
             token = token,
             trustSelfSigned = trustSelfSigned,
-            acceptedCertFingerprints = secureStorage.getAcceptedCertFingerprints(),
-            onAcceptCertFingerprint = { fp -> secureStorage.addAcceptedCertFingerprint(fp) },
+            acceptedCertFingerprints = pins,
+            acceptedCertOrgs = orgs,
+            autoRotateDefaultCert = allDefaultOrUnknown,
+            onAcceptCertFingerprint = { fp, org, replaceAll ->
+                if (replaceAll) {
+                    secureStorage.replaceAcceptedCert(fp, org)
+                    _notice.value =
+                        "Frigate đã tạo chứng chỉ HTTPS mới (bình thường khi cập nhật add-on) — đã cập nhật."
+                } else {
+                    secureStorage.addAcceptedCertFingerprint(fp, org)
+                }
+                client = null
+                clientKey = null
+                api = null
+                apiKey = null
+            },
         )
+    }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -401,6 +422,55 @@ class FrigateRepository(
         clientKey = key
         return built
     }
+
+    /**
+     * Kiểm tra cert trước khi đăng nhập. Trả về prompt nếu cần người dùng xác nhận
+     * (cert tự ký lần đầu, hoặc cert đổi khác cert mặc định của Frigate).
+     * Cert mặc định của Frigate bị xoay (add-on recreate) được tự động cập nhật.
+     */
+    suspend fun certPromptFor(baseUrlRaw: String, trustSelfSigned: Boolean): CertPrompt? {
+        if (!trustSelfSigned) return null
+        val base = FrigateNet.normalizeBaseUrl(baseUrlRaw)
+        if (base.isBlank()) return null
+        val info = withContext(Dispatchers.IO) { FrigateNet.inspectCertificate(base) } ?: return null
+        if (!info.selfSigned) return null
+        val fp = info.fingerprint.lowercase()
+        val pins = secureStorage.getAcceptedCertFingerprints().map { it.lowercase() }.toSet()
+        if (fp in pins) return null
+
+        if (pins.isEmpty()) {
+            return CertPrompt(fp, info.organization, info.commonName, replacing = false)
+        }
+
+        val orgs = secureStorage.getAcceptedCertOrgs()
+        val allDefault = pins.all { pin ->
+            (orgs[pin] ?: FRIGATE_DEFAULT_CERT_ORG) == FRIGATE_DEFAULT_CERT_ORG
+        }
+        if (allDefault && info.organization == FRIGATE_DEFAULT_CERT_ORG) {
+            acceptCertificate(CertPrompt(fp, info.organization, info.commonName, replacing = true))
+            return null
+        }
+        return CertPrompt(fp, info.organization, info.commonName, replacing = true)
+    }
+
+    fun acceptCertificate(prompt: CertPrompt) {
+        if (prompt.replacing) {
+            secureStorage.replaceAcceptedCert(prompt.fingerprint, prompt.organization)
+        } else {
+            secureStorage.addAcceptedCertFingerprint(prompt.fingerprint, prompt.organization)
+        }
+        client = null
+        clientKey = null
+        api = null
+        apiKey = null
+    }
+
+    data class CertPrompt(
+        val fingerprint: String,
+        val organization: String?,
+        val commonName: String?,
+        val replacing: Boolean,
+    )
 
     /** Xoá các fingerprint cert tự ký đã tin (dùng khi Frigate đổi cert). */
     fun clearTrustedCertificates() {
